@@ -9,7 +9,7 @@ import no.nav.syfo.utenlandsopphold.application.ApplicationState
 fun main(args: Array<String>) {
     val applicationState = ApplicationState(
         alive = true,
-        ready = true,
+        ready = true
     )
     val server = embeddedServer(
         Netty,
