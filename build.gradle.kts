@@ -10,7 +10,7 @@ group = "no.nav.syfo"
 version = "1.0.0-SNAPSHOT"
 
 application {
-    mainClass = "io.ktor.server.netty.App"
+    mainClass = "no.nav.syfo.utenlandsopphold.AppKt"
 }
 
 kotlin {
@@ -29,8 +29,11 @@ dependencies {
 tasks {
     shadowJar {
         mergeServiceFiles()
-        archiveBaseName.set("app")
-        archiveClassifier.set("")
-        archiveVersion.set("")
+    }
+}
+
+afterEvaluate {
+    tasks.shadowJar {
+        archiveFileName.set("app.jar")
     }
 }
