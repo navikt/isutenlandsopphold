@@ -2,7 +2,8 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(ktorLibs.plugins.ktor)
-    id("com.gradleup.shadow") version "8.3.8"
+    alias(libs.plugins.shadow)
+    alias(libs.plugins.ktlint)
 }
 
 group = "no.nav.syfo"

@@ -20,7 +20,7 @@ fun main(args: Array<String>) {
         },
         module = {
             apiModule(
-                applicationState = applicationState,
+                applicationState = applicationState
             )
         }
     )
