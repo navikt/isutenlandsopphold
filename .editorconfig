@@ -1,0 +1,3 @@
+[*.{kt,kts}]
+# Tells ktlint and IntelliJ to allow wildcard imports for Ktor and its subpackages
+ij_kotlin_packages_to_use_import_on_demand = io.ktor.**

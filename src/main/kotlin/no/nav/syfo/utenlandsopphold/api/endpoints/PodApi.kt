@@ -1,9 +1,8 @@
 package no.nav.syfo.utenlandsopphold.api.endpoints
 
-import io.ktor.http.HttpStatusCode
-import io.ktor.server.response.respondText
-import io.ktor.server.routing.Routing
-import io.ktor.server.routing.get
+import io.ktor.http.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
 
 const val POD_LIVENESS_PATH = "/internal/is_alive"
