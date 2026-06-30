@@ -2,7 +2,7 @@
 
 Applikasjon for team iSyfo for vedtak av søknader om å beholde sykepenger under utenlandsopphold.
 
-## Technologies used
+## Teknologier som brukes
 
 * Docker
 * Gradle
@@ -12,7 +12,7 @@ Applikasjon for team iSyfo for vedtak av søknader om å beholde sykepenger unde
 * Flyway
 * HikariCP
 
-##### Test Libraries:
+##### Testbiblioteker:
 
 * JUnit
 * embedded-postgres
@@ -44,7 +44,7 @@ Applikasjon for team iSyfo for vedtak av søknader om å beholde sykepenger unde
    curl http://localhost:8080/internal/is_ready     # I'm ready! :)
    ```
 
-## Build
+## Bygg
 
 ```bash
 ./gradlew clean shadowJar
@@ -68,8 +68,8 @@ Migrasjoner ligger i `src/main/resources/db/migration` og kjøres med Flyway ved
 oppstart. Lokalt brukes Postgres fra `docker-compose.yaml`; tester bruker
 embedded-postgres.
 
-## Contact
+## Kontakt
 
-### For NAV employees
+### For NAV-ansatte
 
-We are available at the Slack channel `#isyfo`.
+Vi er tilgjengelige på Slack-kanalen `#isyfo`.
