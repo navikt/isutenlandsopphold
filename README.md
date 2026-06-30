@@ -1,31 +1,75 @@
 # isutenlandsopphold
 
-This project was created using the [Ktor Project Generator](https://start.ktor.io).
+Applikasjon for team iSyfo for vedtak av søknader om å beholde sykepenger under utenlandsopphold.
 
-Here are some useful links to get you started:
- * [Ktor Documentation](https://ktor.io/docs/home.html)
- * [Ktor GitHub page](https://github.com/ktorio/ktor)
- * [Ktor Slack chat](https://app.slack.com/client/T09229ZC6/C0A974TJ9). [Request an invite](https://surveys.jetbrains.com/s3/kotlin-slack-sign-up).
+## Teknologier som brukes
 
+* Docker
+* Gradle
+* Kotlin
+* Ktor
+* Postgres
+* Flyway
+* HikariCP
 
-## Features
-Here's a list of features included in this project:
+##### Testbiblioteker:
 
-| Name | Description |
-|------|-------------|
+* JUnit
+* embedded-postgres
 
-## Building & Running
-To build or run the project, use one of the following tasks:
+## Lokal utvikling
 
+1. Start en lokal Postgres-database med Docker Compose:
 
-| Task | Description |
-|------|-------------|
-| `./gradlew test`    | Run the tests     |
-| `./gradlew build`   | Build the project |
-| `./gradlew run`     | Run the server    |
+   ```bash
+   docker compose up -d
+   ```
 
-If the server starts successfully, you'll see the following output:
+   Dette starter Postgres på `localhost:5432` med database `isutenlandsopphold_dev`
+   (bruker `username` / passord `password`).
+2. Start applikasjonen i lokal modus:
+
+   ```bash
+   ./gradlew run
+   ```
+
+   `KTOR_ENV` defaulter til `local`, som gjør at appen kobler til Postgres med
+   lokale standardverdier i stedet for NAIS-miljøvariabler. Flyway kjører
+   migrasjonene automatisk ved oppstart.
+
+3. Verifiser at appen kjører:
+
+   ```bash
+   curl http://localhost:8080/internal/is_alive    # I'm alive! :)
+   curl http://localhost:8080/internal/is_ready     # I'm ready! :)
+   ```
+
+## Bygg
+
+```bash
+./gradlew clean shadowJar
 ```
-2024-12-04 14:32:45.584 [main] INFO  Application - Application started in 0.303 seconds.
-2024-12-04 14:32:45.682 [main] INFO  Application - Responding at http://0.0.0.0:8080
+
+## Test
+
+```bash
+./gradlew test
 ```
+
+## Lint (Ktlint)
+
+Sjekk: `./gradlew --continue ktlintCheck`
+
+Formater: `./gradlew ktlintFormat`
+
+## Database
+
+Migrasjoner ligger i `src/main/resources/db/migration` og kjøres med Flyway ved
+oppstart. Lokalt brukes Postgres fra `docker-compose.yaml`; tester bruker
+embedded-postgres.
+
+## Kontakt
+
+### For NAV-ansatte
+
+Vi er tilgjengelige på Slack-kanalen `#isyfo`.

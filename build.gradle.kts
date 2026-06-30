@@ -22,13 +22,36 @@ dependencies {
     implementation(ktorLibs.server.netty)
     implementation(libs.logback.classic)
 
+    // Database
+    implementation(libs.postgresql)
+    implementation(libs.hikariCP)
+    implementation(libs.flyway.database.postgresql)
+
     testImplementation(kotlin("test"))
     testImplementation(ktorLibs.server.testHost)
+    testImplementation(libs.embedded.postgres)
+    testImplementation(platform("io.zonky.test.postgres:embedded-postgres-binaries-bom:${libs.versions.postgres.embedded.runtime.get()}"))
 }
 
 tasks {
+    register("printVersion") {
+        doLast {
+            println(project.version)
+        }
+    }
+
     shadowJar {
+        filesMatching("META-INF/services/**") {
+            duplicatesStrategy = DuplicatesStrategy.WARN
+        }
         mergeServiceFiles()
+        archiveFileName.set("app.jar")
+        archiveClassifier.set("")
+        archiveVersion.set("")
+    }
+
+    test {
+        useJUnitPlatform()
     }
 }
 
