@@ -34,8 +34,20 @@ dependencies {
 }
 
 tasks {
+    register("printVersion") {
+        doLast {
+            println(project.version)
+        }
+    }
+
     shadowJar {
+        filesMatching("META-INF/services/**") {
+            duplicatesStrategy = DuplicatesStrategy.WARN
+        }
         mergeServiceFiles()
+        archiveFileName.set("app.jar")
+        archiveClassifier.set("")
+        archiveVersion.set("")
     }
 
     test {
