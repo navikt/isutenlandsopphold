@@ -14,7 +14,7 @@ class SoknadTest {
         val resultat =
             soknad().fattVedtak(
                 utfall = Utfall.FullInnvilgelse,
-                av = veileder,
+                fattetAv = veileder,
                 now = now,
             )
 
@@ -30,14 +30,14 @@ class SoknadTest {
         val alleredeInnvilget =
             soknad().fattVedtak(
                 utfall = Utfall.FullInnvilgelse,
-                av = veileder,
+                fattetAv = veileder,
                 now = Instant.parse("2026-01-10T12:00:00Z"),
             )
 
         assertFailsWith<IllegalStateException> {
             alleredeInnvilget.fattVedtak(
                 utfall = Utfall.FullInnvilgelse,
-                av = veileder,
+                fattetAv = veileder,
                 now = Instant.parse("2026-01-11T12:00:00Z"),
             )
         }
