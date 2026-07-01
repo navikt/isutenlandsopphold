@@ -20,6 +20,9 @@ dependencies {
     implementation(ktorLibs.server.config.yaml)
     implementation(ktorLibs.server.core)
     implementation(ktorLibs.server.netty)
+    implementation(ktorLibs.server.contentNegotiation)
+    implementation(ktorLibs.server.statusPages)
+    implementation(ktorLibs.serialization.jackson)
 
     implementation(libs.isyfo.backend.common)
 
@@ -32,6 +35,7 @@ dependencies {
 
     testImplementation(kotlin("test"))
     testImplementation(ktorLibs.server.testHost)
+    testImplementation(ktorLibs.client.contentNegotiation)
     testImplementation(testFixtures(libs.isyfo.backend.common))
     testImplementation(libs.embedded.postgres)
     testImplementation(platform("io.zonky.test.postgres:embedded-postgres-binaries-bom:${libs.versions.postgres.embedded.runtime.get()}"))
