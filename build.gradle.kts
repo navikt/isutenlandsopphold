@@ -20,6 +20,9 @@ dependencies {
     implementation(ktorLibs.server.config.yaml)
     implementation(ktorLibs.server.core)
     implementation(ktorLibs.server.netty)
+
+    implementation(libs.isyfo.backend.common)
+
     implementation(libs.logback.classic)
 
     // Database
@@ -29,6 +32,7 @@ dependencies {
 
     testImplementation(kotlin("test"))
     testImplementation(ktorLibs.server.testHost)
+    testImplementation(testFixtures(libs.isyfo.backend.common))
     testImplementation(libs.embedded.postgres)
     testImplementation(platform("io.zonky.test.postgres:embedded-postgres-binaries-bom:${libs.versions.postgres.embedded.runtime.get()}"))
 }
