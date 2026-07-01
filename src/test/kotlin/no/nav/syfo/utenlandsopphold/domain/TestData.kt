@@ -6,7 +6,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
 
-internal fun soknad(
+internal fun lagSoknad(
     soktePerioder: List<Periode> =
         listOf(
             Periode(
@@ -18,7 +18,7 @@ internal fun soknad(
     vedtak: Vedtak? = null,
 ): Soknad =
     Soknad(
-        id = "soknad-1",
+        id = UUID.randomUUID(),
         eksternId = UUID.randomUUID(),
         personident = Personident("11111111111"),
         soktePerioder = soktePerioder,

@@ -12,7 +12,7 @@ class SoknadTest {
         val now = Instant.parse("2026-01-10T12:00:00Z")
 
         val resultat =
-            soknad().fattVedtak(
+            lagSoknad().fattVedtak(
                 utfall = Utfall.FullInnvilgelse,
                 fattetAv = veileder,
                 now = now,
@@ -28,7 +28,7 @@ class SoknadTest {
     @Test
     fun `fattVedtak på allerede innvilget søknad kaster`() {
         val alleredeInnvilget =
-            soknad().fattVedtak(
+            lagSoknad().fattVedtak(
                 utfall = Utfall.FullInnvilgelse,
                 fattetAv = veileder,
                 now = Instant.parse("2026-01-10T12:00:00Z"),
@@ -46,7 +46,7 @@ class SoknadTest {
     @Test
     fun `søknad uten søkte perioder kaster`() {
         assertFailsWith<IllegalArgumentException> {
-            soknad(soktePerioder = emptyList())
+            lagSoknad(soktePerioder = emptyList())
         }
     }
 }

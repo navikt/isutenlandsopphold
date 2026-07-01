@@ -11,7 +11,7 @@ enum class SoknadStatus {
 }
 
 data class Soknad(
-    val id: String,
+    val id: UUID,
     val eksternId: UUID, // sjekke type
     val personident: Personident,
     val soktePerioder: List<Periode>,
