@@ -16,9 +16,15 @@ data class Soknad(
     val personident: Personident,
     val soktePerioder: List<Periode>,
     val mottattTidspunkt: Instant,
-    val status: SoknadStatus = SoknadStatus.MOTTATT,
     val vedtak: Vedtak? = null,
 ) {
+    val status: SoknadStatus
+        get() =
+            when (vedtak) {
+                null -> SoknadStatus.MOTTATT
+                else -> SoknadStatus.INNVILGET
+            }
+
     init {
         require(soktePerioder.isNotEmpty()) { "Søknad må ha minst en søkt periode" }
     }
@@ -32,16 +38,6 @@ data class Soknad(
             "Vedtak kan kun fattes på en MOTTATT soknad, men status er $status"
         }
 
-        val nyStatus =
-            when (utfall) {
-                is Utfall.FullInnvilgelse -> {
-                    SoknadStatus.INNVILGET
-                }
-            }
-
-        return copy(
-            status = nyStatus,
-            vedtak = Vedtak(utfall, fattetAv, now),
-        )
+        return copy(vedtak = Vedtak(utfall, fattetAv, now))
     }
 }

@@ -14,7 +14,6 @@ internal fun lagSoknad(
                 tom = LocalDate.of(2026, 1, 9),
             ),
         ),
-    status: SoknadStatus = SoknadStatus.MOTTATT,
     vedtak: Vedtak? = null,
 ): Soknad =
     Soknad(
@@ -23,7 +22,6 @@ internal fun lagSoknad(
         personident = Personident("11111111111"),
         soktePerioder = soktePerioder,
         mottattTidspunkt = Instant.parse("2026-01-02T08:00:00Z"),
-        status = status,
         vedtak = vedtak,
     )
 
