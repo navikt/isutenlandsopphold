@@ -26,7 +26,7 @@ data class Soknad(
     fun fattVedtak(
         utfall: Utfall,
         av: Navident,
-        naa: Instant,
+        now: Instant,
     ): Soknad {
         check(status == SoknadStatus.MOTTATT) {
             "Vedtak kan kun fattes paa en MOTTATT soknad, men status er $status"
@@ -41,7 +41,7 @@ data class Soknad(
 
         return copy(
             status = nyStatus,
-            vedtak = Vedtak(utfall, av, naa),
+            vedtak = Vedtak(utfall, av, now),
         )
     }
 }
