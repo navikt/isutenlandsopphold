@@ -8,7 +8,7 @@ import kotlin.test.assertNotNull
 
 class SoknadTest {
     @Test
-    fun `fattVedtak paa mottatt soknad gir innvilget med vedtak`() {
+    fun `fattVedtak om innvilgelse på mottatt søknad gir vedtak om innvilgelse`() {
         val now = Instant.parse("2026-01-10T12:00:00Z")
 
         val resultat =
@@ -26,7 +26,7 @@ class SoknadTest {
     }
 
     @Test
-    fun `fattVedtak paa allerede innvilget soknad kaster`() {
+    fun `fattVedtak på allerede innvilget søknad kaster`() {
         val alleredeInnvilget =
             soknad().fattVedtak(
                 utfall = Utfall.FullInnvilgelse,
@@ -44,7 +44,7 @@ class SoknadTest {
     }
 
     @Test
-    fun `soknad uten soekte perioder kaster`() {
+    fun `søknad uten søkte perioder kaster`() {
         assertFailsWith<IllegalArgumentException> {
             soknad(soktePerioder = emptyList())
         }

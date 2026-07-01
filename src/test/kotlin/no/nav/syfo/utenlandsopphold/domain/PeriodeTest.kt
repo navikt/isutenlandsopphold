@@ -7,7 +7,7 @@ import kotlin.test.assertFailsWith
 
 class PeriodeTest {
     @Test
-    fun `periode med tom foer fom kaster`() {
+    fun `periode med tom før fom kaster`() {
         assertFailsWith<IllegalArgumentException> {
             Periode(
                 fom = LocalDate.of(2026, 1, 10),
