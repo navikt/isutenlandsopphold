@@ -30,6 +30,10 @@ dependencies {
     implementation(libs.hikariCP)
     implementation(libs.flyway.database.postgresql)
 
+    // Kafka
+    implementation(libs.kafka)
+    implementation(libs.kafka.avro.serializer)
+
     testImplementation(kotlin("test"))
     testImplementation(ktorLibs.server.testHost)
     testImplementation(testFixtures(libs.isyfo.backend.common))
