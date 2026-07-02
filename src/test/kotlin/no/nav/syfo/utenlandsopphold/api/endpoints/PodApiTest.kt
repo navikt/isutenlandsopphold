@@ -4,8 +4,12 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres
+import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.api.apiModule
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
+import no.nav.syfo.utenlandsopphold.application.ISoknadRepository
+import no.nav.syfo.utenlandsopphold.application.SoknadService
+import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.infrastructure.database.Database
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseConfig
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
@@ -49,6 +53,7 @@ class PodApiTest {
                 apiModule(
                     applicationState = ApplicationState(alive = true, ready = true),
                     database = database,
+                    soknadService = emptySoknadService(),
                 )
             }
             val response = client.get(POD_LIVENESS_PATH)
@@ -62,6 +67,7 @@ class PodApiTest {
                 apiModule(
                     applicationState = ApplicationState(alive = true, ready = true),
                     database = database,
+                    soknadService = emptySoknadService(),
                 )
             }
             val response = client.get(POD_READINESS_PATH)
@@ -75,6 +81,7 @@ class PodApiTest {
                 apiModule(
                     applicationState = ApplicationState(alive = true, ready = false),
                     database = database,
+                    soknadService = emptySoknadService(),
                 )
             }
             val response = client.get(POD_READINESS_PATH)
@@ -93,9 +100,20 @@ class PodApiTest {
                 apiModule(
                     applicationState = ApplicationState(alive = true, ready = true),
                     database = brokenDb,
+                    soknadService = emptySoknadService(),
                 )
             }
             val response = client.get(POD_READINESS_PATH)
             assertEquals(HttpStatusCode.InternalServerError, response.status)
         }
 }
+
+private fun emptySoknadService(): SoknadService =
+    SoknadService(
+        soknadRepository =
+            object : ISoknadRepository {
+                override fun hentSoknader(personident: Personident): List<Soknad> = emptyList()
+
+                override fun lagreMottattSoknad(soknad: Soknad): Soknad = soknad
+            },
+    )

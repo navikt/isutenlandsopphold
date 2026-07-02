@@ -1,8 +1,13 @@
 package no.nav.syfo.utenlandsopphold.api.soknad
 
+import no.nav.syfo.utenlandsopphold.domain.Periode
+import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.SoknadStatus
+import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.Vedtak
 import java.time.Instant
 import java.time.LocalDate
+import java.util.UUID
 
 data class SoknaderQueryDTO(
     val personident: String,
@@ -14,8 +19,9 @@ data class SoknaderResponseDTO(
 
 data class SoknadDTO(
     val soknadId: String,
+    val eksternId: UUID,
     val status: SoknadStatusDTO,
-    val mottattTidspunkt: Instant,
+    val innsendtTidspunkt: Instant,
     val soktePerioder: List<PeriodeDTO>,
     val vedtak: VedtakDTO?,
 )
@@ -39,3 +45,28 @@ fun SoknadStatus.toDTO(): SoknadStatusDTO =
         SoknadStatus.MOTTATT -> SoknadStatusDTO.MOTTATT
         SoknadStatus.INNVILGET -> SoknadStatusDTO.INNVILGET
     }
+
+fun List<Soknad>.toResponseDTO(): SoknaderResponseDTO = SoknaderResponseDTO(soknader = map { it.toDTO() })
+
+fun Soknad.toDTO(): SoknadDTO =
+    SoknadDTO(
+        soknadId = id.toString(),
+        eksternId = eksternId,
+        status = status.toDTO(),
+        innsendtTidspunkt = innsendtTidspunkt,
+        soktePerioder = soktePerioder.map { it.toDTO() },
+        vedtak = vedtak?.toDTO(),
+    )
+
+private fun Periode.toDTO(): PeriodeDTO = PeriodeDTO(fom = fom, tom = tom)
+
+private fun Vedtak.toDTO(): VedtakDTO =
+    VedtakDTO(
+        utfall =
+            when (utfall) {
+                Utfall.Innvilget -> "INNVILGET"
+            },
+        innvilgetePerioder = innvilgetePerioder.map { it.toDTO() },
+        fattetAv = fattetAv.value,
+        fattetTidspunkt = fattetTidspunkt,
+    )
