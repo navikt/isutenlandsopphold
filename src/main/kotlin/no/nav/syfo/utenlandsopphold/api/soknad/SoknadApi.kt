@@ -10,7 +10,7 @@ import java.time.LocalDate
 fun Route.registerSoknadApi() {
     route("/api/v1/soknader") {
         post("/query") {
-            val request = call.receive<SoknaderRequestDTO>()
+            val request = call.receive<SoknaderQueryDTO>()
 
             // Personident hentes ut av requesten, men brukes ikke ennaa - responsen er mocket.
             @Suppress("UNUSED_VARIABLE")

@@ -4,7 +4,7 @@ import no.nav.syfo.utenlandsopphold.domain.SoknadStatus
 import java.time.Instant
 import java.time.LocalDate
 
-data class SoknaderRequestDTO(
+data class SoknaderQueryDTO(
     val personident: String,
 )
 
