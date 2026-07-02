@@ -1,5 +1,7 @@
 package no.nav.syfo.utenlandsopphold
 
+import no.nav.syfo.utenlandsopphold.infrastructure.kafka.KafkaEnvironment
+
 const val NAIS_DATABASE_ENV_PREFIX = "NAIS_DATABASE_ISUTENLANDSOPPHOLD_ISUTENLANDSOPPHOLD_DB"
 
 data class Environment(
@@ -11,6 +13,17 @@ data class Environment(
             username = getEnvVar("${NAIS_DATABASE_ENV_PREFIX}_USERNAME"),
             password = getEnvVar("${NAIS_DATABASE_ENV_PREFIX}_PASSWORD"),
             jdbcUrl = getEnvVar("${NAIS_DATABASE_ENV_PREFIX}_JDBC_URL"),
+        ),
+    val kafka: KafkaEnvironment =
+        KafkaEnvironment(
+            aivenBootstrapServers = getEnvVar("KAFKA_BROKERS"),
+            aivenCredstorePassword = getEnvVar("KAFKA_CREDSTORE_PASSWORD"),
+            aivenKeystoreLocation = getEnvVar("KAFKA_KEYSTORE_PATH"),
+            aivenSecurityProtocol = "SSL",
+            aivenTruststoreLocation = getEnvVar("KAFKA_TRUSTSTORE_PATH"),
+            aivenSchemaRegistryUrl = getEnvVar("KAFKA_SCHEMA_REGISTRY"),
+            aivenRegistryUser = getEnvVar("KAFKA_SCHEMA_REGISTRY_USER"),
+            aivenRegistryPassword = getEnvVar("KAFKA_SCHEMA_REGISTRY_PASSWORD"),
         ),
 )
 
