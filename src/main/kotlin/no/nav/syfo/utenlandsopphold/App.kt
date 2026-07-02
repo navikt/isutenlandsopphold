@@ -5,6 +5,7 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import no.nav.syfo.utenlandsopphold.api.apiModule
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
+import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.infrastructure.database.Database
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseConfig
 import no.nav.syfo.utenlandsopphold.infrastructure.database.databaseConfig
@@ -52,6 +53,7 @@ fun main(args: Array<String>) {
                     launchKafkaModule(
                         applicationState = applicationState,
                         environment = Environment(),
+                        soknadService = SoknadService(),
                     )
                 }
                 monitor.subscribe(ApplicationStopping) {

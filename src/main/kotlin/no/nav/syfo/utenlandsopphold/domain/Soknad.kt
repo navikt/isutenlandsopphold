@@ -11,10 +11,11 @@ enum class SoknadStatus {
 }
 
 data class Soknad(
-    val id: UUID,
+    val id: UUID = UUID.randomUUID(),
+    val eksternId: UUID,
     val personident: Personident,
     val soktePerioder: List<Periode>,
-    val mottattTidspunkt: Instant,
+    val innsendtTidspunkt: Instant,
     val vedtak: Vedtak? = null,
 ) {
     val status: SoknadStatus
@@ -25,7 +26,9 @@ data class Soknad(
             }
 
     init {
-        require(soktePerioder.isNotEmpty()) { "Søknad må ha minst en søkt periode" }
+        if (soktePerioder.isEmpty()) {
+            throw ManglerSoktePerioderException()
+        }
     }
 
     fun fattVedtak(
