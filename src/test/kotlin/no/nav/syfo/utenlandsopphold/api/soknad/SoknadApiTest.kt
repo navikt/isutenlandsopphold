@@ -41,7 +41,7 @@ class SoknadApiTest {
             val response =
                 client.post(SOKNADER_QUERY_PATH) {
                     contentType(ContentType.Application.Json)
-                    setBody("""{"personident":"11111111111"}""")
+                    setBody(SoknaderQueryDTO(personident = "11111111111"))
                 }
 
             assertEquals(HttpStatusCode.OK, response.status)
@@ -64,7 +64,7 @@ class SoknadApiTest {
             val response =
                 client.post(SOKNADER_QUERY_PATH) {
                     contentType(ContentType.Application.Json)
-                    setBody("""{"personident":"ikke-gyldig"}""")
+                    setBody(SoknaderQueryDTO(personident = "ikke-gyldig"))
                 }
 
             assertEquals(HttpStatusCode.BadRequest, response.status)
