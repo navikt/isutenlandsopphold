@@ -14,11 +14,13 @@ import no.nav.syfo.common.util.consumerClientId
 import no.nav.syfo.utenlandsopphold.api.endpoints.registerPodApi
 import no.nav.syfo.utenlandsopphold.api.soknad.registerSoknadApi
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
+import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
 
 fun Application.apiModule(
     applicationState: ApplicationState,
     database: DatabaseInterface,
+    soknadService: SoknadService,
 ) {
     installContentNegotiation()
     installStatusPages()
@@ -28,7 +30,7 @@ fun Application.apiModule(
             applicationState = applicationState,
             database = database,
         )
-        registerSoknadApi()
+        registerSoknadApi(soknadService = soknadService)
     }
 }
 
