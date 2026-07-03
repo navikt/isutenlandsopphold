@@ -28,7 +28,7 @@ private fun mockSoknaderResponse(): SoknaderResponseDTO =
                 SoknadDTO(
                     soknadId = "1a2b3c4d-5e6f-7890-abcd-ef0987654321",
                     status = SoknadStatusDTO.MOTTATT,
-                    mottattTidspunkt = Instant.parse("2026-05-15T08:30:00Z"),
+                    innsendtTidspunkt = Instant.parse("2026-05-15T08:30:00Z"),
                     soktePerioder =
                         listOf(
                             PeriodeDTO(
@@ -41,7 +41,7 @@ private fun mockSoknaderResponse(): SoknaderResponseDTO =
                 SoknadDTO(
                     soknadId = "9b1c2d3e-4f56-7890-abcd-ef1234567890",
                     status = SoknadStatusDTO.INNVILGET,
-                    mottattTidspunkt = Instant.parse("2026-03-01T09:00:00Z"),
+                    innsendtTidspunkt = Instant.parse("2026-03-01T09:00:00Z"),
                     soktePerioder =
                         listOf(
                             PeriodeDTO(

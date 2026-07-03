@@ -15,7 +15,7 @@ data class SoknaderResponseDTO(
 data class SoknadDTO(
     val soknadId: String,
     val status: SoknadStatusDTO,
-    val mottattTidspunkt: Instant,
+    val innsendtTidspunkt: Instant,
     val soktePerioder: List<PeriodeDTO>,
     val vedtak: VedtakDTO?,
 )

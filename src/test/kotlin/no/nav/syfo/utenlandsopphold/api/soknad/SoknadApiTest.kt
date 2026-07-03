@@ -51,7 +51,7 @@ class SoknadApiTest {
 
             val raatekst = response.bodyAsText()
             assertTrue(
-                raatekst.contains("\"mottattTidspunkt\":\"2026-03-01T09:00:00Z\""),
+                raatekst.contains("\"innsendtTidspunkt\":\"2026-03-01T09:00:00Z\""),
                 "Instant skal serialiseres som ISO-8601",
             )
         }
