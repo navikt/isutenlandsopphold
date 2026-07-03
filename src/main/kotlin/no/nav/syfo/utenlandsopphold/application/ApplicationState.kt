@@ -1,6 +1,6 @@
 package no.nav.syfo.utenlandsopphold.application
 
 data class ApplicationState(
-    var alive: Boolean = true,
-    var ready: Boolean = false,
+    @Volatile var alive: Boolean = true,
+    @Volatile var ready: Boolean = false,
 )
