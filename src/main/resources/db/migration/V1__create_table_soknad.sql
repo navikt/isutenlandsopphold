@@ -5,8 +5,7 @@ CREATE TABLE SOKNAD
     ekstern_id         UUID        NOT NULL UNIQUE,
     personident        VARCHAR(11) NOT NULL,
     innsendt_tidspunkt TIMESTAMPTZ NOT NULL,
-    created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX idx_soknad_personident ON SOKNAD (personident);
 
@@ -29,8 +28,7 @@ CREATE TABLE VEDTAK
     soknad_id  BIGINT        NOT NULL REFERENCES SOKNAD (id) ON DELETE CASCADE,
     utfall     VEDTAK_UTFALL NOT NULL,
     fattet_av  VARCHAR(30)   NOT NULL,
-    created_at TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
 CREATE INDEX idx_vedtak_soknad_id ON VEDTAK (soknad_id);
 
