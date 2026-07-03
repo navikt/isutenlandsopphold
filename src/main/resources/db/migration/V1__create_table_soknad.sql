@@ -19,16 +19,15 @@ CREATE TABLE SOKNAD_PERIODE
 );
 CREATE INDEX idx_soknad_periode_soknad_id ON SOKNAD_PERIODE (soknad_id);
 
-CREATE TYPE VEDTAK_UTFALL AS ENUM ('INNVILGET');
-
 CREATE TABLE VEDTAK
 (
     id         INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    uuid       UUID          NOT NULL UNIQUE,
-    soknad_id  INT        NOT NULL REFERENCES SOKNAD (id) ON DELETE CASCADE,
-    utfall     VEDTAK_UTFALL NOT NULL,
-    fattet_av  VARCHAR(30)   NOT NULL,
-    created_at TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+    uuid       UUID        NOT NULL UNIQUE,
+    soknad_id  INT         NOT NULL REFERENCES SOKNAD (id) ON DELETE CASCADE,
+    utfall     VARCHAR(50) NOT NULL,
+    fattet_av  VARCHAR(30) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT check_vedtak_utfall CHECK (utfall IN ('INNVILGET'))
 );
 CREATE INDEX idx_vedtak_soknad_id ON VEDTAK (soknad_id);
 
