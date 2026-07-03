@@ -1,6 +1,6 @@
 [versions]
 kotlin = "2.4.0"
-isyfo-backend-common = "1.0.0"
+isyfo-backend-common = "1.1.0"
 logback = "1.5.37"
 shadow = "9.4.3"
 ktlint = "14.2.0"
