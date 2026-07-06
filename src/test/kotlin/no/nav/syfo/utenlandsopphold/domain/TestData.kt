@@ -18,9 +18,10 @@ internal fun lagSoknad(
 ): Soknad =
     Soknad(
         id = UUID.randomUUID(),
+        eksternId = UUID.randomUUID(),
         personident = Personident("11111111111"),
         soktePerioder = soktePerioder,
-        mottattTidspunkt = Instant.parse("2026-01-02T08:00:00Z"),
+        innsendtTidspunkt = Instant.parse("2026-01-02T08:00:00Z"),
         vedtak = vedtak,
     )
 

@@ -5,9 +5,11 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import no.nav.syfo.utenlandsopphold.api.apiModule
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
+import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.infrastructure.database.Database
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseConfig
 import no.nav.syfo.utenlandsopphold.infrastructure.database.databaseConfig
+import no.nav.syfo.utenlandsopphold.infrastructure.kafka.launchKafkaModule
 import org.slf4j.LoggerFactory
 
 fun main(args: Array<String>) {
@@ -47,6 +49,12 @@ fun main(args: Array<String>) {
                 monitor.subscribe(ApplicationStarted) {
                     applicationState.ready = true
                     logger.info("Application is ready, running Java VM ${Runtime.version()}")
+
+                    launchKafkaModule(
+                        applicationState = applicationState,
+                        environment = Environment(),
+                        soknadService = SoknadService(),
+                    )
                 }
                 monitor.subscribe(ApplicationStopping) {
                     applicationState.ready = false

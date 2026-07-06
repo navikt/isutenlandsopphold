@@ -1,4 +1,3 @@
-
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(ktorLibs.plugins.ktor)
@@ -22,6 +21,7 @@ dependencies {
     implementation(ktorLibs.server.netty)
     implementation(ktorLibs.server.contentNegotiation)
     implementation(ktorLibs.server.statusPages)
+
     implementation(ktorLibs.serialization.jackson)
 
     implementation(libs.isyfo.backend.common)
@@ -32,6 +32,9 @@ dependencies {
     implementation(libs.postgresql)
     implementation(libs.hikariCP)
     implementation(libs.flyway.database.postgresql)
+
+    // Kafka
+    implementation(libs.kafka)
 
     testImplementation(kotlin("test"))
     testImplementation(ktorLibs.server.testHost)

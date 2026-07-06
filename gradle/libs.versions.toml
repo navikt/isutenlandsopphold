@@ -9,6 +9,8 @@ hikari = "6.3.0"
 postgres = "42.7.12"
 postgres-embedded = "2.2.2"
 postgres-embedded-runtime = "17.5.0"
+kafka = "4.2.0"
+confluent = "8.2.1"
 
 [libraries.isyfo-backend-common]
 module = "no.nav.syfo:isyfo-backend-common"
@@ -33,6 +35,14 @@ version.ref = "postgres"
 [libraries.embedded-postgres]
 module = "io.zonky.test:embedded-postgres"
 version.ref = "postgres-embedded"
+
+[libraries.kafka]
+module = "org.apache.kafka:kafka_2.13"
+version.ref = "kafka"
+
+[libraries.kafka-avro-serializer]
+module = "io.confluent:kafka-avro-serializer"
+version.ref = "confluent"
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
