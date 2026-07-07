@@ -33,7 +33,7 @@ class JournalforVedtakServiceTest {
             val service =
                 JournalforVedtakService(
                     vedtakRepository = repository,
-                    personInfoClient = FakePersonInfoClient(),
+                    personInfoClient = FakePdlClient(),
                     pdfClient = pdfClient,
                     journalforingService = journalforingService,
                 )
@@ -70,7 +70,7 @@ class JournalforVedtakServiceTest {
             val service =
                 JournalforVedtakService(
                     vedtakRepository = repository,
-                    personInfoClient = FakePersonInfoClient(),
+                    personInfoClient = FakePdlClient(),
                     pdfClient = pdfClient,
                     journalforingService = journalforingService,
                 )
@@ -91,7 +91,7 @@ class JournalforVedtakServiceTest {
             val service =
                 JournalforVedtakService(
                     vedtakRepository = repository,
-                    personInfoClient = FakePersonInfoClient(),
+                    personInfoClient = FakePdlClient(),
                     pdfClient = FakePdfClient(),
                     journalforingService = FakeJournalforingService(Result.success(JournalpostId("999"))),
                 )
@@ -119,9 +119,9 @@ private class FakeVedtakRepository(
     }
 }
 
-private class FakePersonInfoClient(
+private class FakePdlClient(
     private val navn: String = "Ola Nordmann",
-) : IPersonInfoClient {
+) : IPdlClient {
     override suspend fun getNavn(personident: Personident): String = navn
 }
 

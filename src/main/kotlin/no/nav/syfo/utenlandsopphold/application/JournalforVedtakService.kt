@@ -16,7 +16,7 @@ import java.time.Instant
  */
 class JournalforVedtakService(
     private val vedtakRepository: IVedtakRepository,
-    private val personInfoClient: IPersonInfoClient,
+    private val personInfoClient: IPdlClient,
     private val pdfClient: IPdfClient,
     private val journalforingService: IJournalforingService,
 ) {

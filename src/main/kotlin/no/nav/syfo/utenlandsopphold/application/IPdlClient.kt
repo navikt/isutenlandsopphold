@@ -5,6 +5,6 @@ import no.nav.syfo.common.types.ident.Personident
 /**
  * Henter personinformasjon (navn) fra PDL for bruk i journalførte dokumenter.
  */
-interface IPersonInfoClient {
+interface IPdlClient {
     suspend fun getNavn(personident: Personident): String
 }

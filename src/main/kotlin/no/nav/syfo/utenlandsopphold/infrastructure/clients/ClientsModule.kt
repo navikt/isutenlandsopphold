@@ -7,7 +7,7 @@ import no.nav.syfo.common.token.azuread.AzureAdClient
 import no.nav.syfo.common.util.ClientConfig
 import no.nav.syfo.utenlandsopphold.application.IJournalforingService
 import no.nav.syfo.utenlandsopphold.application.IPdfClient
-import no.nav.syfo.utenlandsopphold.application.IPersonInfoClient
+import no.nav.syfo.utenlandsopphold.application.IPdlClient
 import no.nav.syfo.utenlandsopphold.infrastructure.journalforing.DokarkivClientConfig
 import no.nav.syfo.utenlandsopphold.infrastructure.journalforing.JournalforingService
 import no.nav.syfo.utenlandsopphold.infrastructure.leaderelection.LeaderElection
@@ -43,7 +43,7 @@ class ClientsModule(
             isJournalforingRetryEnabled = dokarkivClientConfig.isRetryEnabled,
         )
 
-    val personInfoClient: IPersonInfoClient =
+    val personInfoClient: IPdlClient =
         PdlClient(
             systemTokenProvider = azureAdClient,
             config = pdlClientConfig,

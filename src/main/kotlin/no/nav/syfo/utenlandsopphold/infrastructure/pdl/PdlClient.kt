@@ -13,7 +13,7 @@ import no.nav.syfo.common.http.defaultHttpClient
 import no.nav.syfo.common.token.SystemTokenProvider
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.common.util.bearerHeader
-import no.nav.syfo.utenlandsopphold.application.IPersonInfoClient
+import no.nav.syfo.utenlandsopphold.application.IPdlClient
 
 private const val HENT_PERSON_QUERY =
     """
@@ -43,7 +43,7 @@ class PdlClient(
     private val systemTokenProvider: SystemTokenProvider,
     private val config: PdlClientConfig,
     private val httpClient: HttpClient = defaultHttpClient(),
-) : IPersonInfoClient {
+) : IPdlClient {
     override suspend fun getNavn(personident: Personident): String {
         val systemToken =
             systemTokenProvider.getSystemToken(config.clientId)
