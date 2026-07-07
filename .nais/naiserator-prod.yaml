@@ -50,6 +50,9 @@ spec:
       rules:
         - application: istilgangskontroll
         - application: ispdfgen
+        - application: pdl-api
+          namespace: pdl
+          cluster: prod-gcp
   gcp:
     sqlInstances:
       - type: POSTGRES_17
@@ -77,3 +80,18 @@ spec:
   env:
     - name: KTOR_ENV
       value: "production"
+    # TODO: Verifiser URL/scope-verdier mot dokumentasjonen for dokarkiv, PDL og ispdfgen i prod-gcp.
+    - name: DOKARKIV_URL
+      value: "https://dokarkiv.prod-fss-pub.nais.io"
+    - name: DOKARKIV_SCOPE
+      value: "prod-fss.teamdokumenthandtering.dokarkiv"
+    - name: PDL_URL
+      value: "http://pdl-api.pdl/graphql"
+    - name: PDL_SCOPE
+      value: "prod-gcp.pdl.pdl-api"
+    - name: ISPDFGEN_URL
+      value: "http://ispdfgen"
+    - name: JOURNALFORING_RETRY_ENABLED
+      value: "true"
+    - name: JOURNALFORING_CRONJOB_INTERVAL_MINUTES
+      value: "10"

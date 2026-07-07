@@ -12,14 +12,14 @@ import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.application.IJournalforingService
 import org.slf4j.LoggerFactory
 
-// TODO: Hente inn PDLClient for å få navn på innbygger
-// TODO: Kalle denne fra en cronjob
-// TODO: For å kunne sende inn PDFen her må vi også ha PdfClient
-// TODO: Legge inn env-variabler i repoet for å kunne newe opp DokarkivClient
-// TODO: Få tilgang til å kalle dokarkiv
+/**
+ * Journalfører PDF-en for et vedtak i dokarkiv (Joark). `dokarkivClient` og
+ * `isJournalforingRetryEnabled` (true i prod, false i dev-gcp) kobles inn fra
+ * infrastructure/clients/ClientsModule.kt basert på Environment.
+ */
 class JournalforingService(
     private val dokarkivClient: DokarkivClient,
-    private val isJournalforingRetryEnabled: Boolean, // TODO: Denne må komme fra miljøvariabel som er true i prod og false i dev
+    private val isJournalforingRetryEnabled: Boolean,
 ) : IJournalforingService {
     override suspend fun journalfor(
         personident: Personident,
@@ -27,12 +27,11 @@ class JournalforingService(
         eksternReferanseId: String,
     ): Result<JournalpostId> =
         runCatching {
-            // TODO: definer tittel
             val journalpostRequest =
                 createJournalpostRequest(
                     bruker = Bruker(id = personident.value, idType = BrukerIdType.PERSONIDENT.value),
                     brevkode = UtenlandsoppholdBrevkode.VEDTAK,
-                    tittel = "TODO: tittel for utenlandsopphold journalpost",
+                    tittel = "Vedtak om utenlandsopphold",
                     pdf = pdf,
                     eksternReferanseId = eksternReferanseId,
                     journalpostType = JournalpostType.UTGAAENDE,
@@ -55,7 +54,7 @@ class JournalforingService(
         }
 
     companion object {
-        val DEFAULT_FAILED_JP_ID = JournalpostId(0)
+        val DEFAULT_FAILED_JP_ID = JournalpostId("0")
         private val log = LoggerFactory.getLogger(JournalforingService::class.java)
     }
 }

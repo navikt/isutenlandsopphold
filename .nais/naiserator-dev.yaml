@@ -50,6 +50,9 @@ spec:
       rules:
         - application: istilgangskontroll
         - application: ispdfgen
+        - application: pdl-api
+          namespace: pdl
+          cluster: dev-gcp
   gcp:
     sqlInstances:
       - type: POSTGRES_17
@@ -77,3 +80,20 @@ spec:
   env:
     - name: KTOR_ENV
       value: "production"
+    # TODO: Verifiser URL/scope-verdier mot dokumentasjonen for dokarkiv, PDL og ispdfgen i dev-gcp.
+    - name: DOKARKIV_URL
+      value: "https://dokarkiv.dev-fss-pub.nais.io"
+    - name: DOKARKIV_SCOPE
+      value: "dev-fss.teamdokumenthandtering.dokarkiv"
+    - name: PDL_URL
+      value: "http://pdl-api.pdl/graphql"
+    - name: PDL_SCOPE
+      value: "dev-gcp.pdl.pdl-api"
+    - name: ISPDFGEN_URL
+      value: "http://ispdfgen"
+    # Skal være false i dev-gcp: mange testbrukere mangler aktør-id i dokarkiv, og vi vil
+    # ikke spamme dokarkiv med retries for disse.
+    - name: JOURNALFORING_RETRY_ENABLED
+      value: "false"
+    - name: JOURNALFORING_CRONJOB_INTERVAL_MINUTES
+      value: "10"
