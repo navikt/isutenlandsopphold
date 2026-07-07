@@ -15,13 +15,13 @@ import java.time.Instant
  * det ikke journalføring av de øvrige.
  */
 class JournalforVedtakService(
-    private val vedtakRepository: IVedtakRepository,
+    private val soknadRepository: ISoknadRepository,
     private val personInfoClient: IPdlClient,
     private val pdfClient: IPdfClient,
     private val journalforingService: IJournalforingService,
 ) {
     suspend fun journalforUjournalforteVedtak() {
-        val soknaderMedUjournalforteVedtak = vedtakRepository.getUjournalforteSoknader()
+        val soknaderMedUjournalforteVedtak = soknadRepository.getUjournalforteSoknader()
 
         soknaderMedUjournalforteVedtak.forEach { soknad ->
             try {
@@ -62,7 +62,7 @@ class JournalforVedtakService(
         val journalfortSoknad = soknad.journalforVedtak(journalpostId, journalfortTidspunkt)
         val journalfortVedtak = checkNotNull(journalfortSoknad.vedtak)
 
-        vedtakRepository.setVedtakJournalfort(
+        soknadRepository.setVedtakJournalfort(
             vedtakId = journalfortVedtak.vedtakId,
             journalpostId = journalpostId,
             journalfortTidspunkt = checkNotNull(journalfortVedtak.journalfortTidspunkt),

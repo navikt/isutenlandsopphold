@@ -1,5 +1,6 @@
 package no.nav.syfo.utenlandsopphold.infrastructure.database.repository
 
+import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.application.ISoknadRepository
 import no.nav.syfo.utenlandsopphold.domain.Soknad
@@ -9,6 +10,8 @@ import no.nav.syfo.utenlandsopphold.infrastructure.database.toList
 import java.sql.Connection
 import java.sql.Date
 import java.sql.ResultSet
+import java.sql.Timestamp
+import java.time.Instant
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -58,6 +61,51 @@ class SoknadRepository(
             soknad
         }
 
+    override fun getUjournalforteSoknader(): List<Soknad> =
+        database.connection.use { connection ->
+            connection.transactionIsolation = Connection.TRANSACTION_REPEATABLE_READ
+
+            val pSoknader = connection.getUjournalforteSoknader()
+            if (pSoknader.isEmpty()) {
+                connection.commit()
+                return@use emptyList()
+            }
+
+            val soknadIds = pSoknader.map { it.id }
+            val perioderPerSoknad = connection.getPerioder(soknadIds).groupBy { it.soknadId }
+            val vedtakPerSoknad = connection.getVedtak(soknadIds).associateBy { it.soknadId }
+            val vedtakPerioderPerVedtak =
+                connection
+                    .getVedtakPerioder(vedtakPerSoknad.values.map { it.id })
+                    .groupBy { it.vedtakId }
+            connection.commit()
+
+            pSoknader.map { pSoknad ->
+                val pVedtak = vedtakPerSoknad[pSoknad.id]
+                pSoknad.toSoknad(
+                    soktePerioder = perioderPerSoknad[pSoknad.id].orEmpty(),
+                    vedtak = pVedtak,
+                    vedtakPerioder = pVedtak?.let { vedtakPerioderPerVedtak[it.id] }.orEmpty(),
+                )
+            }
+        }
+
+    override fun setVedtakJournalfort(
+        vedtakId: UUID,
+        journalpostId: JournalpostId,
+        journalfortTidspunkt: Instant,
+    ) {
+        database.connection.use { connection ->
+            connection.prepareStatement(SET_VEDTAK_JOURNALFORT).use {
+                it.setString(1, journalpostId.value)
+                it.setTimestamp(2, Timestamp.from(journalfortTidspunkt))
+                it.setObject(3, vedtakId)
+                it.executeUpdate()
+            }
+            connection.commit()
+        }
+    }
+
     private fun Connection.getSoknader(personident: Personident): List<PSoknad> =
         prepareStatement(GET_SOKNADER).use {
             it.setString(1, personident.value)
@@ -74,6 +122,11 @@ class SoknadRepository(
         prepareStatement(GET_VEDTAK).use {
             it.setArray(1, createArrayOf("integer", soknadIds.toTypedArray()))
             it.executeQuery().toList { toPVedtak() }
+        }
+
+    private fun Connection.getUjournalforteSoknader(): List<PSoknad> =
+        prepareStatement(GET_UJOURNALFORTE_SOKNADER).use {
+            it.executeQuery().toList { toPSoknad() }
         }
 
     private fun Connection.getVedtakPerioder(vedtakIds: List<Int>): List<PVedtakPeriode> {
@@ -155,6 +208,20 @@ class SoknadRepository(
         private const val GET_VEDTAK =
             """
                 SELECT * FROM vedtak WHERE soknad_id = ANY(?)
+            """
+
+        private const val GET_UJOURNALFORTE_SOKNADER =
+            """
+                SELECT DISTINCT s.* FROM soknad s
+                    INNER JOIN vedtak v ON v.soknad_id = s.id
+                WHERE v.journalpost_id IS NULL
+            """
+
+        private const val SET_VEDTAK_JOURNALFORT =
+            """
+                UPDATE vedtak
+                SET journalpost_id = ?, journalfort_tidspunkt = ?
+                WHERE uuid = ?
             """
 
         private const val GET_VEDTAK_PERIODER =
@@ -241,4 +308,7 @@ internal fun ResultSet.toPVedtak(): PVedtak =
         utfall = getString("utfall"),
         fattetAv = getString("fattet_av"),
         fattetTidspunkt = getObject("fattet_tidspunkt", OffsetDateTime::class.java),
+        document = getString("document"),
+        journalpostId = getString("journalpost_id"),
+        journalfortTidspunkt = getObject("journalfort_tidspunkt", OffsetDateTime::class.java),
     )

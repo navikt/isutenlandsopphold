@@ -1,7 +1,11 @@
 package no.nav.syfo.utenlandsopphold.infrastructure.database.repository
 
+import com.fasterxml.jackson.module.kotlin.readValue
+import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.common.types.ident.Navident
 import no.nav.syfo.common.types.ident.Personident
+import no.nav.syfo.common.util.configuredJacksonMapper
+import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.Utfall
@@ -59,15 +63,24 @@ data class PVedtak(
     val utfall: String,
     val fattetAv: String,
     val fattetTidspunkt: OffsetDateTime,
+    val document: String,
+    val journalpostId: String?,
+    val journalfortTidspunkt: OffsetDateTime?,
 ) {
     fun toVedtak(innvilgetePerioder: List<Periode>): Vedtak =
         Vedtak(
+            vedtakId = uuid,
             utfall = utfall.toUtfall(),
             fattetAv = Navident(fattetAv),
             fattetTidspunkt = fattetTidspunkt.toInstant(),
             innvilgetePerioder = innvilgetePerioder,
+            document = documentMapper.readValue<List<DocumentComponent>>(document),
+            journalpostId = journalpostId?.let { JournalpostId(it) },
+            journalfortTidspunkt = journalfortTidspunkt?.toInstant(),
         )
 }
+
+private val documentMapper = configuredJacksonMapper()
 
 fun Utfall.dbValue(): String =
     when (this) {

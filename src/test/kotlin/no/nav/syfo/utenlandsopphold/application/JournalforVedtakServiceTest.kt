@@ -26,13 +26,13 @@ class JournalforVedtakServiceTest {
     fun `journalfører og oppdaterer u-journalført vedtak`() =
         runTest {
             val soknad = soknadMedVedtak()
-            val repository = FakeVedtakRepository(listOf(soknad))
+            val repository = FakeSoknadRepository(listOf(soknad))
             val pdfClient = FakePdfClient()
             val journalforingService = FakeJournalforingService(Result.success(JournalpostId("999")))
 
             val service =
                 JournalforVedtakService(
-                    vedtakRepository = repository,
+                    soknadRepository = repository,
                     personInfoClient = FakePdlClient(),
                     pdfClient = pdfClient,
                     journalforingService = journalforingService,
@@ -53,7 +53,7 @@ class JournalforVedtakServiceTest {
         runTest {
             val soknadSomFeiler = soknadMedVedtak()
             val soknadSomLykkes = soknadMedVedtak()
-            val repository = FakeVedtakRepository(listOf(soknadSomFeiler, soknadSomLykkes))
+            val repository = FakeSoknadRepository(listOf(soknadSomFeiler, soknadSomLykkes))
             val pdfClient = FakePdfClient()
 
             var callCount = 0
@@ -69,7 +69,7 @@ class JournalforVedtakServiceTest {
 
             val service =
                 JournalforVedtakService(
-                    vedtakRepository = repository,
+                    soknadRepository = repository,
                     personInfoClient = FakePdlClient(),
                     pdfClient = pdfClient,
                     journalforingService = journalforingService,
@@ -86,11 +86,11 @@ class JournalforVedtakServiceTest {
         runTest {
             val soknadUtenVedtak = lagSoknad()
             val soknadMedVedtak = soknadMedVedtak()
-            val repository = FakeVedtakRepository(listOf(soknadUtenVedtak, soknadMedVedtak))
+            val repository = FakeSoknadRepository(listOf(soknadUtenVedtak, soknadMedVedtak))
 
             val service =
                 JournalforVedtakService(
-                    vedtakRepository = repository,
+                    soknadRepository = repository,
                     personInfoClient = FakePdlClient(),
                     pdfClient = FakePdfClient(),
                     journalforingService = FakeJournalforingService(Result.success(JournalpostId("999"))),
@@ -103,10 +103,14 @@ class JournalforVedtakServiceTest {
         }
 }
 
-private class FakeVedtakRepository(
+private class FakeSoknadRepository(
     private val soknader: List<Soknad>,
-) : IVedtakRepository {
+) : ISoknadRepository {
     val journalforte = mutableListOf<Triple<UUID, JournalpostId, Instant>>()
+
+    override fun hentSoknader(personident: Personident): List<Soknad> = soknader.filter { it.personident == personident }
+
+    override fun lagreMottattSoknad(soknad: Soknad): Soknad = soknad
 
     override fun getUjournalforteSoknader(): List<Soknad> = soknader
 

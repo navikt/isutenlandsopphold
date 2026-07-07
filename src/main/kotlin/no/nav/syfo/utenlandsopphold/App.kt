@@ -12,7 +12,6 @@ import no.nav.syfo.utenlandsopphold.application.launchJournalforVedtakCronjob
 import no.nav.syfo.utenlandsopphold.infrastructure.clients.ClientsModule
 import no.nav.syfo.utenlandsopphold.infrastructure.database.Database
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseConfig
-import no.nav.syfo.utenlandsopphold.infrastructure.database.VedtakRepository
 import no.nav.syfo.utenlandsopphold.infrastructure.database.databaseConfig
 import no.nav.syfo.utenlandsopphold.infrastructure.database.repository.SoknadRepository
 import no.nav.syfo.utenlandsopphold.infrastructure.kafka.launchKafkaModule
@@ -72,7 +71,7 @@ fun main(args: Array<String>) {
                         val clientsModule = ClientsModule()
                         val journalforVedtakService =
                             JournalforVedtakService(
-                                vedtakRepository = VedtakRepository(database = database),
+                                soknadRepository = soknadRepository,
                                 personInfoClient = clientsModule.personInfoClient,
                                 pdfClient = clientsModule.pdfClient,
                                 journalforingService = clientsModule.journalforingService,
