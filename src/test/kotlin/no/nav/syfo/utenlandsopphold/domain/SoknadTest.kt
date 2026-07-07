@@ -55,7 +55,7 @@ class SoknadTest {
     fun `journalforVedtak setter journalpostId på vedtaket`() {
         val innvilget =
             lagSoknad().fattVedtak(
-                utfall = Utfall.FullInnvilgelse,
+                utfall = Utfall.Innvilget,
                 fattetAv = veileder,
                 now = Instant.parse("2026-01-10T12:00:00Z"),
             )

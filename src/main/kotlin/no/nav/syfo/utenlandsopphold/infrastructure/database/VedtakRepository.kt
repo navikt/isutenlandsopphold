@@ -15,6 +15,7 @@ import java.sql.Connection
 import java.sql.ResultSet
 import java.sql.Timestamp
 import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
 
 /**
@@ -36,13 +37,16 @@ class VedtakRepository(
             connection.commit()
 
             rader.map { rad ->
+                val soktePerioder = getSoktePerioder(connection, rad.soknadId)
+                val innvilgetePerioder = getVedtakPerioder(connection, rad.vedtakDatabaseId)
+
                 Soknad(
                     id = rad.soknadId,
                     eksternId = rad.eksternId,
                     personident = rad.personident,
-                    soktePerioder = getSoktePerioder(connection, rad.soknadId),
+                    soktePerioder = soktePerioder,
                     innsendtTidspunkt = rad.innsendtTidspunkt,
-                    vedtak = rad.vedtak,
+                    vedtak = rad.toVedtak(innvilgetePerioder),
                 )
             }
         }
@@ -55,6 +59,17 @@ class VedtakRepository(
             preparedStatement.setObject(1, soknadId)
             preparedStatement.executeQuery().toList {
                 Periode(fom = getDate("fom").toLocalDate(), tom = getDate("tom").toLocalDate())
+            }
+        }
+
+    private fun getVedtakPerioder(
+        connection: Connection,
+        vedtakId: Int,
+    ): List<Periode> =
+        connection.prepareStatement(GET_VEDTAK_PERIODER_QUERY).use { preparedStatement ->
+            preparedStatement.setInt(1, vedtakId)
+            preparedStatement.executeQuery().toList {
+                Periode(fom = getObject("fom", LocalDate::class.java), tom = getObject("tom", LocalDate::class.java))
             }
         }
 
@@ -77,29 +92,25 @@ class VedtakRepository(
     private fun ResultSet.toSoknadOgVedtakRad(): SoknadOgVedtakRad {
         val document: List<DocumentComponent> = mapper.readValue(getString("document"))
 
-        val vedtak =
-            Vedtak(
-                vedtakId = UUID.fromString(getString("vedtak_uuid")),
-                utfall = toUtfall(getString("utfall")),
-                fattetAv = Navident(getString("fattet_av")),
-                fattetTidspunkt = getTimestamp("vedtak_created_at").toInstant(),
-                document = document,
-                journalpostId = getString("journalpost_id")?.let { JournalpostId(it) },
-                journalfortTidspunkt = getTimestamp("journalfort_tidspunkt")?.toInstant(),
-            )
-
         return SoknadOgVedtakRad(
             soknadId = UUID.fromString(getString("soknad_uuid")),
             eksternId = UUID.fromString(getString("ekstern_id")),
             personident = Personident(getString("personident")),
             innsendtTidspunkt = getTimestamp("innsendt_tidspunkt").toInstant(),
-            vedtak = vedtak,
+            vedtakDatabaseId = getInt("vedtak_id"),
+            vedtakId = UUID.fromString(getString("vedtak_uuid")),
+            utfall = toUtfall(getString("utfall")),
+            fattetAv = Navident(getString("fattet_av")),
+            fattetTidspunkt = getTimestamp("vedtak_fattet_tidspunkt").toInstant(),
+            document = document,
+            journalpostId = getString("journalpost_id")?.let { JournalpostId(it) },
+            journalfortTidspunkt = getTimestamp("journalfort_tidspunkt")?.toInstant(),
         )
     }
 
     private fun toUtfall(utfall: String): Utfall =
         when (utfall) {
-            "INNVILGET" -> Utfall.FullInnvilgelse
+            "INNVILGET" -> Utfall.Innvilget
             else -> throw IllegalStateException("Ukjent utfall $utfall")
         }
 
@@ -108,8 +119,27 @@ class VedtakRepository(
         val eksternId: UUID,
         val personident: Personident,
         val innsendtTidspunkt: Instant,
-        val vedtak: Vedtak,
-    )
+        val vedtakDatabaseId: Int,
+        val vedtakId: UUID,
+        val utfall: Utfall,
+        val fattetAv: Navident,
+        val fattetTidspunkt: Instant,
+        val document: List<DocumentComponent>,
+        val journalpostId: JournalpostId?,
+        val journalfortTidspunkt: Instant?,
+    ) {
+        fun toVedtak(innvilgetePerioder: List<Periode>): Vedtak =
+            Vedtak(
+                vedtakId = vedtakId,
+                utfall = utfall,
+                fattetAv = fattetAv,
+                fattetTidspunkt = fattetTidspunkt,
+                innvilgetePerioder = innvilgetePerioder,
+                document = document,
+                journalpostId = journalpostId,
+                journalfortTidspunkt = journalfortTidspunkt,
+            )
+    }
 
     companion object {
         private const val GET_UJOURNALFORTE_SOKNADER_QUERY =
@@ -118,10 +148,11 @@ class VedtakRepository(
                    s.ekstern_id             AS ekstern_id,
                    s.personident            AS personident,
                    s.innsendt_tidspunkt     AS innsendt_tidspunkt,
+                   v.id                     AS vedtak_id,
                    v.uuid                   AS vedtak_uuid,
                    v.utfall                 AS utfall,
                    v.fattet_av              AS fattet_av,
-                   v.created_at             AS vedtak_created_at,
+                   v.fattet_tidspunkt       AS vedtak_fattet_tidspunkt,
                    v.document               AS document,
                    v.journalpost_id         AS journalpost_id,
                    v.journalfort_tidspunkt  AS journalfort_tidspunkt
@@ -138,6 +169,14 @@ class VedtakRepository(
             WHERE s.uuid = ?
             """
 
+        private const val GET_VEDTAK_PERIODER_QUERY =
+            """
+            SELECT fom, tom
+            FROM VEDTAK_PERIODE
+            WHERE vedtak_id = ?
+            ORDER BY fom ASC
+            """
+
         private const val SET_VEDTAK_JOURNALFORT_QUERY =
             """
             UPDATE VEDTAK
@@ -146,12 +185,3 @@ class VedtakRepository(
             """
     }
 }
-
-private fun <T> ResultSet.toList(rowMapper: ResultSet.() -> T): List<T> =
-    use {
-        val result = mutableListOf<T>()
-        while (next()) {
-            result.add(rowMapper())
-        }
-        result
-    }

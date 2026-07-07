@@ -10,11 +10,11 @@ sealed interface Utfall {
 }
 
 data class Vedtak(
-    val vedtakId: UUID = UUID.randomUUID(),
     val utfall: Utfall,
     val fattetAv: Navident,
     val fattetTidspunkt: Instant,
     val innvilgetePerioder: List<Periode>,
+    val vedtakId: UUID = UUID.randomUUID(),
     val document: List<DocumentComponent> = emptyList(),
     val journalpostId: JournalpostId? = null,
     val journalfortTidspunkt: Instant? = null,

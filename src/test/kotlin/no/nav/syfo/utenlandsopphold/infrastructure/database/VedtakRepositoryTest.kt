@@ -51,6 +51,7 @@ class VedtakRepositoryTest {
                 ?.title,
         )
         assertEquals(1, soknad.soktePerioder.size)
+        assertEquals(soknad.soktePerioder, soknad.vedtak?.innvilgetePerioder)
     }
 
     @Test
@@ -102,18 +103,43 @@ class VedtakRepositoryTest {
                     statement.executeUpdate()
                 }
 
+            val vedtakId =
+                connection
+                    .prepareStatement(
+                        """
+                        INSERT INTO VEDTAK (
+                            uuid,
+                            soknad_id,
+                            utfall,
+                            fattet_av,
+                            fattet_tidspunkt,
+                            document,
+                            journalpost_id,
+                            journalfort_tidspunkt
+                        )
+                        VALUES (?, ?, 'INNVILGET', 'Z990000', ?, ?::jsonb, ?, ?)
+                        RETURNING id
+                        """,
+                    ).use { statement ->
+                        statement.setObject(1, vedtakUuid)
+                        statement.setInt(2, soknadId)
+                        statement.setTimestamp(3, java.sql.Timestamp.from(Instant.parse("2026-01-10T12:00:00Z")))
+                        statement.setString(4, DOCUMENT_JSON)
+                        statement.setString(5, journalpostId)
+                        statement.setTimestamp(6, journalpostId?.let { java.sql.Timestamp.from(Instant.now()) })
+                        statement.executeQuery().use { rs ->
+                            rs.next()
+                            rs.getInt("id")
+                        }
+                    }
+
             connection
                 .prepareStatement(
-                    """
-                    INSERT INTO VEDTAK (uuid, soknad_id, utfall, fattet_av, document, journalpost_id, journalfort_tidspunkt)
-                    VALUES (?, ?, 'INNVILGET', 'Z990000', ?::jsonb, ?, ?)
-                    """,
+                    "INSERT INTO VEDTAK_PERIODE (vedtak_id, fom, tom) VALUES (?, ?, ?)",
                 ).use { statement ->
-                    statement.setObject(1, vedtakUuid)
-                    statement.setInt(2, soknadId)
-                    statement.setString(3, DOCUMENT_JSON)
-                    statement.setString(4, journalpostId)
-                    statement.setTimestamp(5, journalpostId?.let { java.sql.Timestamp.from(Instant.now()) })
+                    statement.setInt(1, vedtakId)
+                    statement.setObject(2, LocalDate.of(2026, 1, 5))
+                    statement.setObject(3, LocalDate.of(2026, 1, 9))
                     statement.executeUpdate()
                 }
 

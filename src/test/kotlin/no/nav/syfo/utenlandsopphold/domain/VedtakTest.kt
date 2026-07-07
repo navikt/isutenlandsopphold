@@ -2,6 +2,7 @@ package no.nav.syfo.utenlandsopphold.domain
 
 import no.nav.syfo.common.journalforing.JournalpostId
 import java.time.Instant
+import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -11,9 +12,10 @@ import kotlin.test.assertTrue
 class VedtakTest {
     private fun lagVedtak() =
         Vedtak(
-            utfall = Utfall.FullInnvilgelse,
+            utfall = Utfall.Innvilget,
             fattetAv = veileder,
             fattetTidspunkt = Instant.parse("2026-01-10T12:00:00Z"),
+            innvilgetePerioder = listOf(Periode(LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 9))),
         )
 
     @Test

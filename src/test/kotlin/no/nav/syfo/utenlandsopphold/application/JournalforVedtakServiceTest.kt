@@ -13,12 +13,11 @@ import java.time.LocalDate
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class JournalforVedtakServiceTest {
     private fun soknadMedVedtak(): Soknad =
         lagSoknad().fattVedtak(
-            utfall = Utfall.FullInnvilgelse,
+            utfall = Utfall.Innvilget,
             fattetAv = veileder,
             now = Instant.parse("2026-01-10T12:00:00Z"),
         )
@@ -99,7 +98,7 @@ class JournalforVedtakServiceTest {
 
             service.journalforUjournalforteVedtak()
 
-            assertTrue(repository.journalforte.size == 1)
+            assertEquals(repository.journalforte.size, 1)
             assertEquals(soknadMedVedtak.vedtak!!.vedtakId, repository.journalforte.single().first)
         }
 }
