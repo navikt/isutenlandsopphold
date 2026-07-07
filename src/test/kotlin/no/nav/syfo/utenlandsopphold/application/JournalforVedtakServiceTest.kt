@@ -110,8 +110,6 @@ private class FakeSoknadRepository(
 
     override fun hentSoknader(personident: Personident): List<Soknad> = soknader.filter { it.personident == personident }
 
-    override fun lagreMottattSoknad(soknad: Soknad): Soknad = soknad
-
     override fun getIkkeJournalforteSoknader(): List<Soknad> = soknader
 
     override fun setVedtakJournalfort(
@@ -121,6 +119,8 @@ private class FakeSoknadRepository(
     ) {
         journalforte.add(Triple(vedtakId, journalpostId, journalfortTidspunkt))
     }
+
+    override fun lagreMottattSoknad(soknad: Soknad): LagreMottattSoknadResultat = LagreMottattSoknadResultat.LAGRET
 }
 
 private class FakePdlClient(

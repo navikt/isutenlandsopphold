@@ -36,6 +36,9 @@ dependencies {
     // Kafka
     implementation(libs.kafka)
 
+    // Metrics
+    implementation(libs.micrometer.registry.prometheus)
+
     testImplementation(kotlin("test"))
     testImplementation(ktorLibs.server.testHost)
     testImplementation(ktorLibs.client.contentNegotiation)

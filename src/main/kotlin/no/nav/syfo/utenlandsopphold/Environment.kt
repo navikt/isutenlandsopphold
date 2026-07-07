@@ -42,3 +42,5 @@ fun getEnvVar(
 ) = System.getenv(varName) ?: defaultValue ?: throw RuntimeException("Missing required variable \"$varName\"")
 
 fun isLocal() = getEnvVar("KTOR_ENV", "local") == "local"
+
+val isKafkaSoknadConsumerEnabled: Boolean = getEnvVar("KAFKA_SOKNAD_CONSUMER_ENABLED", "false").toBoolean()
