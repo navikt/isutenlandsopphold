@@ -114,6 +114,6 @@ private fun emptySoknadService(): SoknadService =
             object : ISoknadRepository {
                 override fun hentSoknader(personident: Personident): List<Soknad> = emptyList()
 
-                override fun lagreMottattSoknad(soknad: Soknad): Soknad = soknad
+                override fun upsertSoknad(soknad: Soknad): Soknad = soknad
             },
     )

@@ -46,13 +46,12 @@ class SoknadRepository(
             }
         }
 
-    override fun lagreMottattSoknad(soknad: Soknad): Soknad =
+    override fun upsertSoknad(soknad: Soknad): Soknad =
         database.connection.use { connection ->
             val now = OffsetDateTime.now(ZoneOffset.UTC)
             val pSoknad = connection.createSoknad(soknad, now)
-            soknad.soktePerioder.forEach { periode ->
-                connection.createPeriode(pSoknad.id, periode.fom, periode.tom)
-            }
+            connection.deletePerioder(pSoknad.id)
+            connection.createPerioder(pSoknad.id, soknad)
 
             connection.commit()
             soknad
@@ -92,20 +91,29 @@ class SoknadRepository(
             it.setObject(1, soknad.id)
             it.setObject(2, soknad.eksternId)
             it.setString(3, soknad.personident.value)
-            it.setObject(4, soknad.innsendtTidspunkt.atOffset(ZoneOffset.UTC))
+            it.setObject(4, soknad.innsendtTidspunkt)
             it.setObject(5, now)
             it.executeQuery().toList { toPSoknad() }.single()
         }
 
-    private fun Connection.createPeriode(
+    private fun Connection.createPerioder(
         soknadId: Int,
-        fom: LocalDate,
-        tom: LocalDate,
+        soknad: Soknad,
     ) {
-        prepareStatement(CREATE_PERIODE).use {
+        val fomDates = soknad.soktePerioder.map { Date.valueOf(it.fom) }.toTypedArray()
+        val tomDates = soknad.soktePerioder.map { Date.valueOf(it.tom) }.toTypedArray()
+
+        prepareStatement(CREATE_PERIODER).use {
             it.setInt(1, soknadId)
-            it.setDate(2, Date.valueOf(fom))
-            it.setDate(3, Date.valueOf(tom))
+            it.setArray(2, createArrayOf("date", fomDates))
+            it.setArray(3, createArrayOf("date", tomDates))
+            it.executeUpdate()
+        }
+    }
+
+    private fun Connection.deletePerioder(soknadId: Int) {
+        prepareStatement(DELETE_PERIODER).use {
+            it.setInt(1, soknadId)
             it.executeUpdate()
         }
     }
@@ -171,16 +179,27 @@ class SoknadRepository(
                     innsendt_tidspunkt,
                     created_at
                 ) VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT (ekstern_id) DO UPDATE SET
+                    uuid = EXCLUDED.uuid,
+                    personident = EXCLUDED.personident,
+                    innsendt_tidspunkt = EXCLUDED.innsendt_tidspunkt
                 RETURNING *
             """
 
-        private const val CREATE_PERIODE =
+        private const val DELETE_PERIODER =
+            """
+                DELETE FROM soknad_periode WHERE soknad_id = ?
+            """
+
+        private const val CREATE_PERIODER =
             """
                 INSERT INTO soknad_periode (
                     soknad_id,
                     fom,
                     tom
-                ) VALUES (?, ?, ?)
+                )
+                SELECT ?, periode.fom, periode.tom
+                FROM unnest(?::date[], ?::date[]) AS periode(fom, tom)
             """
 
         private const val CREATE_VEDTAK =

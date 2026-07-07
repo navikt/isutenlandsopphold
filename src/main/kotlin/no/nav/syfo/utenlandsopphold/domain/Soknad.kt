@@ -3,6 +3,7 @@ package no.nav.syfo.utenlandsopphold.domain
 import no.nav.syfo.common.types.ident.Navident
 import no.nav.syfo.common.types.ident.Personident
 import java.time.Instant
+import java.time.OffsetDateTime
 import java.util.UUID
 
 enum class SoknadStatus {
@@ -15,7 +16,7 @@ data class Soknad(
     val eksternId: UUID,
     val personident: Personident,
     val soktePerioder: List<Periode>,
-    val innsendtTidspunkt: Instant,
+    val innsendtTidspunkt: OffsetDateTime,
     val vedtak: Vedtak? = null,
 ) {
     val status: SoknadStatus

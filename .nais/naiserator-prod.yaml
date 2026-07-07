@@ -77,3 +77,5 @@ spec:
   env:
     - name: KTOR_ENV
       value: "production"
+    - name: KAFKA_SOKNAD_CONSUMER_ENABLED
+      value: "false"

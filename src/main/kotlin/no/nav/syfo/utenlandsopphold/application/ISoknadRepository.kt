@@ -6,5 +6,5 @@ import no.nav.syfo.utenlandsopphold.domain.Soknad
 interface ISoknadRepository {
     fun hentSoknader(personident: Personident): List<Soknad>
 
-    fun lagreMottattSoknad(soknad: Soknad): Soknad
+    fun upsertSoknad(soknad: Soknad): Soknad
 }

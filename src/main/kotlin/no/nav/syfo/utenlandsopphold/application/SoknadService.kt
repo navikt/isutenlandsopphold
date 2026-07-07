@@ -9,9 +9,6 @@ class SoknadService(
     fun hentSoknader(personident: Personident): List<Soknad> = soknadRepository.hentSoknader(personident)
 
     fun mottaSoknad(soknad: Soknad) {
-        // Process soknader:
-        // Check if soknad is already processed, if not, process it and store it in the database
-
-        soknadRepository.lagreMottattSoknad(soknad)
+        soknadRepository.upsertSoknad(soknad)
     }
 }
