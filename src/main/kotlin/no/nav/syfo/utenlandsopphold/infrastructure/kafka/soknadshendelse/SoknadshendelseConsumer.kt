@@ -1,14 +1,24 @@
 package no.nav.syfo.utenlandsopphold.infrastructure.kafka.soknadshendelse
 
+import io.micrometer.core.instrument.Counter
+import no.nav.syfo.utenlandsopphold.application.LagreMottattSoknadResultat
 import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.domain.ManglerSoktePerioderException
 import no.nav.syfo.utenlandsopphold.infrastructure.kafka.KafkaConsumerService
+import no.nav.syfo.utenlandsopphold.infrastructure.metric.METRICS_NS
+import no.nav.syfo.utenlandsopphold.infrastructure.metric.METRICS_REGISTRY
 import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.slf4j.LoggerFactory
 import java.time.Duration
 
 private val logger = LoggerFactory.getLogger(SoknadshendelseConsumer::class.java)
+
+private val soknadAlleredeLagretCounter: Counter =
+    Counter
+        .builder("${METRICS_NS}_soknad_allerede_lagret_count")
+        .description("Antall mottatte søknader fra Kafka som allerede var lagret og ble hoppet over")
+        .register(METRICS_REGISTRY)
 
 class SoknadshendelseConsumer(
     private val soknadService: SoknadService,
@@ -40,6 +50,13 @@ class SoknadshendelseConsumer(
                     )
                     throw exception
                 }
-            }.forEach { soknadService.mottaSoknad(soknad = it) }
+            }.forEach { soknad ->
+                if (soknadService.mottaSoknad(soknad = soknad) == LagreMottattSoknadResultat.ALLEREDE_LAGRET) {
+                    logger.warn(
+                        "Mottok søknad som allerede er lagret fra før, hopper over. eksternId=${soknad.eksternId}",
+                    )
+                    soknadAlleredeLagretCounter.increment()
+                }
+            }
     }
 }

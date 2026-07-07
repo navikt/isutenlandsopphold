@@ -72,7 +72,7 @@ fun KafkaSykepengesoknadDTO.toSoknad(): Soknad {
         eksternId = UUID.fromString(id),
         personident = Personident(fnr),
         soktePerioder = soktePerioder,
-        innsendtTidspunkt = sendtNav.atZone(osloZone).toInstant(),
+        innsendtTidspunkt = sendtNav.atZone(osloZone).toOffsetDateTime(),
     )
 }
 

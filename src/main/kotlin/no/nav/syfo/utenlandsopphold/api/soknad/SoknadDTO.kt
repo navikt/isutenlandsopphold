@@ -7,6 +7,7 @@ import no.nav.syfo.utenlandsopphold.domain.Utfall
 import no.nav.syfo.utenlandsopphold.domain.Vedtak
 import java.time.Instant
 import java.time.LocalDate
+import java.time.OffsetDateTime
 import java.util.UUID
 
 data class SoknaderQueryDTO(
@@ -21,7 +22,7 @@ data class SoknadDTO(
     val soknadId: String,
     val eksternId: UUID,
     val status: SoknadStatusDTO,
-    val innsendtTidspunkt: Instant,
+    val innsendtTidspunkt: OffsetDateTime,
     val soktePerioder: List<PeriodeDTO>,
     val vedtak: VedtakDTO?,
 )

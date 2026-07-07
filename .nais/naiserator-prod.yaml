@@ -92,3 +92,5 @@ spec:
       value: "true"
     - name: JOURNALFORING_CRONJOB_INTERVAL_MINUTES
       value: "5"
+    - name: KAFKA_SOKNAD_CONSUMER_ENABLED
+      value: "false"

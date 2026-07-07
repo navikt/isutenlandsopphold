@@ -2,8 +2,8 @@ package no.nav.syfo.utenlandsopphold.domain
 
 import no.nav.syfo.common.types.ident.Navident
 import no.nav.syfo.common.types.ident.Personident
-import java.time.Instant
 import java.time.LocalDate
+import java.time.OffsetDateTime
 import java.util.UUID
 
 internal fun lagSoknad(
@@ -21,7 +21,7 @@ internal fun lagSoknad(
         eksternId = UUID.randomUUID(),
         personident = Personident("11111111111"),
         soktePerioder = soktePerioder,
-        innsendtTidspunkt = Instant.parse("2026-01-02T08:00:00Z"),
+        innsendtTidspunkt = OffsetDateTime.parse("2026-01-02T08:00:00Z"),
         vedtak = vedtak,
     )
 
