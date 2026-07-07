@@ -8,6 +8,7 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.testing.*
+import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.common.util.applyCommonJacksonConfig
 import no.nav.syfo.utenlandsopphold.api.apiModule
@@ -113,6 +114,14 @@ private fun soknadServiceReturning(soknader: List<Soknad>): SoknadService =
                 override fun hentSoknader(personident: Personident): List<Soknad> = soknader
 
                 override fun lagreMottattSoknad(soknad: Soknad): Soknad = soknad
+
+                override fun getUjournalforteSoknader(): List<Soknad> = emptyList()
+
+                override fun setVedtakJournalfort(
+                    vedtakId: UUID,
+                    journalpostId: JournalpostId,
+                    journalfortTidspunkt: Instant,
+                ) = Unit
             },
     )
 
