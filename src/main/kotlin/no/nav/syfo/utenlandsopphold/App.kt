@@ -14,6 +14,7 @@ import no.nav.syfo.utenlandsopphold.infrastructure.database.Database
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseConfig
 import no.nav.syfo.utenlandsopphold.infrastructure.database.VedtakRepository
 import no.nav.syfo.utenlandsopphold.infrastructure.database.databaseConfig
+import no.nav.syfo.utenlandsopphold.infrastructure.database.repository.SoknadRepository
 import no.nav.syfo.utenlandsopphold.infrastructure.kafka.launchKafkaModule
 import org.slf4j.LoggerFactory
 
@@ -35,6 +36,9 @@ fun main(args: Array<String>) {
                 },
         )
 
+    val soknadRepository = SoknadRepository(database = database)
+    val soknadService = SoknadService(soknadRepository = soknadRepository)
+
     val server =
         embeddedServer(
             Netty,
@@ -50,6 +54,7 @@ fun main(args: Array<String>) {
                 apiModule(
                     applicationState = applicationState,
                     database = database,
+                    soknadService = soknadService,
                 )
                 monitor.subscribe(ApplicationStarted) {
                     applicationState.ready = true
@@ -58,7 +63,7 @@ fun main(args: Array<String>) {
                     launchKafkaModule(
                         applicationState = applicationState,
                         environment = Environment(),
-                        soknadService = SoknadService(),
+                        soknadService = soknadService,
                     )
 
                     // Klientene (Azure AD, dokarkiv, PDL, ispdfgen) og leder-valg krever

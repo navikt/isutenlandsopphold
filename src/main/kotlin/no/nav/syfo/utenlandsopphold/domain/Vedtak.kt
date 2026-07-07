@@ -6,14 +6,15 @@ import java.time.Instant
 import java.util.UUID
 
 sealed interface Utfall {
-    data object FullInnvilgelse : Utfall
+    data object Innvilget : Utfall
 }
 
 data class Vedtak(
+    val vedtakId: UUID = UUID.randomUUID(),
     val utfall: Utfall,
     val fattetAv: Navident,
     val fattetTidspunkt: Instant,
-    val vedtakId: UUID = UUID.randomUUID(),
+    val innvilgetePerioder: List<Periode>,
     val document: List<DocumentComponent> = emptyList(),
     val journalpostId: JournalpostId? = null,
     val journalfortTidspunkt: Instant? = null,

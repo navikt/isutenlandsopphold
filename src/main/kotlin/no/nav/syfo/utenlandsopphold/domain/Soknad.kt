@@ -41,7 +41,7 @@ data class Soknad(
             "Vedtak kan kun fattes på en MOTTATT soknad, men status er $status"
         }
 
-        return copy(vedtak = Vedtak(utfall, fattetAv, now))
+        return copy(vedtak = Vedtak(utfall, fattetAv, now, innvilgetePerioder = soktePerioder))
     }
 
     /**

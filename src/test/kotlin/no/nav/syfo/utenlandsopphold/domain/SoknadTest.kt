@@ -14,14 +14,14 @@ class SoknadTest {
 
         val resultat =
             lagSoknad().fattVedtak(
-                utfall = Utfall.FullInnvilgelse,
+                utfall = Utfall.Innvilget,
                 fattetAv = veileder,
                 now = now,
             )
 
         assertEquals(SoknadStatus.INNVILGET, resultat.status)
         val vedtak = assertNotNull(resultat.vedtak)
-        assertEquals(Utfall.FullInnvilgelse, vedtak.utfall)
+        assertEquals(Utfall.Innvilget, vedtak.utfall)
         assertEquals(veileder, vedtak.fattetAv)
         assertEquals(now, vedtak.fattetTidspunkt)
     }
@@ -30,14 +30,14 @@ class SoknadTest {
     fun `fattVedtak på allerede innvilget søknad kaster`() {
         val alleredeInnvilget =
             lagSoknad().fattVedtak(
-                utfall = Utfall.FullInnvilgelse,
+                utfall = Utfall.Innvilget,
                 fattetAv = veileder,
                 now = Instant.parse("2026-01-10T12:00:00Z"),
             )
 
         assertFailsWith<IllegalStateException> {
             alleredeInnvilget.fattVedtak(
-                utfall = Utfall.FullInnvilgelse,
+                utfall = Utfall.Innvilget,
                 fattetAv = veileder,
                 now = Instant.parse("2026-01-11T12:00:00Z"),
             )
