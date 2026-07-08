@@ -12,7 +12,6 @@ data class Environment(
             name = getEnvVar("${NAIS_DATABASE_ENV_PREFIX}_DATABASE"),
             username = getEnvVar("${NAIS_DATABASE_ENV_PREFIX}_USERNAME"),
             password = getEnvVar("${NAIS_DATABASE_ENV_PREFIX}_PASSWORD"),
-            jdbcUrl = getEnvVar("${NAIS_DATABASE_ENV_PREFIX}_JDBC_URL"),
         ),
     val kafka: KafkaEnvironment =
         KafkaEnvironment(
@@ -33,8 +32,12 @@ data class DatabaseEnvironment(
     val name: String,
     val username: String,
     val password: String,
-    val jdbcUrl: String,
-)
+) {
+    // Bygger JDBC-URL selv fra host/port/name slik at credentials aldri ligger i
+    // URL-strengen. Brukernavn/passord settes eksplisitt på HikariCP og Flyway.
+    // Dermed kan verken passord eller brukernavn lekke via logging av URL-en.
+    fun jdbcUrl(): String = "jdbc:postgresql://$host:$port/$name"
+}
 
 fun getEnvVar(
     varName: String,

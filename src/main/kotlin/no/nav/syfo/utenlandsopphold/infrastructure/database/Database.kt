@@ -62,7 +62,7 @@ fun DatabaseInterface.isOk(): Boolean =
 
 fun databaseConfig(databaseEnvironment: DatabaseEnvironment) =
     DatabaseConfig(
-        jdbcUrl = databaseEnvironment.jdbcUrl,
+        jdbcUrl = databaseEnvironment.jdbcUrl(),
         username = databaseEnvironment.username,
         password = databaseEnvironment.password,
     )
