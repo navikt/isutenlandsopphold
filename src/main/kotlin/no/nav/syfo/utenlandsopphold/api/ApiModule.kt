@@ -14,6 +14,7 @@ import no.nav.syfo.common.auth.JwtIssuerType
 import no.nav.syfo.common.auth.WellKnown
 import no.nav.syfo.common.auth.installJwtAuthentication
 import no.nav.syfo.common.tilgangskontroll.TilgangDeniedException
+import no.nav.syfo.common.tilgangskontroll.client.TilgangskontrollClient
 import no.nav.syfo.common.util.applyCommonJacksonConfig
 import no.nav.syfo.common.util.consumerClientId
 import no.nav.syfo.utenlandsopphold.api.endpoints.registerMetricApi
@@ -27,11 +28,13 @@ fun Application.apiModule(
     applicationState: ApplicationState,
     database: DatabaseInterface,
     soknadService: SoknadService,
-    wellKnownInternalAzureAD: WellKnown,
+    tilgangskontrollClient: TilgangskontrollClient,
     azureAppClientId: String,
+    wellKnownInternalAzureAD: WellKnown,
 ) {
     installContentNegotiation()
     installStatusPages()
+
     installJwtAuthentication(
         jwtIssuerList =
             listOf(
@@ -50,7 +53,10 @@ fun Application.apiModule(
         )
         registerMetricApi()
         authenticate(JwtIssuerType.INTERNAL_AZUREAD.name) {
-            registerSoknadApi(soknadService = soknadService)
+            registerSoknadApi(
+                soknadService = soknadService,
+                tilgangskontrollClient = tilgangskontrollClient,
+            )
         }
     }
 }

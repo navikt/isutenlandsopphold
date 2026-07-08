@@ -93,6 +93,10 @@ spec:
       value: "prod-fss.teamdokumenthandtering.dokdistfordeling"
     - name: ISPDFGEN_URL
       value: "http://ispdfgen"
+    - name: ISTILGANGSKONTROLL_URL
+      value: "http://istilgangskontroll"
+    - name: ISTILGANGSKONTROLL_CLIENT_ID
+      value: "prod-gcp.teamsykefravr.istilgangskontroll"
     - name: JOURNALFORING_RETRY_ENABLED
       value: "true"
     - name: JOURNALFORING_CRONJOB_INTERVAL_MINUTES

@@ -93,6 +93,10 @@ spec:
       value: "dev-fss.teamdokumenthandtering.dokdistfordeling"
     - name: ISPDFGEN_URL
       value: "http://ispdfgen"
+    - name: ISTILGANGSKONTROLL_URL
+      value: "http://istilgangskontroll"
+    - name: ISTILGANGSKONTROLL_CLIENT_ID
+      value: "dev-gcp.teamsykefravr.istilgangskontroll"
     # Skal være false i dev-gcp: mange testbrukere mangler aktør-id i dokarkiv, og vi vil
     # ikke spamme dokarkiv med retries for disse.
     - name: JOURNALFORING_RETRY_ENABLED
