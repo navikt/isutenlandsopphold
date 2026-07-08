@@ -11,7 +11,7 @@ postgres-embedded = "2.2.2"
 postgres-embedded-runtime = "17.5.0"
 kafka = "4.2.0"
 confluent = "8.2.1"
-micrometer = "1.16.5"
+micrometer = "1.17.0"
 
 [libraries.isyfo-backend-common]
 module = "no.nav.syfo:isyfo-backend-common"
