@@ -21,6 +21,7 @@ class JournalforVedtakService(
     private val journalforingService: IJournalforingService,
 ) {
     suspend fun journalforUjournalforteVedtak() {
+        log.info("Starter journalføring av u-journalførte vedtak")
         val soknaderMedUjournalforteVedtak = soknadRepository.getUjournalforteSoknader()
 
         soknaderMedUjournalforteVedtak.forEach { soknad ->
