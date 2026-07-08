@@ -1,5 +1,6 @@
 package no.nav.syfo.utenlandsopphold.domain
 
+import no.nav.syfo.common.journalforing.JournalpostId
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -47,6 +48,31 @@ class SoknadTest {
     fun `søknad uten søkte perioder kaster`() {
         assertFailsWith<IllegalArgumentException> {
             lagSoknad(soktePerioder = emptyList())
+        }
+    }
+
+    @Test
+    fun `journalforVedtak setter journalpostId på vedtaket`() {
+        val innvilget =
+            lagSoknad().fattVedtak(
+                utfall = Utfall.Innvilget,
+                fattetAv = veileder,
+                now = Instant.parse("2026-01-10T12:00:00Z"),
+            )
+        val journalpostId = JournalpostId("123")
+        val journalfortTidspunkt = Instant.parse("2026-01-11T08:00:00Z")
+
+        val journalfort = innvilget.journalforVedtak(journalpostId, journalfortTidspunkt)
+
+        val vedtak = assertNotNull(journalfort.vedtak)
+        assertEquals(journalpostId, vedtak.journalpostId)
+        assertEquals(journalfortTidspunkt, vedtak.journalfortTidspunkt)
+    }
+
+    @Test
+    fun `journalforVedtak på søknad uten vedtak kaster`() {
+        assertFailsWith<IllegalStateException> {
+            lagSoknad().journalforVedtak(JournalpostId("123"), Instant.parse("2026-01-11T08:00:00Z"))
         }
     }
 }

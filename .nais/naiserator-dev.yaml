@@ -47,6 +47,7 @@ spec:
     outbound:
       external:
         - host: "dokarkiv.dev-fss-pub.nais.io"
+        - host: "pdl-api.dev-fss-pub.nais.io"
       rules:
         - application: istilgangskontroll
         - application: ispdfgen
@@ -77,3 +78,19 @@ spec:
   env:
     - name: KTOR_ENV
       value: "production"
+    - name: DOKARKIV_URL
+      value: "https://dokarkiv.dev-fss-pub.nais.io"
+    - name: DOKARKIV_SCOPE
+      value: "dev-fss.teamdokumenthandtering.dokarkiv"
+    - name: PDL_URL
+      value: "https://pdl-api.dev-fss-pub.nais.io/graphql"
+    - name: PDL_SCOPE
+      value: "dev-fss.pdl.pdl-api"
+    - name: ISPDFGEN_URL
+      value: "http://ispdfgen"
+    # Skal være false i dev-gcp: mange testbrukere mangler aktør-id i dokarkiv, og vi vil
+    # ikke spamme dokarkiv med retries for disse.
+    - name: JOURNALFORING_RETRY_ENABLED
+      value: "false"
+    - name: JOURNALFORING_CRONJOB_INTERVAL_MINUTES
+      value: "1"

@@ -1,5 +1,6 @@
 package no.nav.syfo.utenlandsopphold.domain
 
+import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.common.types.ident.Navident
 import no.nav.syfo.common.types.ident.Personident
 import java.time.Instant
@@ -41,5 +42,22 @@ data class Soknad(
         }
 
         return copy(vedtak = Vedtak(utfall, fattetAv, now, innvilgetePerioder = soktePerioder))
+    }
+
+    /**
+     * Aggregatroten (Soknad) styrer invarianten om at journalføring kun kan skje
+     * på en søknad som faktisk har et vedtak. Selve idempotens-sjekken (kan ikke
+     * journalføres to ganger) håndheves av Vedtak.journalfor().
+     */
+    fun journalforVedtak(
+        journalpostId: JournalpostId,
+        now: Instant,
+    ): Soknad {
+        val gjeldendeVedtak =
+            checkNotNull(vedtak) {
+                "Kan ikke journalføre en søknad som ikke har fått vedtak"
+            }
+
+        return copy(vedtak = gjeldendeVedtak.journalfor(journalpostId, now))
     }
 }
