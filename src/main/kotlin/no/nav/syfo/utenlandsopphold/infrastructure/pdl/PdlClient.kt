@@ -71,8 +71,7 @@ class PdlClient(
     companion object {
         private const val BEHANDLINGSNUMMER_HEADER = "behandlingsnummer"
 
-        // TODO: Verifiser riktig behandlingsnummer for utenlandsopphold-formålet med teamet som forvalter PDL-tilgangen.
-        private const val BEHANDLINGSNUMMER_UTENLANDSOPPHOLD = "B287"
+        private const val BEHANDLINGSNUMMER_UTENLANDSOPPHOLD = "B426"
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
