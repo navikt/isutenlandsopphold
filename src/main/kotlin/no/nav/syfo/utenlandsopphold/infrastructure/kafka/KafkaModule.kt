@@ -6,6 +6,7 @@ import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.getEnvVar
 import no.nav.syfo.utenlandsopphold.infrastructure.kafka.soknadshendelse.SoknadshendelseConsumer
 import no.nav.syfo.utenlandsopphold.infrastructure.kafka.soknadshendelse.launchKafkaTaskSoknadshendelse
+import no.nav.syfo.utenlandsopphold.isKafkaSoknadConsumerEnabled
 
 fun launchKafkaModule(
     applicationState: ApplicationState,
@@ -17,7 +18,6 @@ fun launchKafkaModule(
             soknadService = soknadService,
         )
 
-    val isKafkaSoknadConsumerEnabled: Boolean = getEnvVar("KAFKA_SOKNAD_CONSUMER_ENABLED").toBoolean()
     if (isKafkaSoknadConsumerEnabled) {
         launchKafkaTaskSoknadshendelse(
             applicationState = applicationState,
