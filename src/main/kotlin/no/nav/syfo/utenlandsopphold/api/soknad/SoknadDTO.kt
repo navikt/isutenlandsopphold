@@ -1,5 +1,6 @@
 package no.nav.syfo.utenlandsopphold.api.soknad
 
+import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.SoknadStatus
@@ -16,6 +17,16 @@ data class SoknaderQueryDTO(
 
 data class SoknaderResponseDTO(
     val soknader: List<SoknadDTO>,
+)
+
+data class SoknadVedtakPostDTO(
+    val utfall: String,
+    val innvilgetePerioder: List<PeriodeDTO>,
+    val document: List<DocumentComponent>,
+)
+
+data class SoknadVedtakResponseDTO(
+    val soknad: SoknadDTO,
 )
 
 data class SoknadDTO(
@@ -48,6 +59,8 @@ fun SoknadStatus.toDTO(): SoknadStatusDTO =
     }
 
 fun List<Soknad>.toResponseDTO(): SoknaderResponseDTO = SoknaderResponseDTO(soknader = map { it.toDTO() })
+
+fun Soknad.toResponseDTO(): SoknadVedtakResponseDTO = SoknadVedtakResponseDTO(soknad = toDTO())
 
 fun Soknad.toDTO(): SoknadDTO =
     SoknadDTO(

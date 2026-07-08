@@ -37,12 +37,22 @@ data class Soknad(
         utfall: Utfall,
         fattetAv: Navident,
         now: Instant,
+        document: List<DocumentComponent>,
     ): Soknad {
         check(status == SoknadStatus.MOTTATT) {
             "Vedtak kan kun fattes på en MOTTATT soknad, men status er $status"
         }
 
-        return copy(vedtak = Vedtak(utfall, fattetAv, now, innvilgetePerioder = soktePerioder))
+        return copy(
+            vedtak =
+                Vedtak(
+                    utfall = utfall,
+                    fattetAv = fattetAv,
+                    fattetTidspunkt = now,
+                    innvilgetePerioder = soktePerioder,
+                    document = document,
+                ),
+        )
     }
 
     /**

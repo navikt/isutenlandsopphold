@@ -17,6 +17,7 @@ class SoknadTest {
                 utfall = Utfall.Innvilget,
                 fattetAv = veileder,
                 now = now,
+                document = vedtakDocument,
             )
 
         assertEquals(SoknadStatus.INNVILGET, resultat.status)
@@ -33,6 +34,7 @@ class SoknadTest {
                 utfall = Utfall.Innvilget,
                 fattetAv = veileder,
                 now = Instant.parse("2026-01-10T12:00:00Z"),
+                document = vedtakDocument,
             )
 
         assertFailsWith<IllegalStateException> {
@@ -40,6 +42,7 @@ class SoknadTest {
                 utfall = Utfall.Innvilget,
                 fattetAv = veileder,
                 now = Instant.parse("2026-01-11T12:00:00Z"),
+                document = vedtakDocument,
             )
         }
     }
@@ -58,6 +61,7 @@ class SoknadTest {
                 utfall = Utfall.Innvilget,
                 fattetAv = veileder,
                 now = Instant.parse("2026-01-10T12:00:00Z"),
+                document = vedtakDocument,
             )
         val journalpostId = JournalpostId("123")
         val journalfortTidspunkt = Instant.parse("2026-01-11T08:00:00Z")

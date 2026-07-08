@@ -8,6 +8,7 @@ import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.Vedtak
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
 import no.nav.syfo.utenlandsopphold.infrastructure.database.toList
+import org.postgresql.util.PGobject
 import java.sql.Connection
 import java.sql.Date
 import java.sql.ResultSet
@@ -21,6 +22,31 @@ import java.util.UUID
 class SoknadRepository(
     private val database: DatabaseInterface,
 ) : ISoknadRepository {
+    override fun hentSoknad(soknadId: UUID): Soknad? {
+        database.connection.use { connection ->
+            connection.transactionIsolation = Connection.TRANSACTION_REPEATABLE_READ
+
+            val pSoknad = connection.getSoknadBySoknadUuid(soknadId)
+            if (pSoknad == null) {
+                connection.commit()
+                return null
+            }
+
+            val perioder = connection.getPerioder(listOf(pSoknad.id))
+            val vedtak = connection.getVedtak(listOf(pSoknad.id)).singleOrNull()
+            val vedtakPerioder =
+                vedtak?.let { connection.getVedtakPerioder(listOf(it.id)) }.orEmpty()
+
+            connection.commit()
+
+            return pSoknad.toSoknad(
+                soktePerioder = perioder,
+                vedtak = vedtak,
+                vedtakPerioder = vedtakPerioder,
+            )
+        }
+    }
+
     override fun hentSoknader(personident: Personident): List<Soknad> =
         database.connection.use { connection ->
             connection.transactionIsolation = Connection.TRANSACTION_REPEATABLE_READ
@@ -154,6 +180,26 @@ class SoknadRepository(
         }
     }
 
+    override fun lagreVedtak(soknadMedVedtak: Soknad): Soknad {
+        val vedtak =
+            checkNotNull(soknadMedVedtak.vedtak) {
+                "Søknad ${soknadMedVedtak.id} mangler vedtak etter fattVedtak"
+            }
+
+        database.connection.use { connection ->
+            connection.lagreVedtak(soknadMedVedtak.id, vedtak)
+            connection.commit()
+        }
+
+        return soknadMedVedtak
+    }
+
+    private fun Connection.getSoknadBySoknadUuid(soknadId: UUID): PSoknad? =
+        prepareStatement(GET_SOKNADER_BY_UUID).use {
+            it.setObject(1, soknadId)
+            it.executeQuery().toList { toPSoknad() }.singleOrNull()
+        }
+
     private fun Connection.getSoknader(personident: Personident): List<PSoknad> =
         prepareStatement(GET_SOKNADER).use {
             it.setString(1, personident.value)
@@ -218,18 +264,25 @@ class SoknadRepository(
         }
     }
 
-    private fun Connection.createVedtak(
-        soknadId: Int,
+    private fun Connection.lagreVedtak(
+        soknadId: UUID,
         vedtak: Vedtak,
     ) {
+        val documentJson =
+            PGobject().apply {
+                type = "jsonb"
+                value = vedtak.document.serializeToJson()
+            }
         val pVedtak =
             prepareStatement(CREATE_VEDTAK).use {
                 it.setObject(1, UUID.randomUUID())
-                it.setInt(2, soknadId)
-                it.setString(3, vedtak.utfall.dbValue())
-                it.setString(4, vedtak.fattetAv.value)
-                it.setObject(5, vedtak.fattetTidspunkt.atOffset(ZoneOffset.UTC))
-                it.executeQuery().toList { toPVedtak() }.single()
+                it.setString(2, vedtak.utfall.dbValue())
+                it.setString(3, vedtak.fattetAv.value)
+                it.setObject(4, vedtak.fattetTidspunkt.atOffset(ZoneOffset.UTC))
+                it.setObject(5, documentJson)
+                it.setObject(6, soknadId)
+                it.executeQuery().toList { toPVedtak() }.singleOrNull()
+                    ?: throw IllegalArgumentException("Fant ikke søknad med id $soknadId")
             }
         vedtak.innvilgetePerioder.forEach { periode ->
             createVedtakPeriode(pVedtak.id, periode.fom, periode.tom)
@@ -250,6 +303,11 @@ class SoknadRepository(
     }
 
     companion object {
+        private const val GET_SOKNADER_BY_UUID =
+            """
+                SELECT * FROM soknad WHERE uuid = ?
+            """
+
         private const val GET_SOKNADER =
             """
                 SELECT * FROM soknad WHERE personident = ? ORDER BY innsendt_tidspunkt DESC
@@ -329,8 +387,12 @@ class SoknadRepository(
                     soknad_id,
                     utfall,
                     fattet_av,
-                    fattet_tidspunkt
-                ) VALUES (?, ?, ?, ?, ?)
+                    fattet_tidspunkt,
+                    document
+                )
+                SELECT ?, s.id, ?, ?, ?, ?
+                FROM soknad s
+                WHERE s.uuid = ?
                 RETURNING *
             """
 

@@ -26,3 +26,12 @@ internal fun lagSoknad(
     )
 
 internal val veileder = Navident("Z990000")
+
+internal val vedtakDocument =
+    listOf(
+        DocumentComponent(
+            type = DocumentComponentType.HEADER_H1,
+            title = "Vedtak",
+            texts = listOf("Søknaden din er innvilget"),
+        ),
+    )

@@ -75,7 +75,7 @@ data class PVedtak(
             fattetAv = Navident(fattetAv),
             fattetTidspunkt = fattetTidspunkt.toInstant(),
             innvilgetePerioder = innvilgetePerioder,
-            document = documentMapper.readValue<List<DocumentComponent>>(document),
+            document = document.toDocumentComponents(),
             journalpostId = journalpostId?.let { JournalpostId(it) },
             journalfortTidspunkt = journalfortTidspunkt?.toInstant(),
             distribuertTidspunkt = distribuertTidspunkt?.toInstant(),
@@ -83,6 +83,10 @@ data class PVedtak(
 }
 
 private val documentMapper = configuredJacksonMapper()
+
+fun List<DocumentComponent>.serializeToJson(): String = documentMapper.writeValueAsString(this)
+
+private fun String.toDocumentComponents(): List<DocumentComponent> = documentMapper.readValue(this)
 
 fun Utfall.dbValue(): String =
     when (this) {

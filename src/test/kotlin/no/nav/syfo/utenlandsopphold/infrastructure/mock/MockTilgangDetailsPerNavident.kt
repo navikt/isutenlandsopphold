@@ -17,4 +17,9 @@ val mockTilgangDetailsPerNavident =
                 syfoTilgangLevel = MockUserSyfoTilgangLevel.READ,
                 personsUserHasAccessTo = setOf(UserConstants.PERSON_VEILEDERE_HAR_TILGANG_TIL),
             ),
+        Navident(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG) to
+            MockUserTilgangDetails(
+                syfoTilgangLevel = MockUserSyfoTilgangLevel.FULL,
+                personsUserHasAccessTo = setOf(UserConstants.PERSON_VEILEDERE_HAR_TILGANG_TIL),
+            ),
     )

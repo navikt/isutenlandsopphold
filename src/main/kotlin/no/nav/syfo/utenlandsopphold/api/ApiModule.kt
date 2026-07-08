@@ -84,6 +84,7 @@ fun Application.installStatusPages() {
             val responseStatus =
                 when (cause) {
                     is BadRequestException -> HttpStatusCode.BadRequest
+                    is NotFoundException -> HttpStatusCode.NotFound
                     is IllegalArgumentException -> HttpStatusCode.BadRequest
                     is TilgangDeniedException -> HttpStatusCode.Forbidden
                     else -> {

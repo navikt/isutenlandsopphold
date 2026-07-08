@@ -1,11 +1,16 @@
 package no.nav.syfo.utenlandsopphold.infrastructure.database.repository
 
 import no.nav.syfo.common.journalforing.JournalpostId
+import no.nav.syfo.common.types.ident.Navident
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.application.LagreMottattSoknadResultat
+import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
+import no.nav.syfo.utenlandsopphold.domain.DocumentComponentType
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.SoknadStatus
+import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.Vedtak
 import no.nav.syfo.utenlandsopphold.infrastructure.database.TestDatabase
 import no.nav.syfo.utenlandsopphold.infrastructure.database.dropData
 import org.junit.jupiter.api.AfterAll
@@ -19,6 +24,7 @@ import java.time.temporal.ChronoUnit
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -117,6 +123,45 @@ class SoknadRepositoryTest {
 
         assertEquals(2, lagret.soktePerioder.size)
         assertTrue(lagret.soktePerioder.containsAll(perioder))
+    }
+
+    @Test
+    fun `lagreVedtak lagrer vedtak og oppdaterer status til INNVILGET`() {
+        val soktePerioder = listOf(Periode(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 10)))
+        val soknad = soknad(soktePerioder = soktePerioder)
+        repository.lagreMottattSoknad(soknad)
+
+        val vedtak = vedtak(innvilgetePerioder = soktePerioder)
+        val soknadMedVedtak = soknad.copy(vedtak = vedtak)
+        val oppdatertSoknad = repository.lagreVedtak(soknadMedVedtak)
+
+        assertEquals(SoknadStatus.INNVILGET, oppdatertSoknad.status)
+        assertEquals(Utfall.Innvilget, oppdatertSoknad.vedtak?.utfall)
+        assertEquals(vedtak.fattetAv, oppdatertSoknad.vedtak?.fattetAv)
+        assertEquals(vedtak.fattetTidspunkt, oppdatertSoknad.vedtak?.fattetTidspunkt)
+        assertEquals(soktePerioder, oppdatertSoknad.vedtak?.innvilgetePerioder)
+        assertEquals(vedtak.document, oppdatertSoknad.vedtak?.document)
+    }
+
+    @Test
+    fun `lagreVedtak persisteres og hentes på nytt via hentSoknader`() {
+        val soktePerioder = listOf(Periode(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 10)))
+        val soknad = soknad(soktePerioder = soktePerioder)
+        repository.lagreMottattSoknad(soknad)
+        repository.lagreVedtak(soknad.copy(vedtak = vedtak(innvilgetePerioder = soktePerioder)))
+
+        val hentetPaNytt = repository.hentSoknader(personident).single()
+
+        assertEquals(SoknadStatus.INNVILGET, hentetPaNytt.status)
+        assertEquals(soktePerioder, hentetPaNytt.vedtak?.innvilgetePerioder)
+    }
+
+    @Test
+    fun `lagreVedtak for ukjent soknadId kaster IllegalArgumentException`() {
+        val ukjentSoknadId = UUID.randomUUID()
+        assertFailsWith<IllegalArgumentException> {
+            repository.lagreVedtak(soknad().copy(id = ukjentSoknadId, vedtak = vedtak()))
+        }
     }
 
     private fun soknad(
@@ -291,4 +336,28 @@ class SoknadRepositoryTest {
         private const val DOCUMENT_JSON =
             """[{"type": "PARAGRAPH", "title": "Tittel", "texts": ["Innhold"]}]"""
     }
+
+    private fun vedtak(
+        innvilgetePerioder: List<Periode> =
+            listOf(
+                Periode(
+                    LocalDate.of(2026, 4, 1),
+                    LocalDate.of(2026, 4, 10),
+                ),
+            ),
+    ): Vedtak =
+        Vedtak(
+            utfall = Utfall.Innvilget,
+            fattetAv = Navident("Z999999"),
+            fattetTidspunkt = Instant.parse("2026-03-05T10:00:00Z"),
+            innvilgetePerioder = innvilgetePerioder,
+            document =
+                listOf(
+                    DocumentComponent(
+                        type = DocumentComponentType.HEADER_H1,
+                        title = "Vedtak",
+                        texts = listOf("Søknaden din er innvilget"),
+                    ),
+                ),
+        )
 }
