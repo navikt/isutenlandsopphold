@@ -8,7 +8,5 @@ class SoknadService(
 ) {
     fun hentSoknader(personident: Personident): List<Soknad> = soknadRepository.hentSoknader(personident)
 
-    fun mottaSoknad(soknad: Soknad) {
-        soknadRepository.upsertSoknad(soknad)
-    }
+    fun mottaSoknad(soknad: Soknad): LagreMottattSoknadResultat = soknadRepository.lagreMottattSoknad(soknad)
 }

@@ -1,6 +1,7 @@
 package no.nav.syfo.utenlandsopphold.infrastructure.database.repository
 
 import no.nav.syfo.common.types.ident.Personident
+import no.nav.syfo.utenlandsopphold.application.LagreMottattSoknadResultat
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.SoknadStatus
@@ -38,7 +39,7 @@ class SoknadRepositoryTest {
     fun `lagrer og henter soknad uten vedtak`() {
         val soknad = soknad(soktePerioder = listOf(Periode(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 10))))
 
-        repository.upsertSoknad(soknad)
+        repository.lagreMottattSoknad(soknad)
         val hentet = repository.hentSoknader(personident)
 
         assertEquals(1, hentet.size)
@@ -53,44 +54,45 @@ class SoknadRepositoryTest {
     }
 
     @Test
-    fun `oppdaterer eksisterende soknad med samme eksternId`() {
+    fun `hopper over soknad som allerede er lagret med samme eksternId`() {
         val eksternId = UUID.randomUUID()
-        val opprinneligPersonident = Personident("11111111111")
-        val oppdatertPersonident = Personident("22222222222")
-        val oppdatertePerioder = listOf(Periode(LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 10)))
-        val oppdatertInnsendtTidspunkt = OffsetDateTime.parse("2026-04-01T09:00:00Z")
-        repository.upsertSoknad(
+        val opprinneligePerioder = listOf(Periode(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 10)))
+        val opprinneligInnsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z")
+        val forsteResultat =
+            repository.lagreMottattSoknad(
+                soknad(
+                    eksternId = eksternId,
+                    personident = personident,
+                    soktePerioder = opprinneligePerioder,
+                    innsendtTidspunkt = opprinneligInnsendtTidspunkt,
+                ),
+            )
+        val duplikat =
             soknad(
                 eksternId = eksternId,
-                personident = opprinneligPersonident,
-                soktePerioder = listOf(Periode(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 10))),
-            ),
-        )
-        val oppdatertSoknad =
-            soknad(
-                eksternId = eksternId,
-                personident = oppdatertPersonident,
-                soktePerioder = oppdatertePerioder,
-                innsendtTidspunkt = oppdatertInnsendtTidspunkt,
+                personident = Personident("22222222222"),
+                soktePerioder = listOf(Periode(LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 10))),
+                innsendtTidspunkt = OffsetDateTime.parse("2026-04-01T09:00:00Z"),
             )
 
-        repository.upsertSoknad(oppdatertSoknad)
-        val hentet = repository.hentSoknader(oppdatertPersonident)
+        val duplikatResultat = repository.lagreMottattSoknad(duplikat)
 
-        assertTrue(repository.hentSoknader(opprinneligPersonident).isEmpty())
+        assertEquals(LagreMottattSoknadResultat.LAGRET, forsteResultat)
+        assertEquals(LagreMottattSoknadResultat.ALLEREDE_LAGRET, duplikatResultat)
+        assertTrue(repository.hentSoknader(Personident("22222222222")).isEmpty())
+        val hentet = repository.hentSoknader(personident)
         assertEquals(1, hentet.size)
         val lagret = hentet.single()
-        assertEquals(oppdatertSoknad.id, lagret.id)
         assertEquals(eksternId, lagret.eksternId)
-        assertEquals(oppdatertPersonident, lagret.personident)
-        assertEquals(oppdatertePerioder, lagret.soktePerioder)
-        assertEquals(oppdatertInnsendtTidspunkt, lagret.innsendtTidspunkt)
+        assertEquals(personident, lagret.personident)
+        assertEquals(opprinneligePerioder, lagret.soktePerioder)
+        assertEquals(opprinneligInnsendtTidspunkt, lagret.innsendtTidspunkt)
     }
 
     @Test
     fun `henter kun soknader for angitt personident`() {
-        repository.upsertSoknad(soknad(personident = Personident("11111111111")))
-        repository.upsertSoknad(soknad(personident = Personident("22222222222")))
+        repository.lagreMottattSoknad(soknad(personident = Personident("11111111111")))
+        repository.lagreMottattSoknad(soknad(personident = Personident("22222222222")))
 
         val hentet = repository.hentSoknader(Personident("11111111111"))
 
@@ -106,7 +108,7 @@ class SoknadRepositoryTest {
                 Periode(LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 3)),
             )
 
-        repository.upsertSoknad(soknad(soktePerioder = perioder))
+        repository.lagreMottattSoknad(soknad(soktePerioder = perioder))
         val lagret = repository.hentSoknader(personident).single()
 
         assertEquals(2, lagret.soktePerioder.size)

@@ -2,6 +2,7 @@ package no.nav.syfo.utenlandsopphold.infrastructure.database.repository
 
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.application.ISoknadRepository
+import no.nav.syfo.utenlandsopphold.application.LagreMottattSoknadResultat
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.Vedtak
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
@@ -46,15 +47,20 @@ class SoknadRepository(
             }
         }
 
-    override fun upsertSoknad(soknad: Soknad): Soknad =
+    override fun lagreMottattSoknad(soknad: Soknad): LagreMottattSoknadResultat =
         database.connection.use { connection ->
             val now = OffsetDateTime.now(ZoneOffset.UTC)
             val pSoknad = connection.createSoknad(soknad, now)
-            connection.deletePerioder(pSoknad.id)
-            connection.createPerioder(pSoknad.id, soknad)
+            val resultat =
+                if (pSoknad != null) {
+                    connection.createPerioder(pSoknad.id, soknad)
+                    LagreMottattSoknadResultat.LAGRET
+                } else {
+                    LagreMottattSoknadResultat.ALLEREDE_LAGRET
+                }
 
             connection.commit()
-            soknad
+            resultat
         }
 
     private fun Connection.getSoknader(personident: Personident): List<PSoknad> =
@@ -86,14 +92,14 @@ class SoknadRepository(
     private fun Connection.createSoknad(
         soknad: Soknad,
         now: OffsetDateTime,
-    ): PSoknad =
+    ): PSoknad? =
         prepareStatement(CREATE_SOKNAD).use {
             it.setObject(1, soknad.id)
             it.setObject(2, soknad.eksternId)
             it.setString(3, soknad.personident.value)
             it.setObject(4, soknad.innsendtTidspunkt)
             it.setObject(5, now)
-            it.executeQuery().toList { toPSoknad() }.single()
+            it.executeQuery().toList { toPSoknad() }.singleOrNull()
         }
 
     private fun Connection.createPerioder(
@@ -107,13 +113,6 @@ class SoknadRepository(
             it.setInt(1, soknadId)
             it.setArray(2, createArrayOf("date", fomDates))
             it.setArray(3, createArrayOf("date", tomDates))
-            it.executeUpdate()
-        }
-    }
-
-    private fun Connection.deletePerioder(soknadId: Int) {
-        prepareStatement(DELETE_PERIODER).use {
-            it.setInt(1, soknadId)
             it.executeUpdate()
         }
     }
@@ -179,16 +178,8 @@ class SoknadRepository(
                     innsendt_tidspunkt,
                     created_at
                 ) VALUES (?, ?, ?, ?, ?)
-                ON CONFLICT (ekstern_id) DO UPDATE SET
-                    uuid = EXCLUDED.uuid,
-                    personident = EXCLUDED.personident,
-                    innsendt_tidspunkt = EXCLUDED.innsendt_tidspunkt
+                ON CONFLICT (ekstern_id) DO NOTHING
                 RETURNING *
-            """
-
-        private const val DELETE_PERIODER =
-            """
-                DELETE FROM soknad_periode WHERE soknad_id = ?
             """
 
         private const val CREATE_PERIODER =

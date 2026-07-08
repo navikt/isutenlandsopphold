@@ -11,6 +11,7 @@ postgres-embedded = "2.2.2"
 postgres-embedded-runtime = "17.5.0"
 kafka = "4.2.0"
 confluent = "8.2.1"
+micrometer = "1.16.5"
 
 [libraries.isyfo-backend-common]
 module = "no.nav.syfo:isyfo-backend-common"
@@ -43,6 +44,10 @@ version.ref = "kafka"
 [libraries.kafka-avro-serializer]
 module = "io.confluent:kafka-avro-serializer"
 version.ref = "confluent"
+
+[libraries.micrometer-registry-prometheus]
+module = "io.micrometer:micrometer-registry-prometheus"
+version.ref = "micrometer"
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
