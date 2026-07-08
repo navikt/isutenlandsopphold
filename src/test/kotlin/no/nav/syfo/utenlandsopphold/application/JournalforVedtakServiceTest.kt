@@ -7,6 +7,7 @@ import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.Utfall
 import no.nav.syfo.utenlandsopphold.domain.lagSoknad
+import no.nav.syfo.utenlandsopphold.domain.vedtakDocument
 import no.nav.syfo.utenlandsopphold.domain.veileder
 import java.time.Instant
 import java.time.LocalDate
@@ -20,6 +21,7 @@ class JournalforVedtakServiceTest {
             utfall = Utfall.Innvilget,
             fattetAv = veileder,
             now = Instant.parse("2026-01-10T12:00:00Z"),
+            document = vedtakDocument,
         )
 
     @Test
@@ -175,6 +177,10 @@ private class FakeSoknadRepository(
     val distribuerte = mutableListOf<Pair<UUID, Instant>>()
 
     override fun hentSoknader(personident: Personident): List<Soknad> = soknader.filter { it.personident == personident }
+
+    override fun hentSoknad(soknadId: UUID): Soknad? = soknader.find { it.id == soknadId }
+
+    override fun lagreVedtak(soknadMedVedtak: Soknad): Soknad = throw NotImplementedError("Ikke i bruk i denne testen")
 
     override fun getIkkeJournalforteSoknader(): List<Soknad> = soknader
 

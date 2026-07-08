@@ -131,7 +131,11 @@ private fun emptySoknadService(): SoknadService =
     SoknadService(
         soknadRepository =
             object : ISoknadRepository {
+                override fun hentSoknad(soknadId: UUID): Soknad? = null
+
                 override fun hentSoknader(personident: Personident): List<Soknad> = emptyList()
+
+                override fun lagreVedtak(soknadMedVedtak: Soknad): Soknad = throw NotImplementedError("Ikke i bruk i denne testen")
 
                 override fun getIkkeJournalforteSoknader(): List<Soknad> = emptyList()
 

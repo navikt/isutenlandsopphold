@@ -16,6 +16,7 @@ class VedtakTest {
             fattetAv = veileder,
             fattetTidspunkt = Instant.parse("2026-01-10T12:00:00Z"),
             innvilgetePerioder = listOf(Periode(LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 9))),
+            document = vedtakDocument,
         )
 
     @Test

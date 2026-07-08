@@ -15,7 +15,7 @@ data class Vedtak(
     val fattetTidspunkt: Instant,
     val innvilgetePerioder: List<Periode>,
     val vedtakId: UUID = UUID.randomUUID(),
-    val document: List<DocumentComponent> = emptyList(),
+    val document: List<DocumentComponent>,
     val journalpostId: JournalpostId? = null,
     val journalfortTidspunkt: Instant? = null,
     val distribuertTidspunkt: Instant? = null,

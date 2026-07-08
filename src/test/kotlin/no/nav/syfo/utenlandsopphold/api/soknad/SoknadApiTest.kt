@@ -18,8 +18,11 @@ import no.nav.syfo.utenlandsopphold.application.ApplicationState
 import no.nav.syfo.utenlandsopphold.application.ISoknadRepository
 import no.nav.syfo.utenlandsopphold.application.LagreMottattSoknadResultat
 import no.nav.syfo.utenlandsopphold.application.SoknadService
+import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
+import no.nav.syfo.utenlandsopphold.domain.DocumentComponentType
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
+import no.nav.syfo.utenlandsopphold.domain.Utfall
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
 import no.nav.syfo.utenlandsopphold.infrastructure.mock.mockTilgangskontrollClient
 import no.nav.syfo.utenlandsopphold.testutil.TEST_AZURE_APP_CLIENT_ID
@@ -34,6 +37,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 const val SOKNADER_QUERY_PATH = "/api/v1/soknader/query"
+const val SOKNAD_VEDTAK_PATH = "/api/v1/soknader/%s/vedtak"
 
 class SoknadApiTest {
     private fun ApplicationTestBuilder.setupApiAndClient(
@@ -166,12 +170,204 @@ class SoknadApiTest {
 
             assertEquals(HttpStatusCode.Unauthorized, response.status)
         }
+
+    @Test
+    fun `vedtak uten tilgang til person gir 403`() =
+        testApplication {
+            val soknadId = UUID.randomUUID()
+            val soknad =
+                Soknad(
+                    id = soknadId,
+                    eksternId = UUID.randomUUID(),
+                    personident = UserConstants.PERSON_VEILEDERE_IKKE_HAR_TILGANG_TIL,
+                    soktePerioder = listOf(Periode(fom = LocalDate.of(2026, 4, 1), tom = LocalDate.of(2026, 4, 10))),
+                    innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
+                )
+            val client = setupApiAndClient(soknadServiceCreatingVedtak(soknad) { _ -> error("Skal ikke kalles") })
+
+            val response =
+                client.post(SOKNAD_VEDTAK_PATH.format(soknadId)) {
+                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
+                    contentType(ContentType.Application.Json)
+                    setBody(validSoknadVedtakPostDTO())
+                }
+
+            assertEquals(HttpStatusCode.Forbidden, response.status)
+        }
+
+    @Test
+    fun `vedtak uten token gir 401`() =
+        testApplication {
+            val client =
+                setupApiAndClient(soknadServiceCreatingVedtak(ubruktSoknad) { _ -> error("Skal ikke kalles") })
+
+            val response =
+                client.post(SOKNAD_VEDTAK_PATH.format(UUID.randomUUID())) {
+                    contentType(ContentType.Application.Json)
+                    setBody(validSoknadVedtakPostDTO())
+                }
+
+            assertEquals(HttpStatusCode.Unauthorized, response.status)
+        }
+
+    @Test
+    fun `vedtak med token med feil audience gir 401`() =
+        testApplication {
+            val client =
+                setupApiAndClient(soknadServiceCreatingVedtak(ubruktSoknad) { _ -> error("Skal ikke kalles") })
+
+            val response =
+                client.post(SOKNAD_VEDTAK_PATH.format(UUID.randomUUID())) {
+                    bearerAuth(generateJWT(audience = "en-annen-app"))
+                    contentType(ContentType.Application.Json)
+                    setBody(validSoknadVedtakPostDTO())
+                }
+
+            assertEquals(HttpStatusCode.Unauthorized, response.status)
+        }
+
+    @Test
+    fun `vedtak med ugyldig soknadId gir 400`() =
+        testApplication {
+            val client =
+                setupApiAndClient(soknadServiceCreatingVedtak(ubruktSoknad) { _ -> error("Skal ikke kalles") })
+
+            val response =
+                client.post(SOKNAD_VEDTAK_PATH.format("ikke-gyldig-uuid")) {
+                    bearerAuth(generateJWT())
+                    contentType(ContentType.Application.Json)
+                    setBody(validSoknadVedtakPostDTO())
+                }
+
+            assertEquals(HttpStatusCode.BadRequest, response.status)
+        }
+
+    @Test
+    fun `vedtak med ukjent soknadId gir 404`() =
+        testApplication {
+            val client = setupApiAndClient(soknadServiceReturning(emptyList()))
+
+            val response =
+                client.post(SOKNAD_VEDTAK_PATH.format(UUID.randomUUID())) {
+                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
+                    contentType(ContentType.Application.Json)
+                    setBody(validSoknadVedtakPostDTO())
+                }
+
+            assertEquals(HttpStatusCode.NotFound, response.status)
+        }
+
+    @Test
+    fun `vedtak med ugyldig utfall gir 400`() =
+        testApplication {
+            val client =
+                setupApiAndClient(soknadServiceCreatingVedtak(ubruktSoknad) { _ -> error("Skal ikke kalles") })
+
+            val response =
+                client.post(SOKNAD_VEDTAK_PATH.format(UUID.randomUUID())) {
+                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
+                    contentType(ContentType.Application.Json)
+                    setBody(
+                        SoknadVedtakPostDTO(
+                            utfall = "GODKJENT",
+                            innvilgetePerioder = emptyList(),
+                            document =
+                                listOf(
+                                    DocumentComponent(
+                                        type = DocumentComponentType.HEADER_H1,
+                                        title = "Vedtak",
+                                        texts = listOf("Søknaden din er innvilget"),
+                                    ),
+                                ),
+                        ),
+                    )
+                }
+
+            assertEquals(HttpStatusCode.BadRequest, response.status)
+        }
+
+    @Test
+    fun `vedtak med tom document gir 400`() =
+        testApplication {
+            val client =
+                setupApiAndClient(soknadServiceCreatingVedtak(ubruktSoknad) { _ -> error("Skal ikke kalles") })
+
+            val response =
+                client.post(SOKNAD_VEDTAK_PATH.format(UUID.randomUUID())) {
+                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
+                    contentType(ContentType.Application.Json)
+                    setBody(
+                        SoknadVedtakPostDTO(
+                            utfall = "INNVILGET",
+                            innvilgetePerioder = emptyList(),
+                            document = emptyList(),
+                        ),
+                    )
+                }
+
+            assertEquals(HttpStatusCode.BadRequest, response.status)
+        }
+
+    @Test
+    fun `vedtak returnerer 200 med oppdatert soknad fra service`() =
+        testApplication {
+            val soknadId = UUID.randomUUID()
+            val innvilgetePerioder = listOf(Periode(fom = LocalDate.of(2026, 4, 1), tom = LocalDate.of(2026, 4, 10)))
+            var lagretSoknad: Soknad? = null
+
+            val mottattSoknad =
+                Soknad(
+                    id = soknadId,
+                    eksternId = UUID.randomUUID(),
+                    personident = Personident("11111111111"),
+                    soktePerioder = innvilgetePerioder,
+                    innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
+                )
+
+            val client =
+                setupApiAndClient(
+                    soknadServiceCreatingVedtak(mottattSoknad) { soknadMedVedtak ->
+                        lagretSoknad = soknadMedVedtak
+                    },
+                )
+
+            val response =
+                client.post(SOKNAD_VEDTAK_PATH.format(soknadId.toString())) {
+                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
+                    contentType(ContentType.Application.Json)
+                    setBody(
+                        SoknadVedtakPostDTO(
+                            utfall = "INNVILGET",
+                            innvilgetePerioder = innvilgetePerioder.map { PeriodeDTO(fom = it.fom, tom = it.tom) },
+                            document =
+                                listOf(
+                                    DocumentComponent(
+                                        type = DocumentComponentType.HEADER_H1,
+                                        title = "Vedtak",
+                                        texts = listOf("Søknaden din er innvilget"),
+                                    ),
+                                ),
+                        ),
+                    )
+                }
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(soknadId, lagretSoknad?.id)
+            assertEquals(Utfall.Innvilget, lagretSoknad?.vedtak?.utfall)
+            assertEquals(innvilgetePerioder, lagretSoknad?.vedtak?.innvilgetePerioder)
+
+            val body = response.body<SoknadVedtakResponseDTO>()
+            assertEquals(soknadId.toString(), body.soknad.soknadId)
+            assertEquals(SoknadStatusDTO.INNVILGET, body.soknad.status)
+        }
 }
 
 private fun soknadServiceReturning(soknader: List<Soknad>): SoknadService =
     SoknadService(
         soknadRepository =
             object : ISoknadRepository {
+                override fun hentSoknad(soknadId: UUID): Soknad? = null
+
                 override fun hentSoknader(personident: Personident): List<Soknad> = soknader
 
                 override fun getIkkeJournalforteSoknader(): List<Soknad> = emptyList()
@@ -189,6 +385,66 @@ private fun soknadServiceReturning(soknader: List<Soknad>): SoknadService =
                 override fun setVedtakDistribuert(
                     vedtakId: UUID,
                     distribuertTidspunkt: Instant,
+                ) = Unit
+
+                override fun lagreVedtak(soknadMedVedtak: Soknad): Soknad = throw NotImplementedError("Ikke i bruk i denne testen")
+            },
+    )
+
+private val ubruktSoknad =
+    Soknad(
+        eksternId = UUID.randomUUID(),
+        personident = Personident("11111111111"),
+        soktePerioder = listOf(Periode(fom = LocalDate.of(2026, 4, 1), tom = LocalDate.of(2026, 4, 10))),
+        innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
+    )
+
+private fun validSoknadVedtakPostDTO() =
+    SoknadVedtakPostDTO(
+        utfall = "INNVILGET",
+        innvilgetePerioder = emptyList(),
+        document =
+            listOf(
+                DocumentComponent(
+                    type = DocumentComponentType.HEADER_H1,
+                    title = "Vedtak",
+                    texts = listOf("Søknaden din er innvilget"),
+                ),
+            ),
+    )
+
+private fun soknadServiceCreatingVedtak(
+    mottattSoknad: Soknad,
+    lagreVedtak: (Soknad) -> Unit = { _ -> },
+): SoknadService =
+    SoknadService(
+        soknadRepository =
+            object : ISoknadRepository {
+                override fun hentSoknad(soknadId: UUID): Soknad? = mottattSoknad
+
+                override fun hentSoknader(personident: Personident): List<Soknad> = throw NotImplementedError("Ikke i bruk i denne testen")
+
+                override fun lagreMottattSoknad(soknad: Soknad): LagreMottattSoknadResultat =
+                    throw NotImplementedError("Ikke i bruk i denne testen")
+
+                override fun lagreVedtak(soknadMedVedtak: Soknad): Soknad {
+                    lagreVedtak.invoke(soknadMedVedtak)
+                    return soknadMedVedtak
+                }
+
+                override fun getIkkeJournalforteSoknader(): List<Soknad> = emptyList()
+
+                override fun getSoknaderMedIkkeDistribuerteVedtak(): List<Soknad> = emptyList()
+
+                override fun setVedtakDistribuert(
+                    vedtakId: UUID,
+                    distribuertTidspunkt: Instant,
+                ) = Unit
+
+                override fun setVedtakJournalfort(
+                    vedtakId: UUID,
+                    journalpostId: JournalpostId,
+                    journalfortTidspunkt: Instant,
                 ) = Unit
             },
     )
