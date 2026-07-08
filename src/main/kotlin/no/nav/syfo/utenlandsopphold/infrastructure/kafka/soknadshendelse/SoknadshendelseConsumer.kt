@@ -52,7 +52,7 @@ class SoknadshendelseConsumer(
                 }
             }.forEach { soknad ->
                 if (soknadService.mottaSoknad(soknad = soknad) == LagreMottattSoknadResultat.ALLEREDE_LAGRET) {
-                    logger.info(
+                    logger.warn(
                         "Mottok søknad som allerede er lagret fra før, hopper over. eksternId=${soknad.eksternId}",
                     )
                     soknadAlleredeLagretCounter.increment()
