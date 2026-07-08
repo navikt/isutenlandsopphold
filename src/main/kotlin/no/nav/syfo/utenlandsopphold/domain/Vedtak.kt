@@ -32,7 +32,7 @@ data class Vedtak(
         tidspunkt: Instant,
     ): Vedtak {
         check(!erJournalfort) {
-            "Vedtak $vedtakId er allerede journalført med journalpostId $journalpostId"
+            "Vedtak $vedtakId er allerede journalført med journalpostId ${this.journalpostId}"
         }
 
         return copy(journalpostId = journalpostId, journalfortTidspunkt = tidspunkt)
