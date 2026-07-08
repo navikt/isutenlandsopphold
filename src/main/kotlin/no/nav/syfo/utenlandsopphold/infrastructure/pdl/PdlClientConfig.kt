@@ -5,7 +5,7 @@ import no.nav.syfo.utenlandsopphold.getEnvVar
 /**
  * Konfigurasjon for [PdlClient].
  *
- * @param baseUrl Base-URL til PDL, f.eks. `http://pdl-api.pdl/graphql`.
+ * @param baseUrl Base-URL til PDL, f.eks. `https://pdl-api.dev-fss-pub.nais.io/graphql`.
  * @param clientId Scope til PDL, brukt av [no.nav.syfo.common.token.azuread.AzureAdClient]
  * for å hente system-token.
  */
