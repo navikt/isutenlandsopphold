@@ -47,12 +47,10 @@ spec:
     outbound:
       external:
         - host: "dokarkiv.prod-fss-pub.nais.io"
+        - host: "pdl-api.prod-fss-pub.nais.io"
       rules:
         - application: istilgangskontroll
         - application: ispdfgen
-        - application: pdl-api
-          namespace: pdl
-          cluster: prod-gcp
   gcp:
     sqlInstances:
       - type: POSTGRES_17
