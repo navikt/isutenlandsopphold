@@ -23,7 +23,7 @@ fun launchJournalforVedtakCronjob(
         while (applicationState.ready) {
             try {
                 if (leaderElection.isLeader()) {
-                    journalforVedtakService.journalforUjournalforteVedtak()
+                    journalforVedtakService.journalforVedtak()
                 }
             } catch (ex: CancellationException) {
                 throw ex

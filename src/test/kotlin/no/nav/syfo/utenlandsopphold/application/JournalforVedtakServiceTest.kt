@@ -38,7 +38,7 @@ class JournalforVedtakServiceTest {
                     journalforingService = journalforingService,
                 )
 
-            service.journalforUjournalforteVedtak()
+            service.journalforVedtak()
 
             assertEquals(1, pdfClient.callCount)
             assertEquals(1, journalforingService.callCount)
@@ -75,7 +75,7 @@ class JournalforVedtakServiceTest {
                     journalforingService = journalforingService,
                 )
 
-            service.journalforUjournalforteVedtak()
+            service.journalforVedtak()
 
             assertEquals(1, repository.journalforte.size)
             assertEquals(soknadSomLykkes.vedtak!!.vedtakId, repository.journalforte.single().first)
@@ -96,7 +96,7 @@ class JournalforVedtakServiceTest {
                     journalforingService = FakeJournalforingService(Result.success(JournalpostId("999"))),
                 )
 
-            service.journalforUjournalforteVedtak()
+            service.journalforVedtak()
 
             assertEquals(repository.journalforte.size, 1)
             assertEquals(soknadMedVedtak.vedtak!!.vedtakId, repository.journalforte.single().first)
@@ -112,7 +112,7 @@ private class FakeSoknadRepository(
 
     override fun lagreMottattSoknad(soknad: Soknad): Soknad = soknad
 
-    override fun getUjournalforteSoknader(): List<Soknad> = soknader
+    override fun getIkkeJournalforteSoknader(): List<Soknad> = soknader
 
     override fun setVedtakJournalfort(
         vedtakId: UUID,

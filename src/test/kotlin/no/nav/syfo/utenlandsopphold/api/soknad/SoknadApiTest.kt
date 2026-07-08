@@ -115,7 +115,7 @@ private fun soknadServiceReturning(soknader: List<Soknad>): SoknadService =
 
                 override fun lagreMottattSoknad(soknad: Soknad): Soknad = soknad
 
-                override fun getUjournalforteSoknader(): List<Soknad> = emptyList()
+                override fun getIkkeJournalforteSoknader(): List<Soknad> = emptyList()
 
                 override fun setVedtakJournalfort(
                     vedtakId: UUID,

@@ -15,7 +15,7 @@ interface ISoknadRepository {
      * Henter søknader hvor det fattede vedtaket ennå ikke er journalført
      * (`vedtak.journalpost_id IS NULL`). Brukes av journalføringsjobben.
      */
-    fun getUjournalforteSoknader(): List<Soknad>
+    fun getIkkeJournalforteSoknader(): List<Soknad>
 
     /**
      * Markerer at et vedtak er journalført ved å sette `journalpost_id` og

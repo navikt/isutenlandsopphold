@@ -94,21 +94,21 @@ class SoknadRepositoryTest {
         )
 
     @Test
-    fun `getUjournalforteSoknader returnerer kun soknader med u-journalfort vedtak`() {
+    fun `getIkkeJournalforteSoknader returnerer kun soknader med u-journalfort vedtak`() {
         opprettSoknadMedVedtak(journalpostId = null)
         opprettSoknadMedVedtak(journalpostId = "111")
 
-        val ujournalforte = repository.getUjournalforteSoknader()
+        val ikkeJournalforte = repository.getIkkeJournalforteSoknader()
 
-        assertEquals(1, ujournalforte.size)
-        assertTrue(ujournalforte.single().vedtak?.erJournalfort == false)
+        assertEquals(1, ikkeJournalforte.size)
+        assertTrue(ikkeJournalforte.single().vedtak?.erJournalfort == false)
     }
 
     @Test
-    fun `getUjournalforteSoknader leser document og perioder`() {
+    fun `getIkkeJournalforteSoknader leser document og perioder`() {
         val vedtakId = opprettSoknadMedVedtak(journalpostId = null)
 
-        val soknad = repository.getUjournalforteSoknader().single()
+        val soknad = repository.getIkkeJournalforteSoknader().single()
 
         assertEquals(vedtakId, soknad.vedtak?.vedtakId)
         assertEquals(1, soknad.vedtak?.document?.size)
@@ -131,7 +131,7 @@ class SoknadRepositoryTest {
 
         repository.setVedtakJournalfort(vedtakId, journalpostId, journalfortTidspunkt)
 
-        assertTrue(repository.getUjournalforteSoknader().isEmpty())
+        assertTrue(repository.getIkkeJournalforteSoknader().isEmpty())
     }
 
     private fun opprettSoknadMedVedtak(journalpostId: String?): UUID {

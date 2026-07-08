@@ -20,11 +20,11 @@ class JournalforVedtakService(
     private val pdfClient: IPdfClient,
     private val journalforingService: IJournalforingService,
 ) {
-    suspend fun journalforUjournalforteVedtak() {
+    suspend fun journalforVedtak() {
         log.info("Starter journalføring av u-journalførte vedtak")
-        val soknaderMedUjournalforteVedtak = soknadRepository.getUjournalforteSoknader()
+        val soknaderMedIkkeJournalforteVedtak = soknadRepository.getIkkeJournalforteSoknader()
 
-        soknaderMedUjournalforteVedtak.forEach { soknad ->
+        soknaderMedIkkeJournalforteVedtak.forEach { soknad ->
             try {
                 journalforVedtak(soknad)
             } catch (exception: Exception) {

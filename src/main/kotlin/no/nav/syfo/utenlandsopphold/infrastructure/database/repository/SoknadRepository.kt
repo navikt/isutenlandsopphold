@@ -61,11 +61,11 @@ class SoknadRepository(
             soknad
         }
 
-    override fun getUjournalforteSoknader(): List<Soknad> =
+    override fun getIkkeJournalforteSoknader(): List<Soknad> =
         database.connection.use { connection ->
             connection.transactionIsolation = Connection.TRANSACTION_REPEATABLE_READ
 
-            val pSoknader = connection.getUjournalforteSoknader()
+            val pSoknader = connection.getIkkeJournalforteSoknader()
             if (pSoknader.isEmpty()) {
                 connection.commit()
                 return@use emptyList()
@@ -124,8 +124,8 @@ class SoknadRepository(
             it.executeQuery().toList { toPVedtak() }
         }
 
-    private fun Connection.getUjournalforteSoknader(): List<PSoknad> =
-        prepareStatement(GET_UJOURNALFORTE_SOKNADER).use {
+    private fun Connection.getIkkeJournalforteSoknader(): List<PSoknad> =
+        prepareStatement(GET_IKKE_JOURNALFORTE_SOKNADER).use {
             it.executeQuery().toList { toPSoknad() }
         }
 
@@ -210,7 +210,7 @@ class SoknadRepository(
                 SELECT * FROM vedtak WHERE soknad_id = ANY(?)
             """
 
-        private const val GET_UJOURNALFORTE_SOKNADER =
+        private const val GET_IKKE_JOURNALFORTE_SOKNADER =
             """
                 SELECT DISTINCT s.* FROM soknad s
                     INNER JOIN vedtak v ON v.soknad_id = s.id
