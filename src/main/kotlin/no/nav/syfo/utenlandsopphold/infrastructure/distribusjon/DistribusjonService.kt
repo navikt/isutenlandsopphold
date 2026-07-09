@@ -2,6 +2,8 @@ package no.nav.syfo.utenlandsopphold.infrastructure.distribusjon
 
 import no.nav.syfo.common.distribusjon.client.DokdistfordelingClient
 import no.nav.syfo.common.distribusjon.createDistribuerJournalpostRequest
+import no.nav.syfo.common.distribusjon.dto.Distribusjonstidspunkt
+import no.nav.syfo.common.distribusjon.dto.Distribusjonstype
 import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.utenlandsopphold.application.IDistribusjonService
 import org.slf4j.LoggerFactory
@@ -20,6 +22,8 @@ class DistribusjonService(
                 createDistribuerJournalpostRequest(
                     journalpostId = journalpostId.value,
                     bestillendeFagsystem = bestillendeFagsystem,
+                    distribusjonstype = Distribusjonstype.VEDTAK,
+                    Distribusjonstidspunkt.UMIDDELBART,
                 )
 
             dokdistfordelingClient.distribuer(request).bestillingsId
