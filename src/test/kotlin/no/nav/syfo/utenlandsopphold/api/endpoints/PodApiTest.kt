@@ -127,7 +127,7 @@ private fun emptySoknadService(): SoknadService =
                     journalfortTidspunkt: Instant,
                 ) = Unit
 
-                override fun getIkkeDistribuerteSoknader(): List<Soknad> = emptyList()
+                override fun getSoknaderMedIkkeDistribuerteVedtak(): List<Soknad> = emptyList()
 
                 override fun setVedtakDistribuert(
                     vedtakId: UUID,

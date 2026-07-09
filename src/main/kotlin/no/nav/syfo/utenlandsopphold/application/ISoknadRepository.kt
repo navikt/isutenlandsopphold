@@ -32,7 +32,7 @@ interface ISoknadRepository {
      * (`vedtak.journalpost_id IS NOT NULL AND vedtak.distribuert_tidspunkt IS NULL`).
      * Brukes av distribusjonsjobben.
      */
-    fun getIkkeDistribuerteSoknader(): List<Soknad>
+    fun getSoknaderMedIkkeDistribuerteVedtak(): List<Soknad>
 
     /**
      * Markerer at et vedtak er distribuert ved å sette `distribuert_tidspunkt` på raden.

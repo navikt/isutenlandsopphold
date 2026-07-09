@@ -135,12 +135,12 @@ class SoknadRepositoryTest {
     }
 
     @Test
-    fun `getIkkeDistribuerteSoknader returnerer kun journalforte, ikke-distribuerte vedtak`() {
+    fun `getSoknaderMedIkkeDistribuerteVedtak returnerer kun journalforte, ikke-distribuerte vedtak`() {
         opprettSoknadMedVedtak(journalpostId = null)
         opprettSoknadMedVedtak(journalpostId = "111", distribuertTidspunkt = null)
         opprettSoknadMedVedtak(journalpostId = "222", distribuertTidspunkt = Instant.now())
 
-        val ikkeDistribuerte = repository.getIkkeDistribuerteSoknader()
+        val ikkeDistribuerte = repository.getSoknaderMedIkkeDistribuerteVedtak()
 
         assertEquals(1, ikkeDistribuerte.size)
         val vedtak = ikkeDistribuerte.single().vedtak
@@ -155,7 +155,7 @@ class SoknadRepositoryTest {
 
         repository.setVedtakDistribuert(vedtakId, distribuertTidspunkt)
 
-        assertTrue(repository.getIkkeDistribuerteSoknader().isEmpty())
+        assertTrue(repository.getSoknaderMedIkkeDistribuerteVedtak().isEmpty())
     }
 
     private fun opprettSoknadMedVedtak(

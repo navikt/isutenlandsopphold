@@ -188,7 +188,7 @@ private class FakeSoknadRepository(
         journalforte.add(Triple(vedtakId, journalpostId, journalfortTidspunkt))
     }
 
-    override fun getIkkeDistribuerteSoknader(): List<Soknad> =
+    override fun getSoknaderMedIkkeDistribuerteVedtak(): List<Soknad> =
         soknader.filter { it.vedtak?.let { vedtak -> vedtak.erJournalfort && !vedtak.erDistribuert } == true }
 
     override fun setVedtakDistribuert(

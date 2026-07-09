@@ -79,7 +79,7 @@ class JournalforVedtakService(
      */
     suspend fun distribuerVedtak() {
         log.info("Starter distribusjon av journalførte, ikke-distribuerte vedtak")
-        val soknaderMedIkkeDistribuerteVedtak = soknadRepository.getIkkeDistribuerteSoknader()
+        val soknaderMedIkkeDistribuerteVedtak = soknadRepository.getSoknaderMedIkkeDistribuerteVedtak()
 
         soknaderMedIkkeDistribuerteVedtak.forEach { soknad ->
             try {

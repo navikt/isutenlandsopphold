@@ -106,11 +106,11 @@ class SoknadRepository(
         }
     }
 
-    override fun getIkkeDistribuerteSoknader(): List<Soknad> =
+    override fun getSoknaderMedIkkeDistribuerteVedtak(): List<Soknad> =
         database.connection.use { connection ->
             connection.transactionIsolation = Connection.TRANSACTION_REPEATABLE_READ
 
-            val pSoknader = connection.getIkkeDistribuerteSoknader()
+            val pSoknader = connection.getSoknaderMedIkkeDistribuerteVedtak()
             if (pSoknader.isEmpty()) {
                 connection.commit()
                 return@use emptyList()
@@ -172,7 +172,7 @@ class SoknadRepository(
             it.executeQuery().toList { toPSoknad() }
         }
 
-    private fun Connection.getIkkeDistribuerteSoknader(): List<PSoknad> =
+    private fun Connection.getSoknaderMedIkkeDistribuerteVedtak(): List<PSoknad> =
         prepareStatement(GET_IKKE_DISTRIBUERTE_SOKNADER).use {
             it.executeQuery().toList { toPSoknad() }
         }
