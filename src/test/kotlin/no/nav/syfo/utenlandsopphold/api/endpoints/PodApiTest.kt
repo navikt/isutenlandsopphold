@@ -15,6 +15,8 @@ import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.infrastructure.database.Database
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseConfig
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
+import no.nav.syfo.utenlandsopphold.testutil.TEST_AZURE_APP_CLIENT_ID
+import no.nav.syfo.utenlandsopphold.testutil.wellKnownInternalAzureAD
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import java.sql.Connection
@@ -58,6 +60,8 @@ class PodApiTest {
                     applicationState = ApplicationState(alive = true, ready = true),
                     database = database,
                     soknadService = emptySoknadService(),
+                    wellKnownInternalAzureAD = wellKnownInternalAzureAD(),
+                    azureAppClientId = TEST_AZURE_APP_CLIENT_ID,
                 )
             }
             val response = client.get(POD_LIVENESS_PATH)
@@ -72,6 +76,8 @@ class PodApiTest {
                     applicationState = ApplicationState(alive = true, ready = true),
                     database = database,
                     soknadService = emptySoknadService(),
+                    wellKnownInternalAzureAD = wellKnownInternalAzureAD(),
+                    azureAppClientId = TEST_AZURE_APP_CLIENT_ID,
                 )
             }
             val response = client.get(POD_READINESS_PATH)
@@ -86,6 +92,8 @@ class PodApiTest {
                     applicationState = ApplicationState(alive = true, ready = false),
                     database = database,
                     soknadService = emptySoknadService(),
+                    wellKnownInternalAzureAD = wellKnownInternalAzureAD(),
+                    azureAppClientId = TEST_AZURE_APP_CLIENT_ID,
                 )
             }
             val response = client.get(POD_READINESS_PATH)
@@ -105,6 +113,8 @@ class PodApiTest {
                     applicationState = ApplicationState(alive = true, ready = true),
                     database = brokenDb,
                     soknadService = emptySoknadService(),
+                    wellKnownInternalAzureAD = wellKnownInternalAzureAD(),
+                    azureAppClientId = TEST_AZURE_APP_CLIENT_ID,
                 )
             }
             val response = client.get(POD_READINESS_PATH)

@@ -13,6 +13,7 @@ postgres-embedded-runtime = "17.5.0"
 kafka = "4.2.0"
 confluent = "8.2.1"
 micrometer = "1.17.0"
+nimbus-jose-jwt = "10.9"
 
 [libraries.isyfo-backend-common]
 module = "no.nav.syfo:isyfo-backend-common"
@@ -53,6 +54,10 @@ version.ref = "confluent"
 [libraries.micrometer-registry-prometheus]
 module = "io.micrometer:micrometer-registry-prometheus"
 version.ref = "micrometer"
+
+[libraries.nimbus-jose-jwt]
+module = "com.nimbusds:nimbus-jose-jwt"
+version.ref = "nimbus-jose-jwt"
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

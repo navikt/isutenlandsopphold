@@ -3,11 +3,16 @@ package no.nav.syfo.utenlandsopphold.api
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
+import io.ktor.server.auth.*
 import io.ktor.server.plugins.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import no.nav.syfo.common.auth.JwtIssuer
+import no.nav.syfo.common.auth.JwtIssuerType
+import no.nav.syfo.common.auth.WellKnown
+import no.nav.syfo.common.auth.installJwtAuthentication
 import no.nav.syfo.common.tilgangskontroll.TilgangDeniedException
 import no.nav.syfo.common.util.applyCommonJacksonConfig
 import no.nav.syfo.common.util.consumerClientId
@@ -22,9 +27,21 @@ fun Application.apiModule(
     applicationState: ApplicationState,
     database: DatabaseInterface,
     soknadService: SoknadService,
+    wellKnownInternalAzureAD: WellKnown,
+    azureAppClientId: String,
 ) {
     installContentNegotiation()
     installStatusPages()
+    installJwtAuthentication(
+        jwtIssuerList =
+            listOf(
+                JwtIssuer(
+                    acceptedAudienceList = listOf(azureAppClientId),
+                    jwtIssuerType = JwtIssuerType.INTERNAL_AZUREAD,
+                    wellKnown = wellKnownInternalAzureAD,
+                ),
+            ),
+    )
 
     routing {
         registerPodApi(
@@ -32,7 +49,9 @@ fun Application.apiModule(
             database = database,
         )
         registerMetricApi()
-        registerSoknadApi(soknadService = soknadService)
+        authenticate(JwtIssuerType.INTERNAL_AZUREAD.name) {
+            registerSoknadApi(soknadService = soknadService)
+        }
     }
 }
 

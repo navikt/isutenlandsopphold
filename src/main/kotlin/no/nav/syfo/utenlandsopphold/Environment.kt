@@ -25,6 +25,16 @@ data class Environment(
             aivenRegistryUser = getEnvVar("KAFKA_SCHEMA_REGISTRY_USER"),
             aivenRegistryPassword = getEnvVar("KAFKA_SCHEMA_REGISTRY_PASSWORD"),
         ),
+    val azure: AzureEnvironment =
+        AzureEnvironment(
+            appClientId = getEnvVar("AZURE_APP_CLIENT_ID"),
+            appWellKnownUrl = getEnvVar("AZURE_APP_WELL_KNOWN_URL"),
+        ),
+)
+
+data class AzureEnvironment(
+    val appClientId: String,
+    val appWellKnownUrl: String,
 )
 
 data class DatabaseEnvironment(

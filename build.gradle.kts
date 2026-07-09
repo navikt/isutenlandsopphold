@@ -21,6 +21,7 @@ dependencies {
     implementation(ktorLibs.server.netty)
     implementation(ktorLibs.server.contentNegotiation)
     implementation(ktorLibs.server.statusPages)
+    implementation(ktorLibs.server.auth)
 
     implementation(ktorLibs.serialization.jackson)
 
@@ -44,6 +45,7 @@ dependencies {
     testImplementation(ktorLibs.server.testHost)
     testImplementation(ktorLibs.client.contentNegotiation)
     testImplementation(testFixtures(libs.isyfo.backend.common))
+    testImplementation(libs.nimbus.jose.jwt)
     testImplementation(libs.embedded.postgres)
     testImplementation(platform("io.zonky.test.postgres:embedded-postgres-binaries-bom:${libs.versions.postgres.embedded.runtime.get()}"))
 }

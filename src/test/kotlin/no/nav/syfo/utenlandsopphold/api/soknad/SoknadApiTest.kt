@@ -19,6 +19,9 @@ import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
+import no.nav.syfo.utenlandsopphold.testutil.TEST_AZURE_APP_CLIENT_ID
+import no.nav.syfo.utenlandsopphold.testutil.generateJWT
+import no.nav.syfo.utenlandsopphold.testutil.wellKnownInternalAzureAD
 import java.time.Instant
 import java.time.LocalDate
 import java.time.OffsetDateTime
@@ -36,6 +39,8 @@ class SoknadApiTest {
                 applicationState = ApplicationState(),
                 database = NoopDatabase,
                 soknadService = soknadService,
+                wellKnownInternalAzureAD = wellKnownInternalAzureAD(),
+                azureAppClientId = TEST_AZURE_APP_CLIENT_ID,
             )
         }
         return createClient {
@@ -63,6 +68,7 @@ class SoknadApiTest {
 
             val response =
                 client.post(SOKNADER_QUERY_PATH) {
+                    bearerAuth(generateJWT())
                     contentType(ContentType.Application.Json)
                     setBody(SoknaderQueryDTO(personident = "11111111111"))
                 }
@@ -87,6 +93,7 @@ class SoknadApiTest {
 
             val response =
                 client.post(SOKNADER_QUERY_PATH) {
+                    bearerAuth(generateJWT())
                     contentType(ContentType.Application.Json)
                     setBody(SoknaderQueryDTO(personident = "ikke-gyldig"))
                 }
@@ -101,11 +108,41 @@ class SoknadApiTest {
 
             val response =
                 client.post(SOKNADER_QUERY_PATH) {
+                    bearerAuth(generateJWT())
                     contentType(ContentType.Application.Json)
                     setBody("""{ dette er ikke gyldig json """)
                 }
 
             assertEquals(HttpStatusCode.BadRequest, response.status)
+        }
+
+    @Test
+    fun `query uten token gir 401`() =
+        testApplication {
+            val client = setupApiAndClient(soknadServiceReturning(emptyList()))
+
+            val response =
+                client.post(SOKNADER_QUERY_PATH) {
+                    contentType(ContentType.Application.Json)
+                    setBody(SoknaderQueryDTO(personident = "11111111111"))
+                }
+
+            assertEquals(HttpStatusCode.Unauthorized, response.status)
+        }
+
+    @Test
+    fun `query med token med feil audience gir 401`() =
+        testApplication {
+            val client = setupApiAndClient(soknadServiceReturning(emptyList()))
+
+            val response =
+                client.post(SOKNADER_QUERY_PATH) {
+                    bearerAuth(generateJWT(audience = "en-annen-app"))
+                    contentType(ContentType.Application.Json)
+                    setBody(SoknaderQueryDTO(personident = "11111111111"))
+                }
+
+            assertEquals(HttpStatusCode.Unauthorized, response.status)
         }
 }
 

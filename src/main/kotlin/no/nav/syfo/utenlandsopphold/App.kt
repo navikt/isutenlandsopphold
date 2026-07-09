@@ -3,6 +3,7 @@ package no.nav.syfo.utenlandsopphold
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
+import no.nav.syfo.common.auth.getWellKnown
 import no.nav.syfo.utenlandsopphold.api.apiModule
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
 import no.nav.syfo.utenlandsopphold.application.JournalforVedtakService
@@ -20,6 +21,7 @@ import org.slf4j.LoggerFactory
 fun main(args: Array<String>) {
     val logger = LoggerFactory.getLogger("ktor.application")
     val applicationState = ApplicationState()
+    val environment = Environment()
 
     val database =
         Database(
@@ -31,12 +33,14 @@ fun main(args: Array<String>) {
                         password = "password",
                     )
                 } else {
-                    databaseConfig(Environment().database)
+                    databaseConfig(environment.database)
                 },
         )
 
     val soknadRepository = SoknadRepository(database = database)
     val soknadService = SoknadService(soknadRepository = soknadRepository)
+
+    val wellKnownInternalAzureAD = getWellKnown(environment.azure.appWellKnownUrl)
 
     val server =
         embeddedServer(
@@ -54,6 +58,8 @@ fun main(args: Array<String>) {
                     applicationState = applicationState,
                     database = database,
                     soknadService = soknadService,
+                    wellKnownInternalAzureAD = wellKnownInternalAzureAD,
+                    azureAppClientId = environment.azure.appClientId,
                 )
                 monitor.subscribe(ApplicationStarted) {
                     applicationState.ready = true
@@ -61,7 +67,7 @@ fun main(args: Array<String>) {
 
                     launchKafkaModule(
                         applicationState = applicationState,
-                        environment = Environment(),
+                        environment = environment,
                         soknadService = soknadService,
                     )
 
