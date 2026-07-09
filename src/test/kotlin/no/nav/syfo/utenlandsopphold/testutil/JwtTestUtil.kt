@@ -19,16 +19,6 @@ const val KEY_ID = "localhost-signer"
 const val TEST_AZURE_APP_CLIENT_ID = "isutenlandsopphold-client-id"
 const val TEST_ISSUER = "https://sts.issuer.net/veileder/v2"
 
-/**
- * Lager et JWT med NAVident-claim slik at mock-istilgangskontroll kan lese hvilken veileder som
- * kaller. Signaturen verifiseres ikke av mock-handleren.
- */
-fun bearerToken(navident: String = UserConstants.VEILEDER_IDENT_MED_LESETILGANG): String =
-    JWT
-        .create()
-        .withClaim(JWT_CLAIM_NAVIDENT, navident)
-        .sign(Algorithm.HMAC256("test-secret"))
-
 fun wellKnownInternalAzureAD(): WellKnown {
     val uri = Paths.get("src/test/resources/jwkset.json").toUri().toURL()
     return WellKnown(
@@ -41,7 +31,7 @@ fun wellKnownInternalAzureAD(): WellKnown {
 fun generateJWT(
     audience: String = TEST_AZURE_APP_CLIENT_ID,
     issuer: String = TEST_ISSUER,
-    navIdent: String? = "Z999999",
+    navIdent: String? = UserConstants.VEILEDER_IDENT_MED_LESETILGANG,
     subject: String? = null,
     expiry: LocalDateTime? = LocalDateTime.now().plusHours(1),
 ): String {

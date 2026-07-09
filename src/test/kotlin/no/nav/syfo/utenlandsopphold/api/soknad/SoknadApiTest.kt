@@ -23,7 +23,6 @@ import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
 import no.nav.syfo.utenlandsopphold.infrastructure.mock.mockTilgangskontrollClient
 import no.nav.syfo.utenlandsopphold.testutil.TEST_AZURE_APP_CLIENT_ID
-import no.nav.syfo.utenlandsopphold.testutil.bearerToken
 import no.nav.syfo.utenlandsopphold.testutil.generateJWT
 import no.nav.syfo.utenlandsopphold.testutil.wellKnownInternalAzureAD
 import java.time.Instant
@@ -76,7 +75,6 @@ class SoknadApiTest {
 
             val response =
                 client.post(SOKNADER_QUERY_PATH) {
-                    bearerAuth(bearerToken())
                     bearerAuth(generateJWT())
                     contentType(ContentType.Application.Json)
                     setBody(SoknaderQueryDTO(personident = UserConstants.PERSON_VEILEDERE_HAR_TILGANG_TIL.value))
@@ -132,26 +130,12 @@ class SoknadApiTest {
 
             val response =
                 client.post(SOKNADER_QUERY_PATH) {
-                    bearerAuth(bearerToken())
+                    bearerAuth(generateJWT())
                     contentType(ContentType.Application.Json)
                     setBody(SoknaderQueryDTO(personident = UserConstants.PERSON_VEILEDERE_IKKE_HAR_TILGANG_TIL.value))
                 }
 
             assertEquals(HttpStatusCode.Forbidden, response.status)
-        }
-
-    @Test
-    fun `query uten token gir 400`() =
-        testApplication {
-            val client = setupApiAndClient(soknadServiceReturning(emptyList()))
-
-            val response =
-                client.post(SOKNADER_QUERY_PATH) {
-                    contentType(ContentType.Application.Json)
-                    setBody(SoknaderQueryDTO(personident = UserConstants.PERSON_VEILEDERE_HAR_TILGANG_TIL.value))
-                }
-
-            assertEquals(HttpStatusCode.BadRequest, response.status)
         }
 
     @Test
