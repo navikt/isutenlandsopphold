@@ -101,7 +101,9 @@ class JournalforVedtakService(
                 "Vedtak ${vedtak.vedtakId} er ikke journalført, kan ikke distribuere"
             }
 
-        distribusjonService.distribuer(journalpostId).getOrThrow()
+        val bestillingsId = distribusjonService.distribuer(journalpostId).getOrThrow()
+
+        log.info("Distribusjon av vedtak ${vedtak.vedtakId} for søknad ${soknad.id} bestilt, bestillingsId: $bestillingsId")
 
         val distribuertTidspunkt = Instant.now()
 
