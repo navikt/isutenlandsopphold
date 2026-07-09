@@ -6,6 +6,7 @@ import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jose.jwk.RSAKey
 import no.nav.syfo.common.auth.WellKnown
 import no.nav.syfo.common.util.JWT_CLAIM_NAVIDENT
+import no.nav.syfo.utenlandsopphold.UserConstants
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -30,7 +31,7 @@ fun wellKnownInternalAzureAD(): WellKnown {
 fun generateJWT(
     audience: String = TEST_AZURE_APP_CLIENT_ID,
     issuer: String = TEST_ISSUER,
-    navIdent: String? = "Z999999",
+    navIdent: String? = UserConstants.VEILEDER_IDENT_MED_LESETILGANG,
     subject: String? = null,
     expiry: LocalDateTime? = LocalDateTime.now().plusHours(1),
 ): String {

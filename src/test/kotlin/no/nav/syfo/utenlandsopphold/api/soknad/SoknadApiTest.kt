@@ -1,6 +1,6 @@
 package no.nav.syfo.utenlandsopphold.api.soknad
 
-import io.ktor.client.HttpClient
+import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
@@ -9,8 +9,10 @@ import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.testing.*
 import no.nav.syfo.common.journalforing.JournalpostId
+import no.nav.syfo.common.tilgangskontroll.client.TilgangskontrollClient
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.common.util.applyCommonJacksonConfig
+import no.nav.syfo.utenlandsopphold.UserConstants
 import no.nav.syfo.utenlandsopphold.api.apiModule
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
 import no.nav.syfo.utenlandsopphold.application.ISoknadRepository
@@ -19,6 +21,7 @@ import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
+import no.nav.syfo.utenlandsopphold.infrastructure.mock.mockTilgangskontrollClient
 import no.nav.syfo.utenlandsopphold.testutil.TEST_AZURE_APP_CLIENT_ID
 import no.nav.syfo.utenlandsopphold.testutil.generateJWT
 import no.nav.syfo.utenlandsopphold.testutil.wellKnownInternalAzureAD
@@ -33,14 +36,18 @@ import kotlin.test.assertTrue
 const val SOKNADER_QUERY_PATH = "/api/v1/soknader/query"
 
 class SoknadApiTest {
-    private fun ApplicationTestBuilder.setupApiAndClient(soknadService: SoknadService): HttpClient {
+    private fun ApplicationTestBuilder.setupApiAndClient(
+        soknadService: SoknadService,
+        tilgangskontrollClient: TilgangskontrollClient = mockTilgangskontrollClient(),
+    ): HttpClient {
         application {
             apiModule(
                 applicationState = ApplicationState(),
                 database = NoopDatabase,
                 soknadService = soknadService,
-                wellKnownInternalAzureAD = wellKnownInternalAzureAD(),
+                tilgangskontrollClient = tilgangskontrollClient,
                 azureAppClientId = TEST_AZURE_APP_CLIENT_ID,
+                wellKnownInternalAzureAD = wellKnownInternalAzureAD(),
             )
         }
         return createClient {
@@ -57,7 +64,7 @@ class SoknadApiTest {
                 Soknad(
                     id = UUID.randomUUID(),
                     eksternId = UUID.randomUUID(),
-                    personident = Personident("11111111111"),
+                    personident = UserConstants.PERSON_VEILEDERE_HAR_TILGANG_TIL,
                     soktePerioder =
                         listOf(
                             Periode(fom = LocalDate.of(2026, 4, 1), tom = LocalDate.of(2026, 4, 10)),
@@ -70,7 +77,7 @@ class SoknadApiTest {
                 client.post(SOKNADER_QUERY_PATH) {
                     bearerAuth(generateJWT())
                     contentType(ContentType.Application.Json)
-                    setBody(SoknaderQueryDTO(personident = "11111111111"))
+                    setBody(SoknaderQueryDTO(personident = UserConstants.PERSON_VEILEDERE_HAR_TILGANG_TIL.value))
                 }
 
             assertEquals(HttpStatusCode.OK, response.status)
@@ -114,6 +121,21 @@ class SoknadApiTest {
                 }
 
             assertEquals(HttpStatusCode.BadRequest, response.status)
+        }
+
+    @Test
+    fun `query uten tilgang til person gir 403`() =
+        testApplication {
+            val client = setupApiAndClient(soknadServiceReturning(emptyList()))
+
+            val response =
+                client.post(SOKNADER_QUERY_PATH) {
+                    bearerAuth(generateJWT())
+                    contentType(ContentType.Application.Json)
+                    setBody(SoknaderQueryDTO(personident = UserConstants.PERSON_VEILEDERE_IKKE_HAR_TILGANG_TIL.value))
+                }
+
+            assertEquals(HttpStatusCode.Forbidden, response.status)
         }
 
     @Test

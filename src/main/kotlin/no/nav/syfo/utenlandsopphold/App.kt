@@ -4,6 +4,8 @@ import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import no.nav.syfo.common.auth.getWellKnown
+import no.nav.syfo.common.tilgangskontroll.client.TilgangskontrollClient
+import no.nav.syfo.common.token.azuread.AzureAdClient
 import no.nav.syfo.utenlandsopphold.api.apiModule
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
 import no.nav.syfo.utenlandsopphold.application.JournalforVedtakService
@@ -16,6 +18,7 @@ import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseConfig
 import no.nav.syfo.utenlandsopphold.infrastructure.database.databaseConfig
 import no.nav.syfo.utenlandsopphold.infrastructure.database.repository.SoknadRepository
 import no.nav.syfo.utenlandsopphold.infrastructure.kafka.launchKafkaModule
+import no.nav.syfo.utenlandsopphold.infrastructure.tilgangskontroll.TilgangskontrollClientConfig
 import org.slf4j.LoggerFactory
 
 fun main(args: Array<String>) {
@@ -42,6 +45,12 @@ fun main(args: Array<String>) {
 
     val wellKnownInternalAzureAD = getWellKnown(environment.azure.appWellKnownUrl)
 
+    val tilgangskontrollClient =
+        TilgangskontrollClient(
+            oboTokenProvider = AzureAdClient(),
+            clientConfig = TilgangskontrollClientConfig.fromEnv(),
+        )
+
     val server =
         embeddedServer(
             Netty,
@@ -58,8 +67,9 @@ fun main(args: Array<String>) {
                     applicationState = applicationState,
                     database = database,
                     soknadService = soknadService,
-                    wellKnownInternalAzureAD = wellKnownInternalAzureAD,
+                    tilgangskontrollClient = tilgangskontrollClient,
                     azureAppClientId = environment.azure.appClientId,
+                    wellKnownInternalAzureAD = wellKnownInternalAzureAD,
                 )
                 monitor.subscribe(ApplicationStarted) {
                     applicationState.ready = true

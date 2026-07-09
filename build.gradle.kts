@@ -44,6 +44,7 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation(ktorLibs.server.testHost)
     testImplementation(ktorLibs.client.contentNegotiation)
+    testImplementation(ktorLibs.client.mock)
     testImplementation(testFixtures(libs.isyfo.backend.common))
     testImplementation(libs.nimbus.jose.jwt)
     testImplementation(libs.embedded.postgres)
