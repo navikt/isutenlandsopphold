@@ -23,7 +23,7 @@ class DistribusjonService(
                     journalpostId = journalpostId.value,
                     bestillendeFagsystem = bestillendeFagsystem,
                     distribusjonstype = Distribusjonstype.VEDTAK,
-                    distribusjonstidspunkt = Distribusjonstidspunkt.UMIDDELBART,
+                    distribusjonstidspunkt = Distribusjonstidspunkt.KJERNETID,
                 )
 
             dokdistfordelingClient.distribuer(request).bestillingsId
