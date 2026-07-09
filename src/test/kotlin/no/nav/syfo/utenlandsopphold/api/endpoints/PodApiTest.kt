@@ -9,6 +9,7 @@ import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.api.apiModule
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
 import no.nav.syfo.utenlandsopphold.application.ISoknadRepository
+import no.nav.syfo.utenlandsopphold.application.LagreMottattSoknadResultat
 import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.infrastructure.database.Database
@@ -117,8 +118,6 @@ private fun emptySoknadService(): SoknadService =
             object : ISoknadRepository {
                 override fun hentSoknader(personident: Personident): List<Soknad> = emptyList()
 
-                override fun lagreMottattSoknad(soknad: Soknad): Soknad = soknad
-
                 override fun getIkkeJournalforteSoknader(): List<Soknad> = emptyList()
 
                 override fun setVedtakJournalfort(
@@ -133,5 +132,7 @@ private fun emptySoknadService(): SoknadService =
                     vedtakId: UUID,
                     distribuertTidspunkt: Instant,
                 ) = Unit
+
+                override fun lagreMottattSoknad(soknad: Soknad): LagreMottattSoknadResultat = LagreMottattSoknadResultat.LAGRET
             },
     )

@@ -11,6 +11,7 @@ import io.ktor.server.routing.*
 import no.nav.syfo.common.tilgangskontroll.TilgangDeniedException
 import no.nav.syfo.common.util.applyCommonJacksonConfig
 import no.nav.syfo.common.util.consumerClientId
+import no.nav.syfo.utenlandsopphold.api.endpoints.registerMetricApi
 import no.nav.syfo.utenlandsopphold.api.endpoints.registerPodApi
 import no.nav.syfo.utenlandsopphold.api.soknad.registerSoknadApi
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
@@ -30,6 +31,7 @@ fun Application.apiModule(
             applicationState = applicationState,
             database = database,
         )
+        registerMetricApi()
         registerSoknadApi(soknadService = soknadService)
     }
 }

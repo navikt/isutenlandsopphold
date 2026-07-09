@@ -9,8 +9,6 @@ import java.util.UUID
 interface ISoknadRepository {
     fun hentSoknader(personident: Personident): List<Soknad>
 
-    fun lagreMottattSoknad(soknad: Soknad): Soknad
-
     /**
      * Henter søknader hvor det fattede vedtaket ennå ikke er journalført
      * (`vedtak.journalpost_id IS NULL`). Brukes av journalføringsjobben.
@@ -42,4 +40,11 @@ interface ISoknadRepository {
         vedtakId: UUID,
         distribuertTidspunkt: Instant,
     )
+
+    fun lagreMottattSoknad(soknad: Soknad): LagreMottattSoknadResultat
+}
+
+enum class LagreMottattSoknadResultat {
+    LAGRET,
+    ALLEREDE_LAGRET,
 }

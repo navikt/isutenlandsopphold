@@ -32,7 +32,7 @@ data class PSoknad(
             eksternId = eksternId,
             personident = personident,
             soktePerioder = soktePerioder.map { it.toPeriode() },
-            innsendtTidspunkt = innsendtTidspunkt.toInstant(),
+            innsendtTidspunkt = innsendtTidspunkt,
             vedtak = vedtak?.toVedtak(innvilgetePerioder = vedtakPerioder.map { it.toPeriode() }),
         )
 }

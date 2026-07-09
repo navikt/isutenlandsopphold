@@ -2,6 +2,7 @@ package no.nav.syfo.utenlandsopphold.infrastructure.database.repository
 
 import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.common.types.ident.Personident
+import no.nav.syfo.utenlandsopphold.application.LagreMottattSoknadResultat
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.SoknadStatus
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.TestInstance
 import java.sql.Timestamp
 import java.time.Instant
 import java.time.LocalDate
+import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 import kotlin.test.Test
@@ -56,6 +58,42 @@ class SoknadRepositoryTest {
     }
 
     @Test
+    fun `hopper over soknad som allerede er lagret med samme eksternId`() {
+        val eksternId = UUID.randomUUID()
+        val opprinneligePerioder = listOf(Periode(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 10)))
+        val opprinneligInnsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z")
+        val forsteResultat =
+            repository.lagreMottattSoknad(
+                soknad(
+                    eksternId = eksternId,
+                    personident = personident,
+                    soktePerioder = opprinneligePerioder,
+                    innsendtTidspunkt = opprinneligInnsendtTidspunkt,
+                ),
+            )
+        val duplikat =
+            soknad(
+                eksternId = eksternId,
+                personident = Personident("22222222222"),
+                soktePerioder = listOf(Periode(LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 10))),
+                innsendtTidspunkt = OffsetDateTime.parse("2026-04-01T09:00:00Z"),
+            )
+
+        val duplikatResultat = repository.lagreMottattSoknad(duplikat)
+
+        assertEquals(LagreMottattSoknadResultat.LAGRET, forsteResultat)
+        assertEquals(LagreMottattSoknadResultat.ALLEREDE_LAGRET, duplikatResultat)
+        assertTrue(repository.hentSoknader(Personident("22222222222")).isEmpty())
+        val hentet = repository.hentSoknader(personident)
+        assertEquals(1, hentet.size)
+        val lagret = hentet.single()
+        assertEquals(eksternId, lagret.eksternId)
+        assertEquals(personident, lagret.personident)
+        assertEquals(opprinneligePerioder, lagret.soktePerioder)
+        assertEquals(opprinneligInnsendtTidspunkt, lagret.innsendtTidspunkt)
+    }
+
+    @Test
     fun `henter kun soknader for angitt personident`() {
         repository.lagreMottattSoknad(soknad(personident = Personident("11111111111")))
         repository.lagreMottattSoknad(soknad(personident = Personident("22222222222")))
@@ -82,15 +120,17 @@ class SoknadRepositoryTest {
     }
 
     private fun soknad(
+        eksternId: UUID = UUID.randomUUID(),
         personident: Personident = this.personident,
         soktePerioder: List<Periode> = listOf(Periode(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 10))),
+        innsendtTidspunkt: OffsetDateTime = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
     ): Soknad =
         Soknad(
             id = UUID.randomUUID(),
-            eksternId = UUID.randomUUID(),
+            eksternId = eksternId,
             personident = personident,
             soktePerioder = soktePerioder,
-            innsendtTidspunkt = Instant.parse("2026-03-01T09:00:00Z"),
+            innsendtTidspunkt = innsendtTidspunkt,
         )
 
     @Test

@@ -14,12 +14,14 @@ import no.nav.syfo.common.util.applyCommonJacksonConfig
 import no.nav.syfo.utenlandsopphold.api.apiModule
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
 import no.nav.syfo.utenlandsopphold.application.ISoknadRepository
+import no.nav.syfo.utenlandsopphold.application.LagreMottattSoknadResultat
 import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
 import java.time.Instant
 import java.time.LocalDate
+import java.time.OffsetDateTime
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -55,7 +57,7 @@ class SoknadApiTest {
                         listOf(
                             Periode(fom = LocalDate.of(2026, 4, 1), tom = LocalDate.of(2026, 4, 10)),
                         ),
-                    innsendtTidspunkt = Instant.parse("2026-03-01T09:00:00Z"),
+                    innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
                 )
             val client = setupApiAndClient(soknadServiceReturning(listOf(soknad)))
 
@@ -113,8 +115,6 @@ private fun soknadServiceReturning(soknader: List<Soknad>): SoknadService =
             object : ISoknadRepository {
                 override fun hentSoknader(personident: Personident): List<Soknad> = soknader
 
-                override fun lagreMottattSoknad(soknad: Soknad): Soknad = soknad
-
                 override fun getIkkeJournalforteSoknader(): List<Soknad> = emptyList()
 
                 override fun setVedtakJournalfort(
@@ -122,6 +122,8 @@ private fun soknadServiceReturning(soknader: List<Soknad>): SoknadService =
                     journalpostId: JournalpostId,
                     journalfortTidspunkt: Instant,
                 ) = Unit
+
+                override fun lagreMottattSoknad(soknad: Soknad): LagreMottattSoknadResultat = LagreMottattSoknadResultat.LAGRET
 
                 override fun getSoknaderMedIkkeDistribuerteVedtak(): List<Soknad> = emptyList()
 

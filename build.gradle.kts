@@ -27,6 +27,7 @@ dependencies {
     implementation(libs.isyfo.backend.common)
 
     implementation(libs.logback.classic)
+    implementation(libs.logstash.logback.encoder)
 
     // Database
     implementation(libs.postgresql)
@@ -35,6 +36,9 @@ dependencies {
 
     // Kafka
     implementation(libs.kafka)
+
+    // Metrics
+    implementation(libs.micrometer.registry.prometheus)
 
     testImplementation(kotlin("test"))
     testImplementation(ktorLibs.server.testHost)
