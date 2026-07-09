@@ -3,6 +3,7 @@ package no.nav.syfo.utenlandsopphold.infrastructure.kafka.soknadshendelse
 import io.micrometer.core.instrument.Counter
 import no.nav.syfo.utenlandsopphold.application.LagreMottattSoknadResultat
 import no.nav.syfo.utenlandsopphold.application.SoknadService
+import no.nav.syfo.utenlandsopphold.domain.ManglerSendtNavException
 import no.nav.syfo.utenlandsopphold.domain.ManglerSoktePerioderException
 import no.nav.syfo.utenlandsopphold.infrastructure.kafka.KafkaConsumerService
 import no.nav.syfo.utenlandsopphold.infrastructure.metric.METRICS_NS
@@ -42,6 +43,9 @@ class SoknadshendelseConsumer(
                     kafkaSoknad.toSoknad()
                 } catch (_: ManglerSoktePerioderException) {
                     logger.error("Søknad med id ${kafkaSoknad.id} har ikke søkte perioder for utenlandsopphold.")
+                    return@mapNotNull null
+                } catch (_: ManglerSendtNavException) {
+                    logger.error("Søknad med id ${kafkaSoknad.id} har status SENDT men mangler sendtNav.")
                     return@mapNotNull null
                 } catch (exception: Exception) {
                     logger.error(

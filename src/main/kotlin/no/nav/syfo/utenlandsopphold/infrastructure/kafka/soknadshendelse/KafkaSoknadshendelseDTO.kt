@@ -2,6 +2,7 @@ package no.nav.syfo.utenlandsopphold.infrastructure.kafka.soknadshendelse
 
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.common.util.configuredJacksonMapper
+import no.nav.syfo.utenlandsopphold.domain.ManglerSendtNavException
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import java.time.LocalDate
@@ -18,7 +19,7 @@ data class KafkaSykepengesoknadDTO(
     val fnr: String,
     val status: KafkaSoknadstatusDTO,
     val type: KafkaSoknadstypeDTO,
-    val sendtNav: LocalDateTime,
+    val sendtNav: LocalDateTime?,
     val sporsmal: List<KafkaSporsmalDTO> = emptyList(),
 )
 
@@ -72,7 +73,8 @@ fun KafkaSykepengesoknadDTO.toSoknad(): Soknad {
         eksternId = UUID.fromString(id),
         personident = Personident(fnr),
         soktePerioder = soktePerioder,
-        innsendtTidspunkt = sendtNav.atZone(osloZone).toOffsetDateTime(),
+        innsendtTidspunkt =
+            (sendtNav ?: throw ManglerSendtNavException(id)).atZone(osloZone).toOffsetDateTime(),
     )
 }
 
