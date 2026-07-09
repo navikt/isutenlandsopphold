@@ -174,7 +174,34 @@ class SoknadRepositoryTest {
         assertTrue(repository.getIkkeJournalforteSoknader().isEmpty())
     }
 
-    private fun opprettSoknadMedVedtak(journalpostId: String?): UUID {
+    @Test
+    fun `getSoknaderMedIkkeDistribuerteVedtak returnerer kun journalforte, ikke-distribuerte vedtak`() {
+        opprettSoknadMedVedtak(journalpostId = null)
+        opprettSoknadMedVedtak(journalpostId = "111", distribuertTidspunkt = null)
+        opprettSoknadMedVedtak(journalpostId = "222", distribuertTidspunkt = Instant.now())
+
+        val ikkeDistribuerte = repository.getSoknaderMedIkkeDistribuerteVedtak()
+
+        assertEquals(1, ikkeDistribuerte.size)
+        val vedtak = ikkeDistribuerte.single().vedtak
+        assertEquals(true, vedtak?.erJournalfort)
+        assertEquals(false, vedtak?.erDistribuert)
+    }
+
+    @Test
+    fun `setVedtakDistribuert oppdaterer distribuert_tidspunkt`() {
+        val vedtakId = opprettSoknadMedVedtak(journalpostId = "111", distribuertTidspunkt = null)
+        val distribuertTidspunkt = Instant.now().truncatedTo(ChronoUnit.SECONDS)
+
+        repository.setVedtakDistribuert(vedtakId, distribuertTidspunkt)
+
+        assertTrue(repository.getSoknaderMedIkkeDistribuerteVedtak().isEmpty())
+    }
+
+    private fun opprettSoknadMedVedtak(
+        journalpostId: String?,
+        distribuertTidspunkt: Instant? = null,
+    ): UUID {
         val soknadUuid = UUID.randomUUID()
         val vedtakUuid = UUID.randomUUID()
 
@@ -224,9 +251,10 @@ class SoknadRepositoryTest {
                             fattet_tidspunkt,
                             document,
                             journalpost_id,
-                            journalfort_tidspunkt
+                            journalfort_tidspunkt,
+                            distribuert_tidspunkt
                         )
-                        VALUES (?, ?, 'INNVILGET', 'Z990000', ?, ?::jsonb, ?, ?)
+                        VALUES (?, ?, 'INNVILGET', 'Z990000', ?, ?::jsonb, ?, ?, ?)
                         RETURNING id
                         """,
                     ).use { statement ->
@@ -236,6 +264,7 @@ class SoknadRepositoryTest {
                         statement.setString(4, DOCUMENT_JSON)
                         statement.setString(5, journalpostId)
                         statement.setTimestamp(6, journalpostId?.let { Timestamp.from(Instant.now()) })
+                        statement.setTimestamp(7, distribuertTidspunkt?.let { Timestamp.from(it) })
                         statement.executeQuery().use { rs ->
                             rs.next()
                             rs.getInt("id")

@@ -126,6 +126,13 @@ private fun emptySoknadService(): SoknadService =
                     journalfortTidspunkt: Instant,
                 ) = Unit
 
+                override fun getSoknaderMedIkkeDistribuerteVedtak(): List<Soknad> = emptyList()
+
+                override fun setVedtakDistribuert(
+                    vedtakId: UUID,
+                    distribuertTidspunkt: Instant,
+                ) = Unit
+
                 override fun lagreMottattSoknad(soknad: Soknad): LagreMottattSoknadResultat = LagreMottattSoknadResultat.LAGRET
             },
     )

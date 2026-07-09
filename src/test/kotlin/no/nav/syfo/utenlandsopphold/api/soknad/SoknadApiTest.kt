@@ -124,6 +124,13 @@ private fun soknadServiceReturning(soknader: List<Soknad>): SoknadService =
                 ) = Unit
 
                 override fun lagreMottattSoknad(soknad: Soknad): LagreMottattSoknadResultat = LagreMottattSoknadResultat.LAGRET
+
+                override fun getSoknaderMedIkkeDistribuerteVedtak(): List<Soknad> = emptyList()
+
+                override fun setVedtakDistribuert(
+                    vedtakId: UUID,
+                    distribuertTidspunkt: Instant,
+                ) = Unit
             },
     )
 

@@ -66,6 +66,7 @@ data class PVedtak(
     val document: String,
     val journalpostId: String?,
     val journalfortTidspunkt: OffsetDateTime?,
+    val distribuertTidspunkt: OffsetDateTime?,
 ) {
     fun toVedtak(innvilgetePerioder: List<Periode>): Vedtak =
         Vedtak(
@@ -77,6 +78,7 @@ data class PVedtak(
             document = documentMapper.readValue<List<DocumentComponent>>(document),
             journalpostId = journalpostId?.let { JournalpostId(it) },
             journalfortTidspunkt = journalfortTidspunkt?.toInstant(),
+            distribuertTidspunkt = distribuertTidspunkt?.toInstant(),
         )
 }
 

@@ -1,13 +1,17 @@
 package no.nav.syfo.utenlandsopphold.infrastructure.clients
 
+import no.nav.syfo.common.distribusjon.client.DokdistfordelingClient
 import no.nav.syfo.common.http.defaultHttpClient
 import no.nav.syfo.common.http.proxyHttpClient
 import no.nav.syfo.common.journalforing.client.DokarkivClient
 import no.nav.syfo.common.token.azuread.AzureAdClient
 import no.nav.syfo.common.util.ClientConfig
+import no.nav.syfo.utenlandsopphold.application.IDistribusjonService
 import no.nav.syfo.utenlandsopphold.application.IJournalforingService
 import no.nav.syfo.utenlandsopphold.application.IPdfClient
 import no.nav.syfo.utenlandsopphold.application.IPdlClient
+import no.nav.syfo.utenlandsopphold.infrastructure.distribusjon.DistribusjonService
+import no.nav.syfo.utenlandsopphold.infrastructure.distribusjon.DokdistfordelingClientConfig
 import no.nav.syfo.utenlandsopphold.infrastructure.journalforing.DokarkivClientConfig
 import no.nav.syfo.utenlandsopphold.infrastructure.journalforing.JournalforingService
 import no.nav.syfo.utenlandsopphold.infrastructure.leaderelection.LeaderElection
@@ -23,6 +27,7 @@ import no.nav.syfo.utenlandsopphold.infrastructure.pdl.PdlClientConfig
  */
 class ClientsModule(
     dokarkivClientConfig: DokarkivClientConfig = DokarkivClientConfig.fromEnv(),
+    dokdistfordelingClientConfig: DokdistfordelingClientConfig = DokdistfordelingClientConfig.fromEnv(),
     pdlClientConfig: PdlClientConfig = PdlClientConfig.fromEnv(),
     pdfClientConfig: PdfClientConfig = PdfClientConfig.fromEnv(),
     leaderElectionConfig: LeaderElectionConfig = LeaderElectionConfig.fromEnv(),
@@ -43,6 +48,22 @@ class ClientsModule(
             isJournalforingRetryEnabled = dokarkivClientConfig.isRetryEnabled,
         )
 
+    val distribusjonService: IDistribusjonService =
+        DistribusjonService(
+            dokdistfordelingClient =
+                DokdistfordelingClient(
+                    systemTokenProvider = azureAdClient,
+                    // Dokdistfordeling nås som ekstern host (utenfor NAIS-clusteret), derfor proxyHttpClient.
+                    clientConfig =
+                        ClientConfig(
+                            baseUrl = dokdistfordelingClientConfig.baseUrl,
+                            clientId = dokdistfordelingClientConfig.clientId,
+                        ),
+                    httpClient = proxyHttpClient(),
+                ),
+            bestillendeFagsystem = BESTILLENDE_FAGSYSTEM,
+        )
+
     val personInfoClient: IPdlClient =
         PdlClient(
             systemTokenProvider = azureAdClient,
@@ -61,4 +82,8 @@ class ClientsModule(
             httpClient = defaultHttpClient(),
             config = leaderElectionConfig,
         )
+
+    companion object {
+        private const val BESTILLENDE_FAGSYSTEM = "MODIA_SYFO"
+    }
 }

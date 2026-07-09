@@ -1,0 +1,2 @@
+ALTER TABLE VEDTAK
+    ADD COLUMN distribuert_tidspunkt TIMESTAMPTZ;
