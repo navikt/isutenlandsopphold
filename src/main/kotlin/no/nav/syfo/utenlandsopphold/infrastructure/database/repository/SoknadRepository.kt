@@ -106,6 +106,49 @@ class SoknadRepository(
         }
     }
 
+    override fun getIkkeDistribuerteSoknader(): List<Soknad> =
+        database.connection.use { connection ->
+            connection.transactionIsolation = Connection.TRANSACTION_REPEATABLE_READ
+
+            val pSoknader = connection.getIkkeDistribuerteSoknader()
+            if (pSoknader.isEmpty()) {
+                connection.commit()
+                return@use emptyList()
+            }
+
+            val soknadIds = pSoknader.map { it.id }
+            val perioderPerSoknad = connection.getPerioder(soknadIds).groupBy { it.soknadId }
+            val vedtakPerSoknad = connection.getVedtak(soknadIds).associateBy { it.soknadId }
+            val vedtakPerioderPerVedtak =
+                connection
+                    .getVedtakPerioder(vedtakPerSoknad.values.map { it.id })
+                    .groupBy { it.vedtakId }
+            connection.commit()
+
+            pSoknader.map { pSoknad ->
+                val pVedtak = vedtakPerSoknad[pSoknad.id]
+                pSoknad.toSoknad(
+                    soktePerioder = perioderPerSoknad[pSoknad.id].orEmpty(),
+                    vedtak = pVedtak,
+                    vedtakPerioder = pVedtak?.let { vedtakPerioderPerVedtak[it.id] }.orEmpty(),
+                )
+            }
+        }
+
+    override fun setVedtakDistribuert(
+        vedtakId: UUID,
+        distribuertTidspunkt: Instant,
+    ) {
+        database.connection.use { connection ->
+            connection.prepareStatement(SET_VEDTAK_DISTRIBUERT).use {
+                it.setTimestamp(1, Timestamp.from(distribuertTidspunkt))
+                it.setObject(2, vedtakId)
+                it.executeUpdate()
+            }
+            connection.commit()
+        }
+    }
+
     private fun Connection.getSoknader(personident: Personident): List<PSoknad> =
         prepareStatement(GET_SOKNADER).use {
             it.setString(1, personident.value)
@@ -126,6 +169,11 @@ class SoknadRepository(
 
     private fun Connection.getIkkeJournalforteSoknader(): List<PSoknad> =
         prepareStatement(GET_IKKE_JOURNALFORTE_SOKNADER).use {
+            it.executeQuery().toList { toPSoknad() }
+        }
+
+    private fun Connection.getIkkeDistribuerteSoknader(): List<PSoknad> =
+        prepareStatement(GET_IKKE_DISTRIBUERTE_SOKNADER).use {
             it.executeQuery().toList { toPSoknad() }
         }
 
@@ -217,10 +265,24 @@ class SoknadRepository(
                 WHERE v.journalpost_id IS NULL
             """
 
+        private const val GET_IKKE_DISTRIBUERTE_SOKNADER =
+            """
+                SELECT DISTINCT s.* FROM soknad s
+                    INNER JOIN vedtak v ON v.soknad_id = s.id
+                WHERE v.journalpost_id IS NOT NULL AND v.distribuert_tidspunkt IS NULL
+            """
+
         private const val SET_VEDTAK_JOURNALFORT =
             """
                 UPDATE vedtak
                 SET journalpost_id = ?, journalfort_tidspunkt = ?
+                WHERE uuid = ?
+            """
+
+        private const val SET_VEDTAK_DISTRIBUERT =
+            """
+                UPDATE vedtak
+                SET distribuert_tidspunkt = ?
                 WHERE uuid = ?
             """
 
@@ -311,4 +373,5 @@ internal fun ResultSet.toPVedtak(): PVedtak =
         document = getString("document"),
         journalpostId = getString("journalpost_id"),
         journalfortTidspunkt = getObject("journalfort_tidspunkt", OffsetDateTime::class.java),
+        distribuertTidspunkt = getObject("distribuert_tidspunkt", OffsetDateTime::class.java),
     )

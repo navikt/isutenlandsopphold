@@ -75,6 +75,7 @@ fun main(args: Array<String>) {
                                 personInfoClient = clientsModule.personInfoClient,
                                 pdfClient = clientsModule.pdfClient,
                                 journalforingService = clientsModule.journalforingService,
+                                distribusjonService = clientsModule.distribusjonService,
                             )
 
                         launchJournalforVedtakCronjob(

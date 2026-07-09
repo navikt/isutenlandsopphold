@@ -48,6 +48,7 @@ spec:
       external:
         - host: "dokarkiv.prod-fss-pub.nais.io"
         - host: "pdl-api.prod-fss-pub.nais.io"
+        - host: "dokdistfordeling.prod-fss-pub.nais.io"
       rules:
         - application: istilgangskontroll
         - application: ispdfgen
@@ -86,6 +87,10 @@ spec:
       value: "https://pdl-api.prod-fss-pub.nais.io/graphql"
     - name: PDL_SCOPE
       value: "prod-fss.pdl.pdl-api"
+    - name: DOKDISTFORDELING_URL
+      value: "https://dokdistfordeling.prod-fss-pub.nais.io"
+    - name: DOKDISTFORDELING_SCOPE
+      value: "prod-fss.teamdokumenthandtering.dokdistfordeling"
     - name: ISPDFGEN_URL
       value: "http://ispdfgen"
     - name: JOURNALFORING_RETRY_ENABLED

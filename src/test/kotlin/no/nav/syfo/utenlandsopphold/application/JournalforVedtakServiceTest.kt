@@ -36,6 +36,7 @@ class JournalforVedtakServiceTest {
                     personInfoClient = FakePdlClient(),
                     pdfClient = pdfClient,
                     journalforingService = journalforingService,
+                    distribusjonService = FakeDistribusjonService(),
                 )
 
             service.journalforVedtak()
@@ -73,6 +74,7 @@ class JournalforVedtakServiceTest {
                     personInfoClient = FakePdlClient(),
                     pdfClient = pdfClient,
                     journalforingService = journalforingService,
+                    distribusjonService = FakeDistribusjonService(),
                 )
 
             service.journalforVedtak()
@@ -94,6 +96,7 @@ class JournalforVedtakServiceTest {
                     personInfoClient = FakePdlClient(),
                     pdfClient = FakePdfClient(),
                     journalforingService = FakeJournalforingService(Result.success(JournalpostId("999"))),
+                    distribusjonService = FakeDistribusjonService(),
                 )
 
             service.journalforVedtak()
@@ -101,12 +104,75 @@ class JournalforVedtakServiceTest {
             assertEquals(repository.journalforte.size, 1)
             assertEquals(soknadMedVedtak.vedtak!!.vedtakId, repository.journalforte.single().first)
         }
+
+    @Test
+    fun `distribuerer og oppdaterer journalfort, ikke-distribuert vedtak`() =
+        runTest {
+            val soknad =
+                soknadMedVedtak().let {
+                    it.journalforVedtak(JournalpostId("999"), Instant.parse("2026-01-11T08:00:00Z"))
+                }
+            val repository = FakeSoknadRepository(listOf(soknad))
+            val distribusjonService = FakeDistribusjonService(Result.success("bestilling-1"))
+
+            val service =
+                JournalforVedtakService(
+                    soknadRepository = repository,
+                    personInfoClient = FakePdlClient(),
+                    pdfClient = FakePdfClient(),
+                    journalforingService = FakeJournalforingService(Result.success(JournalpostId("999"))),
+                    distribusjonService = distribusjonService,
+                )
+
+            service.distribuerVedtak()
+
+            assertEquals(1, distribusjonService.callCount)
+            assertEquals(1, repository.distribuerte.size)
+            val (vedtakId, _) = repository.distribuerte.single()
+            assertEquals(soknad.vedtak!!.vedtakId, vedtakId)
+        }
+
+    @Test
+    fun `feil for ett vedtak stopper ikke distribusjon av de andre`() =
+        runTest {
+            val soknadSomFeiler =
+                soknadMedVedtak().journalforVedtak(JournalpostId("111"), Instant.parse("2026-01-11T08:00:00Z"))
+            val soknadSomLykkes =
+                soknadMedVedtak().journalforVedtak(JournalpostId("222"), Instant.parse("2026-01-11T08:00:00Z"))
+            val repository = FakeSoknadRepository(listOf(soknadSomFeiler, soknadSomLykkes))
+
+            var callCount = 0
+            val distribusjonService =
+                FakeDistribusjonService { _ ->
+                    callCount++
+                    if (callCount == 1) {
+                        Result.failure(RuntimeException("dokdistfordeling er nede"))
+                    } else {
+                        Result.success("bestilling-1")
+                    }
+                }
+
+            val service =
+                JournalforVedtakService(
+                    soknadRepository = repository,
+                    personInfoClient = FakePdlClient(),
+                    pdfClient = FakePdfClient(),
+                    journalforingService = FakeJournalforingService(Result.success(JournalpostId("999"))),
+                    distribusjonService = distribusjonService,
+                )
+
+            service.distribuerVedtak()
+
+            assertEquals(1, repository.distribuerte.size)
+            assertEquals(soknadSomLykkes.vedtak!!.vedtakId, repository.distribuerte.single().first)
+        }
 }
 
 private class FakeSoknadRepository(
     private val soknader: List<Soknad>,
 ) : ISoknadRepository {
     val journalforte = mutableListOf<Triple<UUID, JournalpostId, Instant>>()
+    val distribuerte = mutableListOf<Pair<UUID, Instant>>()
 
     override fun hentSoknader(personident: Personident): List<Soknad> = soknader.filter { it.personident == personident }
 
@@ -120,6 +186,16 @@ private class FakeSoknadRepository(
         journalfortTidspunkt: Instant,
     ) {
         journalforte.add(Triple(vedtakId, journalpostId, journalfortTidspunkt))
+    }
+
+    override fun getIkkeDistribuerteSoknader(): List<Soknad> =
+        soknader.filter { it.vedtak?.let { vedtak -> vedtak.erJournalfort && !vedtak.erDistribuert } == true }
+
+    override fun setVedtakDistribuert(
+        vedtakId: UUID,
+        distribuertTidspunkt: Instant,
+    ) {
+        distribuerte.add(Pair(vedtakId, distribuertTidspunkt))
     }
 }
 
@@ -159,5 +235,19 @@ private class FakeJournalforingService(
     ): Result<JournalpostId> {
         callCount++
         return onJournalfor(personident, pdf, eksternReferanseId)
+    }
+}
+
+private class FakeDistribusjonService(
+    private val onDistribuer: (JournalpostId) -> Result<String> = { Result.success("bestilling-1") },
+) : IDistribusjonService {
+    var callCount = 0
+        private set
+
+    constructor(result: Result<String>) : this({ _ -> result })
+
+    override suspend fun distribuer(journalpostId: JournalpostId): Result<String> {
+        callCount++
+        return onDistribuer(journalpostId)
     }
 }

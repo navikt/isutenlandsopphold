@@ -26,4 +26,20 @@ interface ISoknadRepository {
         journalpostId: JournalpostId,
         journalfortTidspunkt: Instant,
     )
+
+    /**
+     * Henter søknader hvor det fattede vedtaket er journalført, men ennå ikke distribuert
+     * (`vedtak.journalpost_id IS NOT NULL AND vedtak.distribuert_tidspunkt IS NULL`).
+     * Brukes av distribusjonsjobben.
+     */
+    fun getIkkeDistribuerteSoknader(): List<Soknad>
+
+    /**
+     * Markerer at et vedtak er distribuert ved å sette `distribuert_tidspunkt` på raden.
+     * Kalles etter vellykket bestilling i dokdistfordeling.
+     */
+    fun setVedtakDistribuert(
+        vedtakId: UUID,
+        distribuertTidspunkt: Instant,
+    )
 }

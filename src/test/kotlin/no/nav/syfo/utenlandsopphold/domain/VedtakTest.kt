@@ -46,4 +46,43 @@ class VedtakTest {
             journalfort.journalfor(JournalpostId("456"), Instant.parse("2026-01-12T08:00:00Z"))
         }
     }
+
+    @Test
+    fun `nyfattet vedtak er ikke distribuert`() {
+        val vedtak = lagVedtak()
+
+        assertFalse(vedtak.erDistribuert)
+    }
+
+    @Test
+    fun `distribuer på ikke-journalført vedtak kaster`() {
+        val vedtak = lagVedtak()
+
+        assertFailsWith<IllegalStateException> {
+            vedtak.distribuer(Instant.parse("2026-01-12T08:00:00Z"))
+        }
+    }
+
+    @Test
+    fun `distribuer setter distribuertTidspunkt for journalført vedtak`() {
+        val journalfort = lagVedtak().journalfor(JournalpostId("123"), Instant.parse("2026-01-11T08:00:00Z"))
+        val distribuertTidspunkt = Instant.parse("2026-01-12T08:00:00Z")
+
+        val distribuert = journalfort.distribuer(distribuertTidspunkt)
+
+        assertTrue(distribuert.erDistribuert)
+        assertEquals(distribuertTidspunkt, distribuert.distribuertTidspunkt)
+    }
+
+    @Test
+    fun `distribuer på allerede distribuert vedtak kaster`() {
+        val distribuert =
+            lagVedtak()
+                .journalfor(JournalpostId("123"), Instant.parse("2026-01-11T08:00:00Z"))
+                .distribuer(Instant.parse("2026-01-12T08:00:00Z"))
+
+        assertFailsWith<IllegalStateException> {
+            distribuert.distribuer(Instant.parse("2026-01-13T08:00:00Z"))
+        }
+    }
 }

@@ -18,9 +18,13 @@ data class Vedtak(
     val document: List<DocumentComponent> = emptyList(),
     val journalpostId: JournalpostId? = null,
     val journalfortTidspunkt: Instant? = null,
+    val distribuertTidspunkt: Instant? = null,
 ) {
     val erJournalfort: Boolean
         get() = journalpostId != null
+
+    val erDistribuert: Boolean
+        get() = distribuertTidspunkt != null
 
     /**
      * Rød sone: dette er en kjerne-invariant for journalføring. Et vedtak skal aldri
@@ -36,5 +40,21 @@ data class Vedtak(
         }
 
         return copy(journalpostId = journalpostId, journalfortTidspunkt = tidspunkt)
+    }
+
+    /**
+     * Rød sone: kjerne-invariant for distribusjon. Et vedtak kan kun distribueres etter at
+     * det er journalført, og skal aldri distribueres mer enn én gang (idempotens) — kall
+     * denne kun etter en vellykket bestilling i dokdistfordeling, aldri på forhånd.
+     */
+    fun distribuer(tidspunkt: Instant): Vedtak {
+        check(erJournalfort) {
+            "Vedtak $vedtakId må være journalført før det kan distribueres"
+        }
+        check(!erDistribuert) {
+            "Vedtak $vedtakId er allerede distribuert (distribuertTidspunkt=$distribuertTidspunkt)"
+        }
+
+        return copy(distribuertTidspunkt = tidspunkt)
     }
 }

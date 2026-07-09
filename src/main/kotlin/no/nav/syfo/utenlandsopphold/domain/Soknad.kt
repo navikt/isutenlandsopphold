@@ -60,4 +60,18 @@ data class Soknad(
 
         return copy(vedtak = gjeldendeVedtak.journalfor(journalpostId, now))
     }
+
+    /**
+     * Aggregatroten (Soknad) styrer invarianten om at distribusjon kun kan skje
+     * på en søknad som faktisk har et vedtak. Selve idempotens- og rekkefølge-sjekken
+     * (må være journalført, kan ikke distribueres to ganger) håndheves av Vedtak.distribuer().
+     */
+    fun distribuerVedtak(now: Instant): Soknad {
+        val gjeldendeVedtak =
+            checkNotNull(vedtak) {
+                "Kan ikke distribuere en søknad som ikke har fått vedtak"
+            }
+
+        return copy(vedtak = gjeldendeVedtak.distribuer(now))
+    }
 }
