@@ -27,6 +27,7 @@ dependencies {
     implementation(libs.isyfo.backend.common)
 
     implementation(libs.logback.classic)
+    implementation(libs.logstash.logback.encoder)
 
     // Database
     implementation(libs.postgresql)
