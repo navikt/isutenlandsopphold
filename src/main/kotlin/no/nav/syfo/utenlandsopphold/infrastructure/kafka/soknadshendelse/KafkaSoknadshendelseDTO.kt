@@ -42,7 +42,7 @@ enum class KafkaSoknadstatusDTO {
     UTKAST_TIL_KORRIGERING,
     KORRIGERT,
     AVBRUTT,
-    UTGATT,
+    UTGAATT,
     SLETTET,
 }
 
