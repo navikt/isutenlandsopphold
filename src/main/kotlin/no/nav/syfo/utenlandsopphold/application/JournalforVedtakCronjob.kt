@@ -24,7 +24,7 @@ fun launchJournalforVedtakCronjob(
             try {
                 if (leaderElection.isLeader()) {
                     journalforVedtakService.journalforVedtak()
-                    journalforVedtakService.distribuerVedtak()
+//                    journalforVedtakService.distribuerVedtak()
                 }
             } catch (ex: CancellationException) {
                 throw ex
