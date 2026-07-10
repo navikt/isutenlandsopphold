@@ -88,9 +88,9 @@ spec:
     - name: PDL_SCOPE
       value: "dev-fss.pdl.pdl-api"
     - name: DOKDISTFORDELING_URL
-      value: "https://dokdistfordeling-q1.dev-fss-pub.nais.io"
+      value: "https://dokdistfordeling.dev-fss-pub.nais.io"
     - name: DOKDISTFORDELING_SCOPE
-      value: "dev-fss.teamdokumenthandtering.dokdistfordeling-q1"
+      value: "dev-fss.teamdokumenthandtering.dokdistfordeling"
     - name: ISPDFGEN_URL
       value: "http://ispdfgen"
     - name: ISTILGANGSKONTROLL_URL
