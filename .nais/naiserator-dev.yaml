@@ -82,7 +82,7 @@ spec:
     - name: DOKARKIV_URL
       value: "https://dokarkiv.dev-fss-pub.nais.io"
     - name: DOKARKIV_SCOPE
-      value: "dev-fss.teamdokumenthandtering.dokarkiv"
+      value: "dev-fss.teamdokumenthandtering.dokarkiv-q1"
     - name: PDL_URL
       value: "https://pdl-api.dev-fss-pub.nais.io/graphql"
     - name: PDL_SCOPE
