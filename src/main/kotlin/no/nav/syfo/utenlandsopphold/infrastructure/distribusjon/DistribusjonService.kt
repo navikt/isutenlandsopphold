@@ -25,6 +25,8 @@ class DistribusjonService(
                     distribusjonstype = Distribusjonstype.VEDTAK,
                     distribusjonstidspunkt = Distribusjonstidspunkt.KJERNETID,
                 )
+                    // TODO: fix legg til dette parameteret på createDistribuerJournalpostRequest i isyfo-backend-common
+                    .copy(dokumentProdApp = "isutenlandsopphold")
 
             dokdistfordelingClient.distribuer(request).bestillingsId
         }.onFailure { exc ->
