@@ -2,6 +2,7 @@ package no.nav.syfo.utenlandsopphold.application
 
 import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.utenlandsopphold.domain.Soknad
+import no.nav.syfo.utenlandsopphold.infrastructure.journalforing.JournalforingService.Companion.DEFAULT_FAILED_JP_ID
 import org.slf4j.LoggerFactory
 import java.time.Instant
 
@@ -100,6 +101,15 @@ class JournalforVedtakService(
             checkNotNull(vedtak.journalpostId) {
                 "Vedtak ${vedtak.vedtakId} er ikke journalført, kan ikke distribuere"
             }
+
+        if (journalpostId.value == DEFAULT_FAILED_JP_ID.value) {
+            // Hvis journalpostId er DEFAULT_FAILED_JP_ID, betyr det at journalføringen feilet i dev-gcp, og vi skal ikke forsøke å distribuere dette vedtaket.
+            soknadRepository.setVedtakDistribuert(
+                vedtakId = vedtak.vedtakId,
+                distribuertTidspunkt = Instant.now(),
+            )
+            return
+        }
 
         val bestillingsId = distribusjonService.distribuer(journalpostId).getOrThrow()
 
