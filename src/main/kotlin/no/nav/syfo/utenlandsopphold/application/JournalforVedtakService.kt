@@ -106,7 +106,7 @@ class JournalforVedtakService(
             // Hvis journalpostId er DEFAULT_FAILED_JP_ID, betyr det at journalføringen feilet i dev-gcp, og vi skal ikke forsøke å distribuere dette vedtaket.
             soknadRepository.setVedtakDistribuert(
                 vedtakId = vedtak.vedtakId,
-                distribuertTidspunkt = checkNotNull(Instant.now()),
+                distribuertTidspunkt = Instant.now(),
             )
             return
         }
