@@ -22,14 +22,11 @@ import java.util.UUID
 class SoknadRepository(
     private val database: DatabaseInterface,
 ) : ISoknadRepository {
-    override fun hentSoknad(soknadId: UUID): Soknad? {
+    override fun hentSoknad(soknadId: UUID): Soknad? =
         database.connection.use { connection ->
-            connection.transactionIsolation = Connection.TRANSACTION_REPEATABLE_READ
-
             val pSoknad = connection.getSoknadBySoknadUuid(soknadId)
             if (pSoknad == null) {
-                connection.commit()
-                return null
+                return@use null
             }
 
             val perioder = connection.getPerioder(listOf(pSoknad.id))
@@ -37,23 +34,17 @@ class SoknadRepository(
             val vedtakPerioder =
                 vedtak?.let { connection.getVedtakPerioder(listOf(it.id)) }.orEmpty()
 
-            connection.commit()
-
-            return pSoknad.toSoknad(
+            pSoknad.toSoknad(
                 soktePerioder = perioder,
                 vedtak = vedtak,
                 vedtakPerioder = vedtakPerioder,
             )
         }
-    }
 
     override fun hentSoknader(personident: Personident): List<Soknad> =
         database.connection.use { connection ->
-            connection.transactionIsolation = Connection.TRANSACTION_REPEATABLE_READ
-
             val pSoknader = connection.getSoknader(personident)
             if (pSoknader.isEmpty()) {
-                connection.commit()
                 return@use emptyList()
             }
 
@@ -64,7 +55,6 @@ class SoknadRepository(
                 connection
                     .getVedtakPerioder(vedtakPerSoknad.values.map { it.id })
                     .groupBy { it.vedtakId }
-            connection.commit()
 
             pSoknader.map { pSoknad ->
                 val pVedtak = vedtakPerSoknad[pSoknad.id]
@@ -94,11 +84,8 @@ class SoknadRepository(
 
     override fun getIkkeJournalforteSoknader(): List<Soknad> =
         database.connection.use { connection ->
-            connection.transactionIsolation = Connection.TRANSACTION_REPEATABLE_READ
-
             val pSoknader = connection.getIkkeJournalforteSoknader()
             if (pSoknader.isEmpty()) {
-                connection.commit()
                 return@use emptyList()
             }
 
@@ -109,7 +96,6 @@ class SoknadRepository(
                 connection
                     .getVedtakPerioder(vedtakPerSoknad.values.map { it.id })
                     .groupBy { it.vedtakId }
-            connection.commit()
 
             pSoknader.map { pSoknad ->
                 val pVedtak = vedtakPerSoknad[pSoknad.id]
@@ -139,11 +125,8 @@ class SoknadRepository(
 
     override fun getSoknaderMedIkkeDistribuerteVedtak(): List<Soknad> =
         database.connection.use { connection ->
-            connection.transactionIsolation = Connection.TRANSACTION_REPEATABLE_READ
-
             val pSoknader = connection.getSoknaderMedIkkeDistribuerteVedtak()
             if (pSoknader.isEmpty()) {
-                connection.commit()
                 return@use emptyList()
             }
 
@@ -154,7 +137,6 @@ class SoknadRepository(
                 connection
                     .getVedtakPerioder(vedtakPerSoknad.values.map { it.id })
                     .groupBy { it.vedtakId }
-            connection.commit()
 
             pSoknader.map { pSoknad ->
                 val pVedtak = vedtakPerSoknad[pSoknad.id]
