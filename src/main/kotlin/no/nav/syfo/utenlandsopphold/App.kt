@@ -15,6 +15,7 @@ import no.nav.syfo.utenlandsopphold.application.launchJournalforVedtakCronjob
 import no.nav.syfo.utenlandsopphold.infrastructure.clients.ClientsModule
 import no.nav.syfo.utenlandsopphold.infrastructure.database.Database
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseConfig
+import no.nav.syfo.utenlandsopphold.infrastructure.database.JdbcTransactionManager
 import no.nav.syfo.utenlandsopphold.infrastructure.database.databaseConfig
 import no.nav.syfo.utenlandsopphold.infrastructure.database.repository.SoknadRepository
 import no.nav.syfo.utenlandsopphold.infrastructure.kafka.launchKafkaModule
@@ -40,8 +41,13 @@ fun main(args: Array<String>) {
                 },
         )
 
+    val transactionManager = JdbcTransactionManager(database = database)
     val soknadRepository = SoknadRepository(database = database)
-    val soknadService = SoknadService(soknadRepository = soknadRepository)
+    val soknadService =
+        SoknadService(
+            transactionManager = transactionManager,
+            soknadRepository = soknadRepository,
+        )
 
     val wellKnownInternalAzureAD = getWellKnown(environment.azure.appWellKnownUrl)
 

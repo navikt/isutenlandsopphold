@@ -180,7 +180,15 @@ private class FakeSoknadRepository(
 
     override fun hentSoknad(soknadId: UUID): Soknad? = soknader.find { it.id == soknadId }
 
-    override fun lagreVedtak(soknadMedVedtak: Soknad): Soknad = throw NotImplementedError("Ikke i bruk i denne testen")
+    override fun hentSoknadForUpdate(
+        tx: TransactionContext,
+        soknadId: UUID,
+    ): Soknad? = soknader.find { it.id == soknadId }
+
+    override fun lagreVedtak(
+        tx: TransactionContext,
+        soknadMedVedtak: Soknad,
+    ): Soknad = throw NotImplementedError("Ikke i bruk i denne testen")
 
     override fun getIkkeJournalforteSoknader(): List<Soknad> = soknader
 
