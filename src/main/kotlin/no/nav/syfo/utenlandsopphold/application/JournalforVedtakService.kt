@@ -23,12 +23,13 @@ class JournalforVedtakService(
     private val distribusjonService: IDistribusjonService,
 ) {
     suspend fun journalforVedtak() {
-        log.info("Starter journalføring av u-journalførte vedtak")
+        log.debug("Starter journalføring av ujournalførte vedtak")
         val soknaderMedIkkeJournalforteVedtak = soknadRepository.getIkkeJournalforteSoknader()
 
         soknaderMedIkkeJournalforteVedtak.forEach { soknad ->
             try {
                 journalforVedtak(soknad)
+                log.info("Vedtak for søknad ${soknad.id} journalført med journalpostId ${soknad.vedtak?.journalpostId?.value}")
             } catch (exception: Exception) {
                 log.error("Feil ved journalføring av vedtak for søknad ${soknad.id}", exception)
             }
@@ -79,12 +80,13 @@ class JournalforVedtakService(
      * journalpost som suksess (409 Conflict).
      */
     suspend fun distribuerVedtak() {
-        log.info("Starter distribusjon av journalførte, ikke-distribuerte vedtak")
+        log.debug("Starter distribusjon av journalførte, ikke-distribuerte vedtak")
         val soknaderMedIkkeDistribuerteVedtak = soknadRepository.getSoknaderMedIkkeDistribuerteVedtak()
 
         soknaderMedIkkeDistribuerteVedtak.forEach { soknad ->
             try {
                 distribuerVedtak(soknad)
+                log.info("Vedtak for søknad ${soknad.id} distribuert med journalpostId ${soknad.vedtak?.journalpostId?.value}")
             } catch (exception: Exception) {
                 log.error("Feil ved distribusjon av vedtak for søknad ${soknad.id}", exception)
             }
