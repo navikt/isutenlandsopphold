@@ -109,11 +109,5 @@ fun main(args: Array<String>) {
             },
         )
 
-    Runtime.getRuntime().addShutdownHook(
-        Thread {
-            applicationState.ready = false
-        },
-    )
-
     server.start(wait = true)
 }
