@@ -7,7 +7,6 @@ import io.mockk.mockk
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres
 import no.nav.syfo.utenlandsopphold.api.apiModule
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
-import no.nav.syfo.utenlandsopphold.application.ISoknadRepository
 import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.infrastructure.database.Database
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseConfig
@@ -22,6 +21,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class PodApiTest {
+    private val soknadServiceMock = mockk<SoknadService>()
+
     companion object {
         private lateinit var embeddedPostgres: EmbeddedPostgres
         lateinit var database: Database
@@ -55,7 +56,7 @@ class PodApiTest {
                 apiModule(
                     applicationState = ApplicationState(alive = true, ready = true),
                     database = database,
-                    soknadService = emptySoknadService(),
+                    soknadService = soknadServiceMock,
                     tilgangskontrollClient = mockTilgangskontrollClient(),
                     azureAppClientId = TEST_AZURE_APP_CLIENT_ID,
                     wellKnownInternalAzureAD = wellKnownInternalAzureAD(),
@@ -72,7 +73,7 @@ class PodApiTest {
                 apiModule(
                     applicationState = ApplicationState(alive = true, ready = true),
                     database = database,
-                    soknadService = emptySoknadService(),
+                    soknadService = soknadServiceMock,
                     tilgangskontrollClient = mockTilgangskontrollClient(),
                     azureAppClientId = TEST_AZURE_APP_CLIENT_ID,
                     wellKnownInternalAzureAD = wellKnownInternalAzureAD(),
@@ -89,7 +90,7 @@ class PodApiTest {
                 apiModule(
                     applicationState = ApplicationState(alive = true, ready = false),
                     database = database,
-                    soknadService = emptySoknadService(),
+                    soknadService = soknadServiceMock,
                     tilgangskontrollClient = mockTilgangskontrollClient(),
                     azureAppClientId = TEST_AZURE_APP_CLIENT_ID,
                     wellKnownInternalAzureAD = wellKnownInternalAzureAD(),
@@ -111,7 +112,7 @@ class PodApiTest {
                 apiModule(
                     applicationState = ApplicationState(alive = true, ready = true),
                     database = brokenDb,
-                    soknadService = emptySoknadService(),
+                    soknadService = soknadServiceMock,
                     tilgangskontrollClient = mockTilgangskontrollClient(),
                     azureAppClientId = TEST_AZURE_APP_CLIENT_ID,
                     wellKnownInternalAzureAD = wellKnownInternalAzureAD(),
@@ -121,7 +122,3 @@ class PodApiTest {
             assertEquals(HttpStatusCode.InternalServerError, response.status)
         }
 }
-
-private fun emptySoknadService(): SoknadService =
-    // Ingen av pod-testene når fram til å kalle soknadRepository, så mocken trenger ingen stubs.
-    SoknadService(soknadRepository = mockk<ISoknadRepository>())
