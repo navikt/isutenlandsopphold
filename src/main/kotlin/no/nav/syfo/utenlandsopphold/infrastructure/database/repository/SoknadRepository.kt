@@ -40,54 +40,6 @@ class SoknadRepository(
             }
         }
 
-    override fun hentSoknad(soknadId: UUID): Soknad? =
-        withConnection(Connection.TRANSACTION_REPEATABLE_READ) { connection ->
-            connection.getSoknad(soknadId)
-        }
-
-    override fun hentSoknadForUpdate(
-        transaction: Transaction,
-        soknadId: UUID,
-    ): Soknad? = transaction.jdbcConnection().getSoknadForUpdate(soknadId)
-
-    private fun Connection.getSoknad(soknadId: UUID): Soknad? =
-        getSoknadBySoknadUuid(soknadId)?.let { pSoknad ->
-            toSoknad(pSoknad)
-        }
-
-    private fun Connection.getSoknadForUpdate(soknadId: UUID): Soknad? =
-        getSoknadBySoknadUuidForUpdate(soknadId)?.let { pSoknad ->
-            toSoknad(pSoknad)
-        }
-
-    private fun Connection.toSoknad(pSoknad: PSoknad): Soknad = toSoknader(listOf(pSoknad)).single()
-
-    private fun Connection.toSoknader(pSoknader: List<PSoknad>): List<Soknad> {
-        if (pSoknader.isEmpty()) return emptyList()
-
-        val soknadIds = pSoknader.map { it.id }
-        val perioderPerSoknad = getPerioder(soknadIds).groupBy { it.soknadId }
-        val vedtakPerSoknad = getVedtak(soknadIds).associateBy { it.soknadId }
-        val vedtakPerioderPerVedtak =
-            getVedtakPerioder(vedtakPerSoknad.values.map { it.id })
-                .groupBy { it.vedtakId }
-
-        return pSoknader.map { pSoknad ->
-            val pVedtak = vedtakPerSoknad[pSoknad.id]
-            pSoknad.toSoknad(
-                soktePerioder = perioderPerSoknad[pSoknad.id].orEmpty(),
-                vedtak = pVedtak,
-                vedtakPerioder = pVedtak?.let { vedtakPerioderPerVedtak[it.id] }.orEmpty(),
-            )
-        }
-    }
-
-    override fun hentSoknader(personident: Personident): List<Soknad> =
-        withConnection(Connection.TRANSACTION_REPEATABLE_READ) { connection ->
-            val pSoknader = connection.getSoknader(personident)
-            connection.toSoknader(pSoknader)
-        }
-
     override fun lagreMottattSoknad(soknad: Soknad): LagreMottattSoknadResultat =
         withConnection { connection ->
             val now = OffsetDateTime.now(ZoneOffset.UTC)
@@ -101,9 +53,19 @@ class SoknadRepository(
             }
         }
 
-    override fun getIkkeJournalforteSoknader(): List<Soknad> =
+    override fun hentSoknad(soknadId: UUID): Soknad? =
         withConnection(Connection.TRANSACTION_REPEATABLE_READ) { connection ->
-            val pSoknader = connection.getIkkeJournalforteSoknader()
+            connection.getSoknad(soknadId)
+        }
+
+    override fun hentSoknadForUpdate(
+        transaction: Transaction,
+        soknadId: UUID,
+    ): Soknad? = transaction.jdbcConnection().getSoknadForUpdate(soknadId)
+
+    override fun hentSoknader(personident: Personident): List<Soknad> =
+        withConnection(Connection.TRANSACTION_REPEATABLE_READ) { connection ->
+            val pSoknader = connection.getSoknader(personident)
             connection.toSoknader(pSoknader)
         }
 
@@ -120,6 +82,12 @@ class SoknadRepository(
 
         return soknadMedVedtak
     }
+
+    override fun getIkkeJournalforteSoknader(): List<Soknad> =
+        withConnection(Connection.TRANSACTION_REPEATABLE_READ) { connection ->
+            val pSoknader = connection.getIkkeJournalforteSoknader()
+            connection.toSoknader(pSoknader)
+        }
 
     override fun setVedtakJournalfort(
         vedtakId: UUID,
@@ -152,6 +120,38 @@ class SoknadRepository(
                 it.setObject(2, vedtakId)
                 it.executeUpdate()
             }
+        }
+    }
+
+    private fun Connection.getSoknad(soknadId: UUID): Soknad? =
+        getSoknadBySoknadUuid(soknadId)?.let { pSoknad ->
+            toSoknad(pSoknad)
+        }
+
+    private fun Connection.getSoknadForUpdate(soknadId: UUID): Soknad? =
+        getSoknadBySoknadUuidForUpdate(soknadId)?.let { pSoknad ->
+            toSoknad(pSoknad)
+        }
+
+    private fun Connection.toSoknad(pSoknad: PSoknad): Soknad = toSoknader(listOf(pSoknad)).single()
+
+    private fun Connection.toSoknader(pSoknader: List<PSoknad>): List<Soknad> {
+        if (pSoknader.isEmpty()) return emptyList()
+
+        val soknadIds = pSoknader.map { it.id }
+        val perioderPerSoknad = getPerioder(soknadIds).groupBy { it.soknadId }
+        val vedtakPerSoknad = getVedtak(soknadIds).associateBy { it.soknadId }
+        val vedtakPerioderPerVedtak =
+            getVedtakPerioder(vedtakPerSoknad.values.map { it.id })
+                .groupBy { it.vedtakId }
+
+        return pSoknader.map { pSoknad ->
+            val pVedtak = vedtakPerSoknad[pSoknad.id]
+            pSoknad.toSoknad(
+                soktePerioder = perioderPerSoknad[pSoknad.id].orEmpty(),
+                vedtak = pVedtak,
+                vedtakPerioder = pVedtak?.let { vedtakPerioderPerVedtak[it.id] }.orEmpty(),
+            )
         }
     }
 
