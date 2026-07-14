@@ -3,15 +3,12 @@ package no.nav.syfo.utenlandsopphold.api.endpoints
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
+import io.mockk.mockk
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres
-import no.nav.syfo.common.journalforing.JournalpostId
-import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.api.apiModule
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
 import no.nav.syfo.utenlandsopphold.application.ISoknadRepository
-import no.nav.syfo.utenlandsopphold.application.LagreMottattSoknadResultat
 import no.nav.syfo.utenlandsopphold.application.SoknadService
-import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.infrastructure.database.Database
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseConfig
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
@@ -21,8 +18,6 @@ import no.nav.syfo.utenlandsopphold.testutil.wellKnownInternalAzureAD
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import java.sql.Connection
-import java.time.Instant
-import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -128,30 +123,5 @@ class PodApiTest {
 }
 
 private fun emptySoknadService(): SoknadService =
-    SoknadService(
-        soknadRepository =
-            object : ISoknadRepository {
-                override fun hentSoknad(soknadId: UUID): Soknad? = null
-
-                override fun hentSoknader(personident: Personident): List<Soknad> = emptyList()
-
-                override fun lagreVedtak(soknadMedVedtak: Soknad): Soknad = throw NotImplementedError("Ikke i bruk i denne testen")
-
-                override fun getIkkeJournalforteSoknader(): List<Soknad> = emptyList()
-
-                override fun setVedtakJournalfort(
-                    vedtakId: UUID,
-                    journalpostId: JournalpostId,
-                    journalfortTidspunkt: Instant,
-                ) = Unit
-
-                override fun getSoknaderMedIkkeDistribuerteVedtak(): List<Soknad> = emptyList()
-
-                override fun setVedtakDistribuert(
-                    vedtakId: UUID,
-                    distribuertTidspunkt: Instant,
-                ) = Unit
-
-                override fun lagreMottattSoknad(soknad: Soknad): LagreMottattSoknadResultat = LagreMottattSoknadResultat.LAGRET
-            },
-    )
+    // Ingen av pod-testene når fram til å kalle soknadRepository, så mocken trenger ingen stubs.
+    SoknadService(soknadRepository = mockk<ISoknadRepository>())

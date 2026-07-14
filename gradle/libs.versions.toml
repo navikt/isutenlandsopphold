@@ -14,6 +14,7 @@ kafka = "4.2.0"
 confluent = "8.2.1"
 micrometer = "1.17.0"
 nimbus-jose-jwt = "10.9"
+mockk = "1.14.11"
 
 [libraries.isyfo-backend-common]
 module = "no.nav.syfo:isyfo-backend-common"
@@ -58,6 +59,10 @@ version.ref = "micrometer"
 [libraries.nimbus-jose-jwt]
 module = "com.nimbusds:nimbus-jose-jwt"
 version.ref = "nimbus-jose-jwt"
+
+[libraries.mockk]
+module = "io.mockk:mockk"
+version.ref = "mockk"
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

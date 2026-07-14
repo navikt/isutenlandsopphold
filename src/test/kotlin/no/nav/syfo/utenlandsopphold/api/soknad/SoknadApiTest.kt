@@ -8,7 +8,8 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.testing.*
-import no.nav.syfo.common.journalforing.JournalpostId
+import io.mockk.every
+import io.mockk.mockk
 import no.nav.syfo.common.tilgangskontroll.client.TilgangskontrollClient
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.common.util.applyCommonJacksonConfig
@@ -16,7 +17,6 @@ import no.nav.syfo.utenlandsopphold.UserConstants
 import no.nav.syfo.utenlandsopphold.api.apiModule
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
 import no.nav.syfo.utenlandsopphold.application.ISoknadRepository
-import no.nav.syfo.utenlandsopphold.application.LagreMottattSoknadResultat
 import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponentType
@@ -28,7 +28,6 @@ import no.nav.syfo.utenlandsopphold.infrastructure.mock.mockTilgangskontrollClie
 import no.nav.syfo.utenlandsopphold.testutil.TEST_AZURE_APP_CLIENT_ID
 import no.nav.syfo.utenlandsopphold.testutil.generateJWT
 import no.nav.syfo.utenlandsopphold.testutil.wellKnownInternalAzureAD
-import java.time.Instant
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -362,34 +361,19 @@ class SoknadApiTest {
         }
 }
 
-private fun soknadServiceReturning(soknader: List<Soknad>): SoknadService =
-    SoknadService(
-        soknadRepository =
-            object : ISoknadRepository {
-                override fun hentSoknad(soknadId: UUID): Soknad? = null
-
-                override fun hentSoknader(personident: Personident): List<Soknad> = soknader
-
-                override fun getIkkeJournalforteSoknader(): List<Soknad> = emptyList()
-
-                override fun setVedtakJournalfort(
-                    vedtakId: UUID,
-                    journalpostId: JournalpostId,
-                    journalfortTidspunkt: Instant,
-                ) = Unit
-
-                override fun lagreMottattSoknad(soknad: Soknad): LagreMottattSoknadResultat = LagreMottattSoknadResultat.LAGRET
-
-                override fun getSoknaderMedIkkeDistribuerteVedtak(): List<Soknad> = emptyList()
-
-                override fun setVedtakDistribuert(
-                    vedtakId: UUID,
-                    distribuertTidspunkt: Instant,
-                ) = Unit
-
-                override fun lagreVedtak(soknadMedVedtak: Soknad): Soknad = throw NotImplementedError("Ikke i bruk i denne testen")
-            },
-    )
+private fun soknadServiceReturning(
+    soknader: List<Soknad>,
+    personident: Personident = Personident("11111111111"),
+): SoknadService {
+    // hentSoknader kalles kun når tilgangskontroll gir tilgang; testene som forventer
+    // 400/401/403 når aldri fram til dette kallet, så stubben trenger bare å dekke
+    // personidentet som faktisk brukes i den positive testen. hentSoknad brukes av
+    // "vedtak med ukjent soknadId"-testen og skal alltid returnere null her.
+    val repository = mockk<ISoknadRepository>()
+    every { repository.hentSoknader(personident) } returns soknader
+    every { repository.hentSoknad(any()) } returns null
+    return SoknadService(soknadRepository = repository)
+}
 
 private val ubruktSoknad =
     Soknad(
@@ -415,39 +399,17 @@ private fun validSoknadVedtakPostDTO() =
 
 private fun soknadServiceCreatingVedtak(
     mottattSoknad: Soknad,
-    lagreVedtak: (Soknad) -> Unit = { _ -> },
-): SoknadService =
-    SoknadService(
-        soknadRepository =
-            object : ISoknadRepository {
-                override fun hentSoknad(soknadId: UUID): Soknad? = mottattSoknad
-
-                override fun hentSoknader(personident: Personident): List<Soknad> = throw NotImplementedError("Ikke i bruk i denne testen")
-
-                override fun lagreMottattSoknad(soknad: Soknad): LagreMottattSoknadResultat =
-                    throw NotImplementedError("Ikke i bruk i denne testen")
-
-                override fun lagreVedtak(soknadMedVedtak: Soknad): Soknad {
-                    lagreVedtak.invoke(soknadMedVedtak)
-                    return soknadMedVedtak
-                }
-
-                override fun getIkkeJournalforteSoknader(): List<Soknad> = emptyList()
-
-                override fun getSoknaderMedIkkeDistribuerteVedtak(): List<Soknad> = emptyList()
-
-                override fun setVedtakDistribuert(
-                    vedtakId: UUID,
-                    distribuertTidspunkt: Instant,
-                ) = Unit
-
-                override fun setVedtakJournalfort(
-                    vedtakId: UUID,
-                    journalpostId: JournalpostId,
-                    journalfortTidspunkt: Instant,
-                ) = Unit
-            },
-    )
+    lagreVedtak: (Soknad) -> Unit = { _ -> error("Skal ikke kalles") },
+): SoknadService {
+    val repository = mockk<ISoknadRepository>()
+    every { repository.hentSoknad(any()) } returns mottattSoknad
+    every { repository.lagreVedtak(any()) } answers {
+        val soknadMedVedtak = firstArg<Soknad>()
+        lagreVedtak(soknadMedVedtak)
+        soknadMedVedtak
+    }
+    return SoknadService(soknadRepository = repository)
+}
 
 private object NoopDatabase : DatabaseInterface {
     override val connection get() = throw NotImplementedError("Ikke i bruk i denne testen")
