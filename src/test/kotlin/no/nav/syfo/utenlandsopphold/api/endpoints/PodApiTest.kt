@@ -12,6 +12,7 @@ import no.nav.syfo.utenlandsopphold.application.ISoknadRepository
 import no.nav.syfo.utenlandsopphold.application.LagreMottattSoknadResultat
 import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.application.Transaction
+import no.nav.syfo.utenlandsopphold.application.TransactionIsolation
 import no.nav.syfo.utenlandsopphold.application.TransactionManager
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.infrastructure.database.Database
@@ -170,5 +171,8 @@ private fun emptySoknadService(): SoknadService =
 private object TestTransaction : Transaction
 
 private object TestTransactionManager : TransactionManager {
-    override fun <T> inTransaction(block: (Transaction) -> T): T = block(TestTransaction)
+    override fun <T> inTransaction(
+        isolation: TransactionIsolation?,
+        block: (Transaction) -> T,
+    ): T = block(TestTransaction)
 }
