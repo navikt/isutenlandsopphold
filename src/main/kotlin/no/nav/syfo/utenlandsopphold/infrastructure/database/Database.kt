@@ -30,6 +30,7 @@ class Database(
                 maximumPoolSize = config.poolSize
                 minimumIdle = 1
                 isAutoCommit = false
+                transactionIsolation = "TRANSACTION_READ_COMMITTED"
                 metricRegistry = METRICS_REGISTRY
                 validate()
             },
