@@ -181,12 +181,12 @@ private class FakeSoknadRepository(
     override fun hentSoknad(soknadId: UUID): Soknad? = soknader.find { it.id == soknadId }
 
     override fun hentSoknadForUpdate(
-        tx: TransactionContext,
+        transaction: Transaction,
         soknadId: UUID,
     ): Soknad? = soknader.find { it.id == soknadId }
 
     override fun lagreVedtak(
-        tx: TransactionContext,
+        transaction: Transaction,
         soknadMedVedtak: Soknad,
     ): Soknad = throw NotImplementedError("Ikke i bruk i denne testen")
 

@@ -4,11 +4,11 @@ import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.application.ISoknadRepository
 import no.nav.syfo.utenlandsopphold.application.LagreMottattSoknadResultat
-import no.nav.syfo.utenlandsopphold.application.TransactionContext
+import no.nav.syfo.utenlandsopphold.application.Transaction
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.Vedtak
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
-import no.nav.syfo.utenlandsopphold.infrastructure.database.JdbcTransactionContext
+import no.nav.syfo.utenlandsopphold.infrastructure.database.jdbcConnection
 import no.nav.syfo.utenlandsopphold.infrastructure.database.toList
 import org.postgresql.util.PGobject
 import java.sql.Connection
@@ -24,11 +24,6 @@ import java.util.UUID
 class SoknadRepository(
     private val database: DatabaseInterface,
 ) : ISoknadRepository {
-    private val TransactionContext.connection: Connection
-        get() =
-            (this as? JdbcTransactionContext)?.connection
-                ?: error("TransactionContext støttes ikke av SoknadRepository")
-
     private fun <T> withConnection(
         isolation: Int? = null,
         block: (Connection) -> T,
@@ -51,9 +46,9 @@ class SoknadRepository(
         }
 
     override fun hentSoknadForUpdate(
-        tx: TransactionContext,
+        transaction: Transaction,
         soknadId: UUID,
-    ): Soknad? = tx.connection.getSoknadForUpdate(soknadId)
+    ): Soknad? = transaction.jdbcConnection().getSoknadForUpdate(soknadId)
 
     private fun Connection.getSoknad(soknadId: UUID): Soknad? =
         getSoknadBySoknadUuid(soknadId)?.let { pSoknad ->
@@ -141,6 +136,20 @@ class SoknadRepository(
             }
         }
 
+    override fun lagreVedtak(
+        transaction: Transaction,
+        soknadMedVedtak: Soknad,
+    ): Soknad {
+        val vedtak =
+            checkNotNull(soknadMedVedtak.vedtak) {
+                "Søknad ${soknadMedVedtak.id} mangler vedtak etter fattVedtak"
+            }
+
+        transaction.jdbcConnection().lagreVedtak(soknadMedVedtak.id, vedtak)
+
+        return soknadMedVedtak
+    }
+
     override fun setVedtakJournalfort(
         vedtakId: UUID,
         journalpostId: JournalpostId,
@@ -192,20 +201,6 @@ class SoknadRepository(
                 it.executeUpdate()
             }
         }
-    }
-
-    override fun lagreVedtak(
-        tx: TransactionContext,
-        soknadMedVedtak: Soknad,
-    ): Soknad {
-        val vedtak =
-            checkNotNull(soknadMedVedtak.vedtak) {
-                "Søknad ${soknadMedVedtak.id} mangler vedtak etter fattVedtak"
-            }
-
-        tx.connection.lagreVedtak(soknadMedVedtak.id, vedtak)
-
-        return soknadMedVedtak
     }
 
     private fun Connection.getSoknadBySoknadUuid(soknadId: UUID): PSoknad? =

@@ -24,10 +24,10 @@ class SoknadService(
         utfall: Utfall.Innvilget,
         document: List<DocumentComponent>,
     ): Soknad =
-        transactionManager.inTransaction { tx ->
+        transactionManager.inTransaction { transaction ->
             val soknad =
                 soknadRepository.hentSoknadForUpdate(
-                    tx = tx,
+                    transaction = transaction,
                     soknadId = soknadId,
                 ) ?: throw IllegalArgumentException("Søknad med id $soknadId finnes ikke")
 
@@ -40,7 +40,7 @@ class SoknadService(
                 )
 
             soknadRepository.lagreVedtak(
-                tx = tx,
+                transaction = transaction,
                 soknadMedVedtak = soknadMedVedtak,
             )
         }

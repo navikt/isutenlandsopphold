@@ -135,9 +135,9 @@ class SoknadRepositoryTest {
 
         val vedtak = vedtak(innvilgetePerioder = soktePerioder)
         val oppdatertSoknad =
-            transactionManager.inTransaction { tx ->
-                val lagretSoknad = repository.hentSoknadForUpdate(tx, soknad.id)!!
-                repository.lagreVedtak(tx, lagretSoknad.copy(vedtak = vedtak))
+            transactionManager.inTransaction { transaction ->
+                val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
+                repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = vedtak))
             }
 
         assertEquals(SoknadStatus.INNVILGET, oppdatertSoknad.status)
@@ -153,9 +153,9 @@ class SoknadRepositoryTest {
         val soktePerioder = listOf(Periode(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 10)))
         val soknad = soknad(soktePerioder = soktePerioder)
         repository.lagreMottattSoknad(soknad)
-        transactionManager.inTransaction { tx ->
-            val lagretSoknad = repository.hentSoknadForUpdate(tx, soknad.id)!!
-            repository.lagreVedtak(tx, lagretSoknad.copy(vedtak = vedtak(innvilgetePerioder = soktePerioder)))
+        transactionManager.inTransaction { transaction ->
+            val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
+            repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = vedtak(innvilgetePerioder = soktePerioder)))
         }
 
         val hentetPaNytt = repository.hentSoknader(personident).single()
@@ -168,8 +168,8 @@ class SoknadRepositoryTest {
     fun `lagreVedtak for ukjent soknadId kaster IllegalArgumentException`() {
         val ukjentSoknadId = UUID.randomUUID()
         assertFailsWith<IllegalArgumentException> {
-            transactionManager.inTransaction { tx ->
-                repository.lagreVedtak(tx, soknad().copy(id = ukjentSoknadId, vedtak = vedtak()))
+            transactionManager.inTransaction { transaction ->
+                repository.lagreVedtak(transaction, soknad().copy(id = ukjentSoknadId, vedtak = vedtak()))
             }
         }
     }

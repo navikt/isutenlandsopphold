@@ -11,7 +11,7 @@ import no.nav.syfo.utenlandsopphold.application.ApplicationState
 import no.nav.syfo.utenlandsopphold.application.ISoknadRepository
 import no.nav.syfo.utenlandsopphold.application.LagreMottattSoknadResultat
 import no.nav.syfo.utenlandsopphold.application.SoknadService
-import no.nav.syfo.utenlandsopphold.application.TransactionContext
+import no.nav.syfo.utenlandsopphold.application.Transaction
 import no.nav.syfo.utenlandsopphold.application.TransactionManager
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.infrastructure.database.Database
@@ -136,14 +136,14 @@ private fun emptySoknadService(): SoknadService =
                 override fun hentSoknad(soknadId: UUID): Soknad? = null
 
                 override fun hentSoknadForUpdate(
-                    tx: TransactionContext,
+                    transaction: Transaction,
                     soknadId: UUID,
                 ): Soknad? = null
 
                 override fun hentSoknader(personident: Personident): List<Soknad> = emptyList()
 
                 override fun lagreVedtak(
-                    tx: TransactionContext,
+                    transaction: Transaction,
                     soknadMedVedtak: Soknad,
                 ): Soknad = throw NotImplementedError("Ikke i bruk i denne testen")
 
@@ -167,8 +167,8 @@ private fun emptySoknadService(): SoknadService =
         transactionManager = TestTransactionManager,
     )
 
-private object TestTransactionContext : TransactionContext
+private object TestTransaction : Transaction
 
 private object TestTransactionManager : TransactionManager {
-    override fun <T> inTransaction(block: (TransactionContext) -> T): T = block(TestTransactionContext)
+    override fun <T> inTransaction(block: (Transaction) -> T): T = block(TestTransaction)
 }

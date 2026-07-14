@@ -10,14 +10,14 @@ interface ISoknadRepository {
     fun hentSoknad(soknadId: UUID): Soknad?
 
     fun hentSoknadForUpdate(
-        tx: TransactionContext,
+        transaction: Transaction,
         soknadId: UUID,
     ): Soknad?
 
     fun hentSoknader(personident: Personident): List<Soknad>
 
     fun lagreVedtak(
-        tx: TransactionContext,
+        transaction: Transaction,
         soknadMedVedtak: Soknad,
     ): Soknad
 

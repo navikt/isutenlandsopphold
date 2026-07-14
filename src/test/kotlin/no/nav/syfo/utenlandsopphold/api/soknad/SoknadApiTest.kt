@@ -19,7 +19,7 @@ import no.nav.syfo.utenlandsopphold.application.ApplicationState
 import no.nav.syfo.utenlandsopphold.application.ISoknadRepository
 import no.nav.syfo.utenlandsopphold.application.LagreMottattSoknadResultat
 import no.nav.syfo.utenlandsopphold.application.SoknadService
-import no.nav.syfo.utenlandsopphold.application.TransactionContext
+import no.nav.syfo.utenlandsopphold.application.Transaction
 import no.nav.syfo.utenlandsopphold.application.TransactionManager
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponentType
@@ -406,7 +406,7 @@ private fun soknadServiceReturning(soknader: List<Soknad>): SoknadService =
                 override fun hentSoknad(soknadId: UUID): Soknad? = null
 
                 override fun hentSoknadForUpdate(
-                    tx: TransactionContext,
+                    transaction: Transaction,
                     soknadId: UUID,
                 ): Soknad? = null
 
@@ -430,7 +430,7 @@ private fun soknadServiceReturning(soknader: List<Soknad>): SoknadService =
                 ) = Unit
 
                 override fun lagreVedtak(
-                    tx: TransactionContext,
+                    transaction: Transaction,
                     soknadMedVedtak: Soknad,
                 ): Soknad = throw NotImplementedError("Ikke i bruk i denne testen")
             },
@@ -469,7 +469,7 @@ private fun soknadServiceCreatingVedtak(
                 override fun hentSoknad(soknadId: UUID): Soknad? = mottattSoknad
 
                 override fun hentSoknadForUpdate(
-                    tx: TransactionContext,
+                    transaction: Transaction,
                     soknadId: UUID,
                 ): Soknad? = mottattSoknad
 
@@ -479,7 +479,7 @@ private fun soknadServiceCreatingVedtak(
                     throw NotImplementedError("Ikke i bruk i denne testen")
 
                 override fun lagreVedtak(
-                    tx: TransactionContext,
+                    transaction: Transaction,
                     soknadMedVedtak: Soknad,
                 ): Soknad {
                     lagreVedtak.invoke(soknadMedVedtak)
@@ -508,8 +508,8 @@ private object NoopDatabase : DatabaseInterface {
     override val connection get() = throw NotImplementedError("Ikke i bruk i denne testen")
 }
 
-private object TestTransactionContext : TransactionContext
+private object TestTransaction : Transaction
 
 private object TestTransactionManager : TransactionManager {
-    override fun <T> inTransaction(block: (TransactionContext) -> T): T = block(TestTransactionContext)
+    override fun <T> inTransaction(block: (Transaction) -> T): T = block(TestTransaction)
 }

@@ -1,7 +1,7 @@
 package no.nav.syfo.utenlandsopphold.application
 
-interface TransactionContext
+interface Transaction
 
 interface TransactionManager {
-    fun <T> inTransaction(block: (TransactionContext) -> T): T
+    fun <T> inTransaction(block: (Transaction) -> T): T
 }
