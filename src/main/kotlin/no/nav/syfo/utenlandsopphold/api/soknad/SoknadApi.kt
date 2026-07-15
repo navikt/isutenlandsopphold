@@ -54,7 +54,7 @@ fun Route.registerSoknadApi(
 
                 val soknadMedVedtak =
                     soknadService.fattVedtak(
-                        soknad = soknad,
+                        soknadId = soknadId,
                         utfall = utfall,
                         fattetAv = authorizedUser.navident,
                         document = request.document,

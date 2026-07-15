@@ -11,6 +11,7 @@ import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.SoknadStatus
 import no.nav.syfo.utenlandsopphold.domain.Utfall
 import no.nav.syfo.utenlandsopphold.domain.Vedtak
+import no.nav.syfo.utenlandsopphold.infrastructure.database.JdbcTransactionManager
 import no.nav.syfo.utenlandsopphold.infrastructure.database.TestDatabase
 import no.nav.syfo.utenlandsopphold.infrastructure.database.dropData
 import org.junit.jupiter.api.AfterAll
@@ -32,6 +33,7 @@ import kotlin.test.assertTrue
 class SoknadRepositoryTest {
     private val database = TestDatabase()
     private val repository = SoknadRepository(database = database)
+    private val transactionManager = JdbcTransactionManager(database = database)
 
     private val personident = Personident("11111111111")
 
@@ -132,8 +134,11 @@ class SoknadRepositoryTest {
         repository.lagreMottattSoknad(soknad)
 
         val vedtak = vedtak(innvilgetePerioder = soktePerioder)
-        val soknadMedVedtak = soknad.copy(vedtak = vedtak)
-        val oppdatertSoknad = repository.lagreVedtak(soknadMedVedtak)
+        val oppdatertSoknad =
+            transactionManager.inTransaction { transaction ->
+                val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
+                repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = vedtak))
+            }
 
         assertEquals(SoknadStatus.INNVILGET, oppdatertSoknad.status)
         assertEquals(Utfall.Innvilget, oppdatertSoknad.vedtak?.utfall)
@@ -148,7 +153,10 @@ class SoknadRepositoryTest {
         val soktePerioder = listOf(Periode(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 10)))
         val soknad = soknad(soktePerioder = soktePerioder)
         repository.lagreMottattSoknad(soknad)
-        repository.lagreVedtak(soknad.copy(vedtak = vedtak(innvilgetePerioder = soktePerioder)))
+        transactionManager.inTransaction { transaction ->
+            val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
+            repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = vedtak(innvilgetePerioder = soktePerioder)))
+        }
 
         val hentetPaNytt = repository.hentSoknader(personident).single()
 
@@ -160,7 +168,9 @@ class SoknadRepositoryTest {
     fun `lagreVedtak for ukjent soknadId kaster IllegalArgumentException`() {
         val ukjentSoknadId = UUID.randomUUID()
         assertFailsWith<IllegalArgumentException> {
-            repository.lagreVedtak(soknad().copy(id = ukjentSoknadId, vedtak = vedtak()))
+            transactionManager.inTransaction { transaction ->
+                repository.lagreVedtak(transaction, soknad().copy(id = ukjentSoknadId, vedtak = vedtak()))
+            }
         }
     }
 

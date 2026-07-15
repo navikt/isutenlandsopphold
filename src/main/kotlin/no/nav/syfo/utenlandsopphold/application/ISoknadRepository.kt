@@ -9,9 +9,17 @@ import java.util.UUID
 interface ISoknadRepository {
     fun hentSoknad(soknadId: UUID): Soknad?
 
+    fun hentSoknadForUpdate(
+        transaction: Transaction,
+        soknadId: UUID,
+    ): Soknad?
+
     fun hentSoknader(personident: Personident): List<Soknad>
 
-    fun lagreVedtak(soknadMedVedtak: Soknad): Soknad
+    fun lagreVedtak(
+        transaction: Transaction,
+        soknadMedVedtak: Soknad,
+    ): Soknad
 
     /**
      * Henter søknader hvor det fattede vedtaket ennå ikke er journalført

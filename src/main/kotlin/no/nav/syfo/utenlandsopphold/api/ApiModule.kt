@@ -102,6 +102,7 @@ fun Application.installStatusPages() {
                 when (cause) {
                     is BadRequestException -> HttpStatusCode.BadRequest
                     is NotFoundException -> HttpStatusCode.NotFound
+                    is IllegalStateException -> HttpStatusCode.Conflict
                     is IllegalArgumentException -> HttpStatusCode.BadRequest
                     is TilgangDeniedException -> HttpStatusCode.Forbidden
                     else -> {

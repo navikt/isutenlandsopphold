@@ -9,6 +9,7 @@ import java.time.Instant
 import java.util.UUID
 
 class SoknadService(
+    private val transactionManager: TransactionManager,
     private val soknadRepository: ISoknadRepository,
 ) {
     fun hentSoknad(soknadId: UUID): Soknad? = soknadRepository.hentSoknad(soknadId)
@@ -18,19 +19,29 @@ class SoknadService(
     fun mottaSoknad(soknad: Soknad): LagreMottattSoknadResultat = soknadRepository.lagreMottattSoknad(soknad)
 
     fun fattVedtak(
-        soknad: Soknad,
+        soknadId: UUID,
         fattetAv: Navident,
         utfall: Utfall.Innvilget,
         document: List<DocumentComponent>,
-    ): Soknad {
-        val soknadMedVedtak =
-            soknad.fattVedtak(
-                utfall = utfall,
-                fattetAv = fattetAv,
-                now = Instant.now(),
-                document = document,
-            )
+    ): Soknad =
+        transactionManager.inTransaction { transaction ->
+            val soknad =
+                soknadRepository.hentSoknadForUpdate(
+                    transaction = transaction,
+                    soknadId = soknadId,
+                ) ?: throw IllegalArgumentException("Søknad med id $soknadId finnes ikke")
 
-        return soknadRepository.lagreVedtak(soknadMedVedtak = soknadMedVedtak)
-    }
+            val soknadMedVedtak =
+                soknad.fattVedtak(
+                    utfall = utfall,
+                    fattetAv = fattetAv,
+                    now = Instant.now(),
+                    document = document,
+                )
+
+            soknadRepository.lagreVedtak(
+                transaction = transaction,
+                soknadMedVedtak = soknadMedVedtak,
+            )
+        }
 }
