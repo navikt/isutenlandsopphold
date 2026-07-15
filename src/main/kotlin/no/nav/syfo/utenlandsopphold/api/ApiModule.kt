@@ -4,11 +4,13 @@ import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
+import io.ktor.server.metrics.micrometer.*
 import io.ktor.server.plugins.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.micrometer.core.instrument.distribution.DistributionStatisticConfig
 import no.nav.syfo.common.auth.JwtIssuer
 import no.nav.syfo.common.auth.JwtIssuerType
 import no.nav.syfo.common.auth.WellKnown
@@ -23,6 +25,8 @@ import no.nav.syfo.utenlandsopphold.api.soknad.registerSoknadApi
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
 import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
+import no.nav.syfo.utenlandsopphold.infrastructure.metric.METRICS_REGISTRY
+import java.time.Duration
 
 fun Application.apiModule(
     applicationState: ApplicationState,
@@ -34,6 +38,7 @@ fun Application.apiModule(
 ) {
     installContentNegotiation()
     installStatusPages()
+    installMetrics()
 
     installJwtAuthentication(
         jwtIssuerList =
@@ -66,6 +71,18 @@ fun Application.installContentNegotiation() {
         jackson {
             applyCommonJacksonConfig()
         }
+    }
+}
+
+fun Application.installMetrics() {
+    install(MicrometerMetrics) {
+        registry = METRICS_REGISTRY
+        distributionStatisticConfig =
+            DistributionStatisticConfig
+                .Builder()
+                .percentilesHistogram(true)
+                .maximumExpectedValue(Duration.ofSeconds(20).toNanos().toDouble())
+                .build()
     }
 }
 
