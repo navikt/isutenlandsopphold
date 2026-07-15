@@ -50,6 +50,7 @@ dependencies {
     testImplementation(libs.nimbus.jose.jwt)
     testImplementation(libs.embedded.postgres)
     testImplementation(platform("io.zonky.test.postgres:embedded-postgres-binaries-bom:${libs.versions.postgres.embedded.runtime.get()}"))
+    testImplementation(libs.mockk)
 }
 
 tasks {

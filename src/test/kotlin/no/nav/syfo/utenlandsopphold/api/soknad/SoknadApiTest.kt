@@ -8,7 +8,9 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.testing.*
-import no.nav.syfo.common.journalforing.JournalpostId
+import io.mockk.clearMocks
+import io.mockk.every
+import io.mockk.mockk
 import no.nav.syfo.common.tilgangskontroll.client.TilgangskontrollClient
 import no.nav.syfo.common.types.ident.Navident
 import no.nav.syfo.common.types.ident.Personident
@@ -17,7 +19,6 @@ import no.nav.syfo.utenlandsopphold.UserConstants
 import no.nav.syfo.utenlandsopphold.api.apiModule
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
 import no.nav.syfo.utenlandsopphold.application.ISoknadRepository
-import no.nav.syfo.utenlandsopphold.application.LagreMottattSoknadResultat
 import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.application.Transaction
 import no.nav.syfo.utenlandsopphold.application.TransactionManager
@@ -32,6 +33,7 @@ import no.nav.syfo.utenlandsopphold.infrastructure.mock.mockTilgangskontrollClie
 import no.nav.syfo.utenlandsopphold.testutil.TEST_AZURE_APP_CLIENT_ID
 import no.nav.syfo.utenlandsopphold.testutil.generateJWT
 import no.nav.syfo.utenlandsopphold.testutil.wellKnownInternalAzureAD
+import org.junit.jupiter.api.BeforeEach
 import java.time.Instant
 import java.time.LocalDate
 import java.time.OffsetDateTime
@@ -44,8 +46,36 @@ const val SOKNADER_QUERY_PATH = "/api/v1/soknader/query"
 const val SOKNAD_VEDTAK_PATH = "/api/v1/soknader/%s/vedtak"
 
 class SoknadApiTest {
+    private val repository = mockk<ISoknadRepository>()
+    private val soknadService = SoknadService(soknadRepository = repository, transactionManager = TestTransactionManager)
+
+    @BeforeEach
+    fun resetMocks() {
+        clearMocks(repository)
+    }
+
+    private fun stubHentSoknader(
+        soknader: List<Soknad>,
+        personident: Personident = Personident("11111111111"),
+    ) {
+        every { repository.hentSoknader(personident) } returns soknader
+        every { repository.hentSoknad(any()) } returns null
+    }
+
+    private fun stubHentSoknadOgLagreVedtak(
+        soknad: Soknad?,
+        lagreVedtak: (Soknad) -> Unit = { _ -> error("Skal ikke kalles") },
+    ) {
+        every { repository.hentSoknad(any()) } returns soknad
+        every { repository.hentSoknadForUpdate(any(), any()) } returns soknad
+        every { repository.lagreVedtak(any(), any()) } answers {
+            val soknadMedVedtak = secondArg<Soknad>()
+            lagreVedtak(soknadMedVedtak)
+            soknadMedVedtak
+        }
+    }
+
     private fun ApplicationTestBuilder.setupApiAndClient(
-        soknadService: SoknadService,
         tilgangskontrollClient: TilgangskontrollClient = mockTilgangskontrollClient(),
     ): HttpClient {
         application {
@@ -79,7 +109,8 @@ class SoknadApiTest {
                         ),
                     innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
                 )
-            val client = setupApiAndClient(soknadServiceReturning(listOf(soknad)))
+            stubHentSoknader(listOf(soknad))
+            val client = setupApiAndClient()
 
             val response =
                 client.post(SOKNADER_QUERY_PATH) {
@@ -104,7 +135,8 @@ class SoknadApiTest {
     @Test
     fun `query med ugyldig personident gir 400`() =
         testApplication {
-            val client = setupApiAndClient(soknadServiceReturning(emptyList()))
+            stubHentSoknader(emptyList())
+            val client = setupApiAndClient()
 
             val response =
                 client.post(SOKNADER_QUERY_PATH) {
@@ -119,7 +151,8 @@ class SoknadApiTest {
     @Test
     fun `query med ugyldig json gir 400`() =
         testApplication {
-            val client = setupApiAndClient(soknadServiceReturning(emptyList()))
+            stubHentSoknader(emptyList())
+            val client = setupApiAndClient()
 
             val response =
                 client.post(SOKNADER_QUERY_PATH) {
@@ -134,7 +167,8 @@ class SoknadApiTest {
     @Test
     fun `query uten tilgang til person gir 403`() =
         testApplication {
-            val client = setupApiAndClient(soknadServiceReturning(emptyList()))
+            stubHentSoknader(emptyList())
+            val client = setupApiAndClient()
 
             val response =
                 client.post(SOKNADER_QUERY_PATH) {
@@ -149,7 +183,8 @@ class SoknadApiTest {
     @Test
     fun `query uten token gir 401`() =
         testApplication {
-            val client = setupApiAndClient(soknadServiceReturning(emptyList()))
+            stubHentSoknader(emptyList())
+            val client = setupApiAndClient()
 
             val response =
                 client.post(SOKNADER_QUERY_PATH) {
@@ -163,7 +198,8 @@ class SoknadApiTest {
     @Test
     fun `query med token med feil audience gir 401`() =
         testApplication {
-            val client = setupApiAndClient(soknadServiceReturning(emptyList()))
+            stubHentSoknader(emptyList())
+            val client = setupApiAndClient()
 
             val response =
                 client.post(SOKNADER_QUERY_PATH) {
@@ -187,7 +223,8 @@ class SoknadApiTest {
                     soktePerioder = listOf(Periode(fom = LocalDate.of(2026, 4, 1), tom = LocalDate.of(2026, 4, 10))),
                     innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
                 )
-            val client = setupApiAndClient(soknadServiceCreatingVedtak(soknad) { _ -> error("Skal ikke kalles") })
+            stubHentSoknadOgLagreVedtak(soknad)
+            val client = setupApiAndClient()
 
             val response =
                 client.post(SOKNAD_VEDTAK_PATH.format(soknadId)) {
@@ -202,8 +239,8 @@ class SoknadApiTest {
     @Test
     fun `vedtak uten token gir 401`() =
         testApplication {
-            val client =
-                setupApiAndClient(soknadServiceCreatingVedtak(ubruktSoknad) { _ -> error("Skal ikke kalles") })
+            stubHentSoknadOgLagreVedtak(ubruktSoknad)
+            val client = setupApiAndClient()
 
             val response =
                 client.post(SOKNAD_VEDTAK_PATH.format(UUID.randomUUID())) {
@@ -217,8 +254,8 @@ class SoknadApiTest {
     @Test
     fun `vedtak med token med feil audience gir 401`() =
         testApplication {
-            val client =
-                setupApiAndClient(soknadServiceCreatingVedtak(ubruktSoknad) { _ -> error("Skal ikke kalles") })
+            stubHentSoknadOgLagreVedtak(ubruktSoknad)
+            val client = setupApiAndClient()
 
             val response =
                 client.post(SOKNAD_VEDTAK_PATH.format(UUID.randomUUID())) {
@@ -233,8 +270,8 @@ class SoknadApiTest {
     @Test
     fun `vedtak med ugyldig soknadId gir 400`() =
         testApplication {
-            val client =
-                setupApiAndClient(soknadServiceCreatingVedtak(ubruktSoknad) { _ -> error("Skal ikke kalles") })
+            stubHentSoknadOgLagreVedtak(ubruktSoknad)
+            val client = setupApiAndClient()
 
             val response =
                 client.post(SOKNAD_VEDTAK_PATH.format("ikke-gyldig-uuid")) {
@@ -249,7 +286,8 @@ class SoknadApiTest {
     @Test
     fun `vedtak med ukjent soknadId gir 404`() =
         testApplication {
-            val client = setupApiAndClient(soknadServiceReturning(emptyList()))
+            stubHentSoknader(emptyList())
+            val client = setupApiAndClient()
 
             val response =
                 client.post(SOKNAD_VEDTAK_PATH.format(UUID.randomUUID())) {
@@ -264,8 +302,8 @@ class SoknadApiTest {
     @Test
     fun `vedtak med ugyldig utfall gir 400`() =
         testApplication {
-            val client =
-                setupApiAndClient(soknadServiceCreatingVedtak(ubruktSoknad) { _ -> error("Skal ikke kalles") })
+            stubHentSoknadOgLagreVedtak(ubruktSoknad)
+            val client = setupApiAndClient()
 
             val response =
                 client.post(SOKNAD_VEDTAK_PATH.format(UUID.randomUUID())) {
@@ -293,8 +331,8 @@ class SoknadApiTest {
     @Test
     fun `vedtak med tom document gir 400`() =
         testApplication {
-            val client =
-                setupApiAndClient(soknadServiceCreatingVedtak(ubruktSoknad) { _ -> error("Skal ikke kalles") })
+            stubHentSoknadOgLagreVedtak(ubruktSoknad)
+            val client = setupApiAndClient()
 
             val response =
                 client.post(SOKNAD_VEDTAK_PATH.format(UUID.randomUUID())) {
@@ -327,13 +365,8 @@ class SoknadApiTest {
                     soktePerioder = innvilgetePerioder,
                     innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
                 )
-
-            val client =
-                setupApiAndClient(
-                    soknadServiceCreatingVedtak(mottattSoknad) { soknadMedVedtak ->
-                        lagretSoknad = soknadMedVedtak
-                    },
-                )
+            stubHentSoknadOgLagreVedtak(mottattSoknad) { soknadMedVedtak -> lagretSoknad = soknadMedVedtak }
+            val client = setupApiAndClient()
 
             val response =
                 client.post(SOKNAD_VEDTAK_PATH.format(soknadId.toString())) {
@@ -386,7 +419,8 @@ class SoknadApiTest {
                             document = validSoknadVedtakPostDTO().document,
                         ),
                 )
-            val client = setupApiAndClient(soknadServiceCreatingVedtak(soknadMedVedtak))
+            stubHentSoknadOgLagreVedtak(soknadMedVedtak)
+            val client = setupApiAndClient()
 
             val response =
                 client.post(SOKNAD_VEDTAK_PATH.format(soknadId.toString())) {
@@ -398,44 +432,6 @@ class SoknadApiTest {
             assertEquals(HttpStatusCode.Conflict, response.status)
         }
 }
-
-private fun soknadServiceReturning(soknader: List<Soknad>): SoknadService =
-    SoknadService(
-        soknadRepository =
-            object : ISoknadRepository {
-                override fun hentSoknad(soknadId: UUID): Soknad? = null
-
-                override fun hentSoknadForUpdate(
-                    transaction: Transaction,
-                    soknadId: UUID,
-                ): Soknad? = null
-
-                override fun hentSoknader(personident: Personident): List<Soknad> = soknader
-
-                override fun getIkkeJournalforteSoknader(): List<Soknad> = emptyList()
-
-                override fun setVedtakJournalfort(
-                    vedtakId: UUID,
-                    journalpostId: JournalpostId,
-                    journalfortTidspunkt: Instant,
-                ) = Unit
-
-                override fun lagreMottattSoknad(soknad: Soknad): LagreMottattSoknadResultat = LagreMottattSoknadResultat.LAGRET
-
-                override fun getSoknaderMedIkkeDistribuerteVedtak(): List<Soknad> = emptyList()
-
-                override fun setVedtakDistribuert(
-                    vedtakId: UUID,
-                    distribuertTidspunkt: Instant,
-                ) = Unit
-
-                override fun lagreVedtak(
-                    transaction: Transaction,
-                    soknadMedVedtak: Soknad,
-                ): Soknad = throw NotImplementedError("Ikke i bruk i denne testen")
-            },
-        transactionManager = TestTransactionManager,
-    )
 
 private val ubruktSoknad =
     Soknad(
@@ -457,51 +453,6 @@ private fun validSoknadVedtakPostDTO() =
                     texts = listOf("Søknaden din er innvilget"),
                 ),
             ),
-    )
-
-private fun soknadServiceCreatingVedtak(
-    mottattSoknad: Soknad,
-    lagreVedtak: (Soknad) -> Unit = { _ -> },
-): SoknadService =
-    SoknadService(
-        soknadRepository =
-            object : ISoknadRepository {
-                override fun hentSoknad(soknadId: UUID): Soknad? = mottattSoknad
-
-                override fun hentSoknadForUpdate(
-                    transaction: Transaction,
-                    soknadId: UUID,
-                ): Soknad? = mottattSoknad
-
-                override fun hentSoknader(personident: Personident): List<Soknad> = throw NotImplementedError("Ikke i bruk i denne testen")
-
-                override fun lagreMottattSoknad(soknad: Soknad): LagreMottattSoknadResultat =
-                    throw NotImplementedError("Ikke i bruk i denne testen")
-
-                override fun lagreVedtak(
-                    transaction: Transaction,
-                    soknadMedVedtak: Soknad,
-                ): Soknad {
-                    lagreVedtak.invoke(soknadMedVedtak)
-                    return soknadMedVedtak
-                }
-
-                override fun getIkkeJournalforteSoknader(): List<Soknad> = emptyList()
-
-                override fun getSoknaderMedIkkeDistribuerteVedtak(): List<Soknad> = emptyList()
-
-                override fun setVedtakDistribuert(
-                    vedtakId: UUID,
-                    distribuertTidspunkt: Instant,
-                ) = Unit
-
-                override fun setVedtakJournalfort(
-                    vedtakId: UUID,
-                    journalpostId: JournalpostId,
-                    journalfortTidspunkt: Instant,
-                ) = Unit
-            },
-        transactionManager = TestTransactionManager,
     )
 
 private object NoopDatabase : DatabaseInterface {
