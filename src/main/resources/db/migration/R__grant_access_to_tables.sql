@@ -8,9 +8,9 @@ $$;
 
 DO $$
 BEGIN
-CREATE ROLE "isyfo-analyse" WITH NOLOGIN;
+CREATE USER "isyfo-analyse";
 EXCEPTION WHEN DUPLICATE_OBJECT THEN
-  RAISE NOTICE 'not creating role isyfo-analyse -- it already exists';
+  RAISE NOTICE 'not creating user isyfo-analyse -- it already exists';
 END
 $$;
 
