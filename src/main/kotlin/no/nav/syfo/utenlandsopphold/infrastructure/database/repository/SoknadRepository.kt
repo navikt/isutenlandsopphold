@@ -46,7 +46,7 @@ class SoknadRepository(
             val pSoknad = connection.createSoknad(soknad, now)
 
             if (pSoknad != null) {
-                connection.createPerioder(pSoknad.id, soknad)
+                connection.createSoknadPerioder(pSoknad.id, soknad)
                 LagreMottattSoknadResultat.LAGRET
             } else {
                 LagreMottattSoknadResultat.ALLEREDE_LAGRET
@@ -139,7 +139,7 @@ class SoknadRepository(
         if (pSoknader.isEmpty()) return emptyList()
 
         val soknadIds = pSoknader.map { it.id }
-        val perioderPerSoknad = getPerioder(soknadIds).groupBy { it.soknadId }
+        val perioderPerSoknad = getSoknadPerioder(soknadIds).groupBy { it.soknadId }
         val vedtakPerSoknad = getVedtak(soknadIds).associateBy { it.soknadId }
         val vedtakPerioderPerVedtak =
             getVedtakPerioder(vedtakPerSoknad.values.map { it.id })
@@ -173,8 +173,8 @@ class SoknadRepository(
             it.executeQuery().toList { toPSoknad() }
         }
 
-    private fun Connection.getPerioder(soknadIds: List<Int>): List<PSoknadPeriode> =
-        prepareStatement(GET_PERIODER).use {
+    private fun Connection.getSoknadPerioder(soknadIds: List<Int>): List<PSoknadPeriode> =
+        prepareStatement(GET_SOKNAD_PERIODER).use {
             it.setArray(1, createArrayOf("integer", soknadIds.toTypedArray()))
             it.executeQuery().toList { toPSoknadPeriode() }
         }
@@ -216,14 +216,14 @@ class SoknadRepository(
             it.executeQuery().toList { toPSoknad() }.singleOrNull()
         }
 
-    private fun Connection.createPerioder(
+    private fun Connection.createSoknadPerioder(
         soknadId: Int,
         soknad: Soknad,
     ) {
         val fomDates = soknad.soktePerioder.map { Date.valueOf(it.fom) }.toTypedArray()
         val tomDates = soknad.soktePerioder.map { Date.valueOf(it.tom) }.toTypedArray()
 
-        prepareStatement(CREATE_PERIODER).use {
+        prepareStatement(CREATE_SOKNAD_PERIODER).use {
             it.setInt(1, soknadId)
             it.setArray(2, createArrayOf("date", fomDates))
             it.setArray(3, createArrayOf("date", tomDates))
@@ -285,7 +285,7 @@ class SoknadRepository(
                 SELECT * FROM soknad WHERE personident = ? ORDER BY innsendt_tidspunkt DESC
             """
 
-        private const val GET_PERIODER =
+        private const val GET_SOKNAD_PERIODER =
             """
                 SELECT * FROM soknad_periode WHERE soknad_id = ANY(?) ORDER BY fom ASC
             """
@@ -341,7 +341,7 @@ class SoknadRepository(
                 RETURNING *
             """
 
-        private const val CREATE_PERIODER =
+        private const val CREATE_SOKNAD_PERIODER =
             """
                 INSERT INTO soknad_periode (
                     soknad_id,
