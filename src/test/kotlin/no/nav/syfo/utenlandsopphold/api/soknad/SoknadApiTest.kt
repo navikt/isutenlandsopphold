@@ -34,6 +34,7 @@ import no.nav.syfo.utenlandsopphold.testutil.TEST_AZURE_APP_CLIENT_ID
 import no.nav.syfo.utenlandsopphold.testutil.generateJWT
 import no.nav.syfo.utenlandsopphold.testutil.wellKnownInternalAzureAD
 import org.junit.jupiter.api.BeforeEach
+import java.time.Instant
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -46,7 +47,7 @@ const val SOKNAD_VEDTAK_PATH = "/api/v1/soknader/%s/vedtak"
 
 class SoknadApiTest {
     private val repository = mockk<ISoknadRepository>()
-    private val soknadService = SoknadService(soknadRepository = repository)
+    private val soknadService = SoknadService(soknadRepository = repository, transactionManager = TestTransactionManager)
 
     @BeforeEach
     fun resetMocks() {
@@ -66,8 +67,9 @@ class SoknadApiTest {
         lagreVedtak: (Soknad) -> Unit = { _ -> error("Skal ikke kalles") },
     ) {
         every { repository.hentSoknad(any()) } returns soknad
-        every { repository.lagreVedtak(any()) } answers {
-            val soknadMedVedtak = firstArg<Soknad>()
+        every { repository.hentSoknadForUpdate(any(), any()) } returns soknad
+        every { repository.lagreVedtak(any(), any()) } answers {
+            val soknadMedVedtak = secondArg<Soknad>()
             lagreVedtak(soknadMedVedtak)
             soknadMedVedtak
         }
@@ -417,7 +419,8 @@ class SoknadApiTest {
                             document = validSoknadVedtakPostDTO().document,
                         ),
                 )
-            val client = setupApiAndClient(soknadServiceCreatingVedtak(soknadMedVedtak))
+            stubHentSoknadOgLagreVedtak(soknadMedVedtak)
+            val client = setupApiAndClient()
 
             val response =
                 client.post(SOKNAD_VEDTAK_PATH.format(soknadId.toString())) {
