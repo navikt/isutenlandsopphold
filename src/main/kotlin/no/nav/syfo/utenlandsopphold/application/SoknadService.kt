@@ -24,9 +24,7 @@ class SoknadService(
         utfall: Utfall.Innvilget,
         document: List<DocumentComponent>,
     ): Soknad =
-        transactionManager.inTransaction(
-            isolation = TransactionIsolation.READ_COMMITTED,
-        ) { transaction ->
+        transactionManager.inTransaction { transaction ->
             val soknad =
                 soknadRepository.hentSoknadForUpdate(
                     transaction = transaction,
