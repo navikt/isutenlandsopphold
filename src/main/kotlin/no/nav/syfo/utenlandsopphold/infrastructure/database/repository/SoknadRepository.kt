@@ -4,9 +4,11 @@ import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.application.ISoknadRepository
 import no.nav.syfo.utenlandsopphold.application.LagreMottattSoknadResultat
+import no.nav.syfo.utenlandsopphold.application.Transaction
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.Vedtak
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
+import no.nav.syfo.utenlandsopphold.infrastructure.database.jdbcConnection
 import no.nav.syfo.utenlandsopphold.infrastructure.database.toList
 import org.postgresql.util.PGobject
 import java.sql.Connection
@@ -22,162 +24,145 @@ import java.util.UUID
 class SoknadRepository(
     private val database: DatabaseInterface,
 ) : ISoknadRepository {
-    override fun hentSoknad(soknadId: UUID): Soknad? =
+    private fun <T> withConnection(
+        isolation: Int? = null,
+        block: (Connection) -> T,
+    ): T =
         database.connection.use { connection ->
-            val pSoknad = connection.getSoknadBySoknadUuid(soknadId)
-            if (pSoknad == null) {
-                return@use null
+            try {
+                isolation?.let { connection.transactionIsolation = it }
+                val result = block(connection)
+                connection.commit()
+                result
+            } catch (e: Exception) {
+                connection.rollback()
+                throw e
             }
-
-            val perioder = connection.getPerioder(listOf(pSoknad.id))
-            val vedtak = connection.getVedtak(listOf(pSoknad.id)).singleOrNull()
-            val vedtakPerioder =
-                vedtak?.let { connection.getVedtakPerioder(listOf(it.id)) }.orEmpty()
-
-            pSoknad.toSoknad(
-                soktePerioder = perioder,
-                vedtak = vedtak,
-                vedtakPerioder = vedtakPerioder,
-            )
         }
 
+    override fun hentSoknad(soknadId: UUID): Soknad? =
+        withConnection(Connection.TRANSACTION_REPEATABLE_READ) { connection ->
+            connection.getSoknad(soknadId)
+        }
+
+    override fun hentSoknadForUpdate(
+        transaction: Transaction,
+        soknadId: UUID,
+    ): Soknad? = transaction.jdbcConnection().getSoknadForUpdate(soknadId)
+
+    private fun Connection.getSoknad(soknadId: UUID): Soknad? =
+        getSoknadBySoknadUuid(soknadId)?.let { pSoknad ->
+            toSoknad(pSoknad)
+        }
+
+    private fun Connection.getSoknadForUpdate(soknadId: UUID): Soknad? =
+        getSoknadBySoknadUuidForUpdate(soknadId)?.let { pSoknad ->
+            toSoknad(pSoknad)
+        }
+
+    private fun Connection.toSoknad(pSoknad: PSoknad): Soknad = toSoknader(listOf(pSoknad)).single()
+
+    private fun Connection.toSoknader(pSoknader: List<PSoknad>): List<Soknad> {
+        if (pSoknader.isEmpty()) return emptyList()
+
+        val soknadIds = pSoknader.map { it.id }
+        val perioderPerSoknad = getPerioder(soknadIds).groupBy { it.soknadId }
+        val vedtakPerSoknad = getVedtak(soknadIds).associateBy { it.soknadId }
+        val vedtakPerioderPerVedtak =
+            getVedtakPerioder(vedtakPerSoknad.values.map { it.id })
+                .groupBy { it.vedtakId }
+
+        return pSoknader.map { pSoknad ->
+            val pVedtak = vedtakPerSoknad[pSoknad.id]
+            pSoknad.toSoknad(
+                soktePerioder = perioderPerSoknad[pSoknad.id].orEmpty(),
+                vedtak = pVedtak,
+                vedtakPerioder = pVedtak?.let { vedtakPerioderPerVedtak[it.id] }.orEmpty(),
+            )
+        }
+    }
+
     override fun hentSoknader(personident: Personident): List<Soknad> =
-        database.connection.use { connection ->
+        withConnection(Connection.TRANSACTION_REPEATABLE_READ) { connection ->
             val pSoknader = connection.getSoknader(personident)
-            if (pSoknader.isEmpty()) {
-                return@use emptyList()
-            }
-
-            val soknadIds = pSoknader.map { it.id }
-            val perioderPerSoknad = connection.getPerioder(soknadIds).groupBy { it.soknadId }
-            val vedtakPerSoknad = connection.getVedtak(soknadIds).associateBy { it.soknadId }
-            val vedtakPerioderPerVedtak =
-                connection
-                    .getVedtakPerioder(vedtakPerSoknad.values.map { it.id })
-                    .groupBy { it.vedtakId }
-
-            pSoknader.map { pSoknad ->
-                val pVedtak = vedtakPerSoknad[pSoknad.id]
-                pSoknad.toSoknad(
-                    soktePerioder = perioderPerSoknad[pSoknad.id].orEmpty(),
-                    vedtak = pVedtak,
-                    vedtakPerioder = pVedtak?.let { vedtakPerioderPerVedtak[it.id] }.orEmpty(),
-                )
-            }
+            connection.toSoknader(pSoknader)
         }
 
     override fun lagreMottattSoknad(soknad: Soknad): LagreMottattSoknadResultat =
-        database.connection.use { connection ->
+        withConnection { connection ->
             val now = OffsetDateTime.now(ZoneOffset.UTC)
             val pSoknad = connection.createSoknad(soknad, now)
-            val resultat =
-                if (pSoknad != null) {
-                    connection.createPerioder(pSoknad.id, soknad)
-                    LagreMottattSoknadResultat.LAGRET
-                } else {
-                    LagreMottattSoknadResultat.ALLEREDE_LAGRET
-                }
 
-            connection.commit()
-            resultat
+            if (pSoknad != null) {
+                connection.createPerioder(pSoknad.id, soknad)
+                LagreMottattSoknadResultat.LAGRET
+            } else {
+                LagreMottattSoknadResultat.ALLEREDE_LAGRET
+            }
         }
 
     override fun getIkkeJournalforteSoknader(): List<Soknad> =
-        database.connection.use { connection ->
+        withConnection(Connection.TRANSACTION_REPEATABLE_READ) { connection ->
             val pSoknader = connection.getIkkeJournalforteSoknader()
-            if (pSoknader.isEmpty()) {
-                return@use emptyList()
-            }
-
-            val soknadIds = pSoknader.map { it.id }
-            val perioderPerSoknad = connection.getPerioder(soknadIds).groupBy { it.soknadId }
-            val vedtakPerSoknad = connection.getVedtak(soknadIds).associateBy { it.soknadId }
-            val vedtakPerioderPerVedtak =
-                connection
-                    .getVedtakPerioder(vedtakPerSoknad.values.map { it.id })
-                    .groupBy { it.vedtakId }
-
-            pSoknader.map { pSoknad ->
-                val pVedtak = vedtakPerSoknad[pSoknad.id]
-                pSoknad.toSoknad(
-                    soktePerioder = perioderPerSoknad[pSoknad.id].orEmpty(),
-                    vedtak = pVedtak,
-                    vedtakPerioder = pVedtak?.let { vedtakPerioderPerVedtak[it.id] }.orEmpty(),
-                )
-            }
+            connection.toSoknader(pSoknader)
         }
+
+    override fun lagreVedtak(
+        transaction: Transaction,
+        soknadMedVedtak: Soknad,
+    ): Soknad {
+        val vedtak =
+            checkNotNull(soknadMedVedtak.vedtak) {
+                "Søknad ${soknadMedVedtak.id} mangler vedtak etter fattVedtak"
+            }
+
+        transaction.jdbcConnection().lagreVedtak(soknadMedVedtak.id, vedtak)
+
+        return soknadMedVedtak
+    }
 
     override fun setVedtakJournalfort(
         vedtakId: UUID,
         journalpostId: JournalpostId,
         journalfortTidspunkt: Instant,
     ) {
-        database.connection.use { connection ->
+        withConnection { connection ->
             connection.prepareStatement(SET_VEDTAK_JOURNALFORT).use {
                 it.setString(1, journalpostId.value)
                 it.setTimestamp(2, Timestamp.from(journalfortTidspunkt))
                 it.setObject(3, vedtakId)
                 it.executeUpdate()
             }
-            connection.commit()
         }
     }
 
     override fun getSoknaderMedIkkeDistribuerteVedtak(): List<Soknad> =
-        database.connection.use { connection ->
+        withConnection(Connection.TRANSACTION_REPEATABLE_READ) { connection ->
             val pSoknader = connection.getSoknaderMedIkkeDistribuerteVedtak()
-            if (pSoknader.isEmpty()) {
-                return@use emptyList()
-            }
-
-            val soknadIds = pSoknader.map { it.id }
-            val perioderPerSoknad = connection.getPerioder(soknadIds).groupBy { it.soknadId }
-            val vedtakPerSoknad = connection.getVedtak(soknadIds).associateBy { it.soknadId }
-            val vedtakPerioderPerVedtak =
-                connection
-                    .getVedtakPerioder(vedtakPerSoknad.values.map { it.id })
-                    .groupBy { it.vedtakId }
-
-            pSoknader.map { pSoknad ->
-                val pVedtak = vedtakPerSoknad[pSoknad.id]
-                pSoknad.toSoknad(
-                    soktePerioder = perioderPerSoknad[pSoknad.id].orEmpty(),
-                    vedtak = pVedtak,
-                    vedtakPerioder = pVedtak?.let { vedtakPerioderPerVedtak[it.id] }.orEmpty(),
-                )
-            }
+            connection.toSoknader(pSoknader)
         }
 
     override fun setVedtakDistribuert(
         vedtakId: UUID,
         distribuertTidspunkt: Instant,
     ) {
-        database.connection.use { connection ->
+        withConnection { connection ->
             connection.prepareStatement(SET_VEDTAK_DISTRIBUERT).use {
                 it.setTimestamp(1, Timestamp.from(distribuertTidspunkt))
                 it.setObject(2, vedtakId)
                 it.executeUpdate()
             }
-            connection.commit()
         }
-    }
-
-    override fun lagreVedtak(soknadMedVedtak: Soknad): Soknad {
-        val vedtak =
-            checkNotNull(soknadMedVedtak.vedtak) {
-                "Søknad ${soknadMedVedtak.id} mangler vedtak etter fattVedtak"
-            }
-
-        database.connection.use { connection ->
-            connection.lagreVedtak(soknadMedVedtak.id, vedtak)
-            connection.commit()
-        }
-
-        return soknadMedVedtak
     }
 
     private fun Connection.getSoknadBySoknadUuid(soknadId: UUID): PSoknad? =
         prepareStatement(GET_SOKNADER_BY_UUID).use {
+            it.setObject(1, soknadId)
+            it.executeQuery().toList { toPSoknad() }.singleOrNull()
+        }
+
+    private fun Connection.getSoknadBySoknadUuidForUpdate(soknadId: UUID): PSoknad? =
+        prepareStatement(GET_SOKNADER_BY_UUID_FOR_UPDATE).use {
             it.setObject(1, soknadId)
             it.executeQuery().toList { toPSoknad() }.singleOrNull()
         }
@@ -288,6 +273,11 @@ class SoknadRepository(
         private const val GET_SOKNADER_BY_UUID =
             """
                 SELECT * FROM soknad WHERE uuid = ?
+            """
+
+        private const val GET_SOKNADER_BY_UUID_FOR_UPDATE =
+            """
+                SELECT * FROM soknad WHERE uuid = ? FOR UPDATE
             """
 
         private const val GET_SOKNADER =

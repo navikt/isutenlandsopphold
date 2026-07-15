@@ -12,6 +12,7 @@ import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import no.nav.syfo.common.tilgangskontroll.client.TilgangskontrollClient
+import no.nav.syfo.common.types.ident.Navident
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.common.util.applyCommonJacksonConfig
 import no.nav.syfo.utenlandsopphold.UserConstants
@@ -19,11 +20,14 @@ import no.nav.syfo.utenlandsopphold.api.apiModule
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
 import no.nav.syfo.utenlandsopphold.application.ISoknadRepository
 import no.nav.syfo.utenlandsopphold.application.SoknadService
+import no.nav.syfo.utenlandsopphold.application.Transaction
+import no.nav.syfo.utenlandsopphold.application.TransactionManager
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponentType
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.Vedtak
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
 import no.nav.syfo.utenlandsopphold.infrastructure.mock.mockTilgangskontrollClient
 import no.nav.syfo.utenlandsopphold.testutil.TEST_AZURE_APP_CLIENT_ID
@@ -391,6 +395,39 @@ class SoknadApiTest {
             assertEquals(soknadId.toString(), body.soknad.soknadId)
             assertEquals(SoknadStatusDTO.INNVILGET, body.soknad.status)
         }
+
+    @Test
+    fun `vedtak på soknad som allerede har vedtak gir 409`() =
+        testApplication {
+            val soknadId = UUID.randomUUID()
+            val innvilgetePerioder = listOf(Periode(fom = LocalDate.of(2026, 4, 1), tom = LocalDate.of(2026, 4, 10)))
+            val soknadMedVedtak =
+                Soknad(
+                    id = soknadId,
+                    eksternId = UUID.randomUUID(),
+                    personident = UserConstants.PERSON_VEILEDERE_HAR_TILGANG_TIL,
+                    soktePerioder = innvilgetePerioder,
+                    innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
+                    vedtak =
+                        Vedtak(
+                            utfall = Utfall.Innvilget,
+                            fattetAv = Navident(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG),
+                            fattetTidspunkt = Instant.parse("2026-03-02T09:00:00Z"),
+                            innvilgetePerioder = innvilgetePerioder,
+                            document = validSoknadVedtakPostDTO().document,
+                        ),
+                )
+            val client = setupApiAndClient(soknadServiceCreatingVedtak(soknadMedVedtak))
+
+            val response =
+                client.post(SOKNAD_VEDTAK_PATH.format(soknadId.toString())) {
+                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
+                    contentType(ContentType.Application.Json)
+                    setBody(validSoknadVedtakPostDTO())
+                }
+
+            assertEquals(HttpStatusCode.Conflict, response.status)
+        }
 }
 
 private val ubruktSoknad =
@@ -417,4 +454,10 @@ private fun validSoknadVedtakPostDTO() =
 
 private object NoopDatabase : DatabaseInterface {
     override val connection get() = throw NotImplementedError("Ikke i bruk i denne testen")
+}
+
+private object TestTransaction : Transaction
+
+private object TestTransactionManager : TransactionManager {
+    override fun <T> inTransaction(block: (Transaction) -> T): T = block(TestTransaction)
 }

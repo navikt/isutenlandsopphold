@@ -22,6 +22,7 @@ dependencies {
     implementation(ktorLibs.server.contentNegotiation)
     implementation(ktorLibs.server.statusPages)
     implementation(ktorLibs.server.auth)
+    implementation(ktorLibs.server.metrics.micrometer)
 
     implementation(ktorLibs.serialization.jackson)
 
