@@ -3,6 +3,7 @@ package no.nav.syfo.utenlandsopphold.infrastructure.database
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import no.nav.syfo.utenlandsopphold.DatabaseEnvironment
+import no.nav.syfo.utenlandsopphold.infrastructure.metric.METRICS_REGISTRY
 import org.flywaydb.core.Flyway
 import java.sql.Connection
 
@@ -30,6 +31,7 @@ class Database(
                 minimumIdle = 1
                 isAutoCommit = false
                 transactionIsolation = "TRANSACTION_REPEATABLE_READ"
+                metricRegistry = METRICS_REGISTRY
                 validate()
             },
         )
