@@ -57,7 +57,7 @@ class SoknadApiTest {
         every { repository.hentSoknad(any()) } returns null
     }
 
-    private fun stubHentSoknad(
+    private fun stubHentSoknadOgLagreVedtak(
         soknad: Soknad?,
         lagreVedtak: (Soknad) -> Unit = { _ -> error("Skal ikke kalles") },
     ) {
@@ -217,7 +217,7 @@ class SoknadApiTest {
                     soktePerioder = listOf(Periode(fom = LocalDate.of(2026, 4, 1), tom = LocalDate.of(2026, 4, 10))),
                     innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
                 )
-            stubHentSoknad(soknad)
+            stubHentSoknadOgLagreVedtak(soknad)
             val client = setupApiAndClient()
 
             val response =
@@ -233,7 +233,7 @@ class SoknadApiTest {
     @Test
     fun `vedtak uten token gir 401`() =
         testApplication {
-            stubHentSoknad(ubruktSoknad)
+            stubHentSoknadOgLagreVedtak(ubruktSoknad)
             val client = setupApiAndClient()
 
             val response =
@@ -248,7 +248,7 @@ class SoknadApiTest {
     @Test
     fun `vedtak med token med feil audience gir 401`() =
         testApplication {
-            stubHentSoknad(ubruktSoknad)
+            stubHentSoknadOgLagreVedtak(ubruktSoknad)
             val client = setupApiAndClient()
 
             val response =
@@ -264,7 +264,7 @@ class SoknadApiTest {
     @Test
     fun `vedtak med ugyldig soknadId gir 400`() =
         testApplication {
-            stubHentSoknad(ubruktSoknad)
+            stubHentSoknadOgLagreVedtak(ubruktSoknad)
             val client = setupApiAndClient()
 
             val response =
@@ -296,7 +296,7 @@ class SoknadApiTest {
     @Test
     fun `vedtak med ugyldig utfall gir 400`() =
         testApplication {
-            stubHentSoknad(ubruktSoknad)
+            stubHentSoknadOgLagreVedtak(ubruktSoknad)
             val client = setupApiAndClient()
 
             val response =
@@ -325,7 +325,7 @@ class SoknadApiTest {
     @Test
     fun `vedtak med tom document gir 400`() =
         testApplication {
-            stubHentSoknad(ubruktSoknad)
+            stubHentSoknadOgLagreVedtak(ubruktSoknad)
             val client = setupApiAndClient()
 
             val response =
@@ -359,7 +359,7 @@ class SoknadApiTest {
                     soktePerioder = innvilgetePerioder,
                     innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
                 )
-            stubHentSoknad(mottattSoknad) { soknadMedVedtak -> lagretSoknad = soknadMedVedtak }
+            stubHentSoknadOgLagreVedtak(mottattSoknad) { soknadMedVedtak -> lagretSoknad = soknadMedVedtak }
             val client = setupApiAndClient()
 
             val response =
