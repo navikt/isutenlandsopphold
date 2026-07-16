@@ -7,13 +7,17 @@ import io.ktor.server.routing.*
 import no.nav.syfo.common.tilgangskontroll.checkPersonAndSyfoTilgang
 import no.nav.syfo.common.tilgangskontroll.client.TilgangskontrollClient
 import no.nav.syfo.common.types.ident.Personident
+import no.nav.syfo.utenlandsopphold.application.JournalforVedtakService
 import no.nav.syfo.utenlandsopphold.application.SoknadService
+import no.nav.syfo.utenlandsopphold.application.launchAsyncTask
 import no.nav.syfo.utenlandsopphold.domain.Utfall
+import org.slf4j.LoggerFactory
 import java.util.UUID
 
 fun Route.registerSoknadApi(
     soknadService: SoknadService,
     tilgangskontrollClient: TilgangskontrollClient,
+    journalforVedtakService: JournalforVedtakService?,
 ) {
     route("/api/v1/soknader") {
         post("/query") {
@@ -60,8 +64,23 @@ fun Route.registerSoknadApi(
                         document = request.document,
                     )
 
+                if (journalforVedtakService != null) {
+                    // Forsøker journalføring umiddelbart som en fire-and-forget bakgrunnsoppgave.
+                    // Feiler dette, plukkes vedtaket likevel opp av den periodiske cronjobben
+                    // (launchJournalforVedtakCronjob) etter dens gradeperiode for ferske vedtak.
+                    launchAsyncTask {
+                        try {
+                            journalforVedtakService.journalforVedtak(soknadMedVedtak)
+                        } catch (exception: Exception) {
+                            log.error("Feil ved umiddelbar journalføring av vedtak for søknad $soknadId", exception)
+                        }
+                    }
+                }
+
                 call.respond(soknadMedVedtak.toResponseDTO())
             }
         }
     }
 }
+
+private val log = LoggerFactory.getLogger("no.nav.syfo.utenlandsopphold.api.soknad.SoknadApi")

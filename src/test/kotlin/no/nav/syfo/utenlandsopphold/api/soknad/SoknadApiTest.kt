@@ -9,8 +9,11 @@ import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.testing.*
 import io.mockk.clearMocks
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.common.tilgangskontroll.client.TilgangskontrollClient
 import no.nav.syfo.common.types.ident.Navident
 import no.nav.syfo.common.types.ident.Personident
@@ -18,7 +21,12 @@ import no.nav.syfo.common.util.applyCommonJacksonConfig
 import no.nav.syfo.utenlandsopphold.UserConstants
 import no.nav.syfo.utenlandsopphold.api.apiModule
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
+import no.nav.syfo.utenlandsopphold.application.IDistribusjonService
+import no.nav.syfo.utenlandsopphold.application.IJournalforingService
+import no.nav.syfo.utenlandsopphold.application.IPdfClient
+import no.nav.syfo.utenlandsopphold.application.IPdlClient
 import no.nav.syfo.utenlandsopphold.application.ISoknadRepository
+import no.nav.syfo.utenlandsopphold.application.JournalforVedtakService
 import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.application.Transaction
 import no.nav.syfo.utenlandsopphold.application.TransactionManager
@@ -77,6 +85,7 @@ class SoknadApiTest {
 
     private fun ApplicationTestBuilder.setupApiAndClient(
         tilgangskontrollClient: TilgangskontrollClient = mockTilgangskontrollClient(),
+        journalforVedtakService: JournalforVedtakService? = null,
     ): HttpClient {
         application {
             apiModule(
@@ -86,6 +95,7 @@ class SoknadApiTest {
                 tilgangskontrollClient = tilgangskontrollClient,
                 azureAppClientId = TEST_AZURE_APP_CLIENT_ID,
                 wellKnownInternalAzureAD = wellKnownInternalAzureAD(),
+                journalforVedtakService = journalforVedtakService,
             )
         }
         return createClient {
@@ -396,6 +406,55 @@ class SoknadApiTest {
             val body = response.body<SoknadVedtakResponseDTO>()
             assertEquals(soknadId.toString(), body.soknad.soknadId)
             assertEquals(SoknadStatusDTO.INNVILGET, body.soknad.status)
+        }
+
+    @Test
+    fun `vedtak trigger umiddelbar journalføring async når journalforVedtakService er satt`() =
+        testApplication {
+            val soknadId = UUID.randomUUID()
+            val innvilgetePerioder = listOf(Periode(fom = LocalDate.of(2026, 4, 1), tom = LocalDate.of(2026, 4, 10)))
+            val personident = Personident("11111111111")
+
+            val mottattSoknad =
+                Soknad(
+                    id = soknadId,
+                    eksternId = UUID.randomUUID(),
+                    personident = personident,
+                    soktePerioder = innvilgetePerioder,
+                    innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
+                )
+            stubHentSoknadOgLagreVedtak(mottattSoknad) { _ -> }
+
+            val pdlClientMock = mockk<IPdlClient>()
+            val pdfClientMock = mockk<IPdfClient>()
+            val journalforingServiceMock = mockk<IJournalforingService>()
+            val distribusjonServiceMock = mockk<IDistribusjonService>()
+            coEvery { pdlClientMock.getNavn(personident) } returns "Ola Nordmann"
+            coEvery { pdfClientMock.createVedtakPdf(personident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
+            coEvery { journalforingServiceMock.journalfor(personident, any(), any()) } returns
+                Result.success(JournalpostId("999"))
+            every { repository.setVedtakJournalfort(any(), any(), any()) } returns Unit
+
+            val journalforVedtakService =
+                JournalforVedtakService(
+                    soknadRepository = repository,
+                    personInfoClient = pdlClientMock,
+                    pdfClient = pdfClientMock,
+                    journalforingService = journalforingServiceMock,
+                    distribusjonService = distribusjonServiceMock,
+                )
+            val client = setupApiAndClient(journalforVedtakService = journalforVedtakService)
+
+            val response =
+                client.post(SOKNAD_VEDTAK_PATH.format(soknadId.toString())) {
+                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
+                    contentType(ContentType.Application.Json)
+                    setBody(validSoknadVedtakPostDTO())
+                }
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            // Journalføringen skjer i en fire-and-forget bakgrunnsoppgave, derfor timeout her.
+            coVerify(timeout = 2000) { journalforingServiceMock.journalfor(personident, any(), any()) }
         }
 
     @Test

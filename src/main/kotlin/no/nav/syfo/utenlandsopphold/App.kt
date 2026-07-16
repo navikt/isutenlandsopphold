@@ -57,6 +57,22 @@ fun main(args: Array<String>) {
             clientConfig = TilgangskontrollClientConfig.fromEnv(),
         )
 
+    // Klientene (Azure AD, dokarkiv, PDL, ispdfgen) og leder-valg krever
+    // miljøvariabler som ikke finnes lokalt.
+    val clientsModule = if (isLocal()) null else ClientsModule()
+    val journalforingCronjobConfig = if (isLocal()) null else JournalforingCronjobConfig.fromEnv()
+    val journalforVedtakService =
+        clientsModule?.let {
+            JournalforVedtakService(
+                soknadRepository = soknadRepository,
+                personInfoClient = it.personInfoClient,
+                pdfClient = it.pdfClient,
+                journalforingService = it.journalforingService,
+                distribusjonService = it.distribusjonService,
+                freshVedtakGracePeriod = checkNotNull(journalforingCronjobConfig).freshVedtakGracePeriod,
+            )
+        }
+
     val server =
         embeddedServer(
             Netty,
@@ -76,6 +92,7 @@ fun main(args: Array<String>) {
                     tilgangskontrollClient = tilgangskontrollClient,
                     azureAppClientId = environment.azure.appClientId,
                     wellKnownInternalAzureAD = wellKnownInternalAzureAD,
+                    journalforVedtakService = journalforVedtakService,
                 )
                 monitor.subscribe(ApplicationStarted) {
                     applicationState.ready = true
@@ -87,24 +104,12 @@ fun main(args: Array<String>) {
                         soknadService = soknadService,
                     )
 
-                    // Klientene (Azure AD, dokarkiv, PDL, ispdfgen) og leder-valg krever
-                    // NAIS-injiserte miljøvariabler som ikke finnes lokalt.
-                    if (!isLocal()) {
-                        val clientsModule = ClientsModule()
-                        val journalforVedtakService =
-                            JournalforVedtakService(
-                                soknadRepository = soknadRepository,
-                                personInfoClient = clientsModule.personInfoClient,
-                                pdfClient = clientsModule.pdfClient,
-                                journalforingService = clientsModule.journalforingService,
-                                distribusjonService = clientsModule.distribusjonService,
-                            )
-
+                    if (clientsModule != null && journalforVedtakService != null && journalforingCronjobConfig != null) {
                         launchJournalforVedtakCronjob(
                             applicationState = applicationState,
                             leaderElection = clientsModule.leaderElection,
                             journalforVedtakService = journalforVedtakService,
-                            interval = JournalforingCronjobConfig.fromEnv().interval,
+                            interval = journalforingCronjobConfig.interval,
                         )
                     }
                 }

@@ -23,6 +23,7 @@ import no.nav.syfo.utenlandsopphold.api.endpoints.registerMetricApi
 import no.nav.syfo.utenlandsopphold.api.endpoints.registerPodApi
 import no.nav.syfo.utenlandsopphold.api.soknad.registerSoknadApi
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
+import no.nav.syfo.utenlandsopphold.application.JournalforVedtakService
 import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
 import no.nav.syfo.utenlandsopphold.infrastructure.metric.METRICS_REGISTRY
@@ -35,6 +36,7 @@ fun Application.apiModule(
     tilgangskontrollClient: TilgangskontrollClient,
     azureAppClientId: String,
     wellKnownInternalAzureAD: WellKnown,
+    journalforVedtakService: JournalforVedtakService? = null,
 ) {
     installContentNegotiation()
     installStatusPages()
@@ -61,6 +63,7 @@ fun Application.apiModule(
             registerSoknadApi(
                 soknadService = soknadService,
                 tilgangskontrollClient = tilgangskontrollClient,
+                journalforVedtakService = journalforVedtakService,
             )
         }
     }

@@ -5,6 +5,8 @@ import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.infrastructure.journalforing.JournalforingService.Companion.DEFAULT_FAILED_JP_ID
 import org.slf4j.LoggerFactory
 import java.time.Instant
+import kotlin.time.Duration
+import kotlin.time.toJavaDuration
 
 /**
  * Use case (application service) som orkestrerer journalføring av vedtak:
@@ -14,6 +16,10 @@ import java.time.Instant
  * Domenet ([Soknad.journalforVedtak]) håndhever invarianten om at et vedtak
  * kun kan journalføres én gang — feiler denne tjenesten på ett vedtak stopper
  * det ikke journalføring av de øvrige.
+ *
+ * @param freshVedtakGracePeriod Brukes av [journalforVedtak] (den periodiske cronjobben) til å
+ * ekskludere nylig fattede vedtak fra spørringen, slik at den ikke journalfører et vedtak som
+ * API-laget allerede forsøker å journalføre umiddelbart (se [journalforVedtak] med `soknad`-parameter).
  */
 class JournalforVedtakService(
     private val soknadRepository: ISoknadRepository,
@@ -21,10 +27,12 @@ class JournalforVedtakService(
     private val pdfClient: IPdfClient,
     private val journalforingService: IJournalforingService,
     private val distribusjonService: IDistribusjonService,
+    private val freshVedtakGracePeriod: Duration = Duration.ZERO,
 ) {
     suspend fun journalforVedtak() {
         log.debug("Starter journalføring av ujournalførte vedtak")
-        val soknaderMedIkkeJournalforteVedtak = soknadRepository.getIkkeJournalforteSoknader()
+        val fattetFor = Instant.now().minus(freshVedtakGracePeriod.toJavaDuration())
+        val soknaderMedIkkeJournalforteVedtak = soknadRepository.getIkkeJournalforteSoknader(fattetFor)
 
         soknaderMedIkkeJournalforteVedtak.forEach { soknad ->
             try {
@@ -36,7 +44,15 @@ class JournalforVedtakService(
         }
     }
 
-    private suspend fun journalforVedtak(soknad: Soknad) {
+    /**
+     * Journalfører vedtaket for én søknad. Gjenbrukes både av den periodiske cronjobben
+     * ([journalforVedtak]) og av API-laget, som forsøker journalføring umiddelbart etter at
+     * vedtaket er fattet (se [no.nav.syfo.utenlandsopphold.api.soknad.registerSoknadApi]).
+     * Idempotent: [Soknad.journalforVedtak] håndhever at et vedtak kun journalføres én gang,
+     * og dokarkiv dedupliserer på `eksternReferanseId` (vedtakId) dersom denne likevel
+     * skulle bli kalt samtidig fra flere steder for samme vedtak.
+     */
+    suspend fun journalforVedtak(soknad: Soknad) {
         val vedtak =
             checkNotNull(soknad.vedtak) {
                 "Søknad ${soknad.id} har ikke fattet vedtak, kan ikke journalføre"
