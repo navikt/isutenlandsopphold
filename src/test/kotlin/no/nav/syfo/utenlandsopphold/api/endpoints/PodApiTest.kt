@@ -7,6 +7,7 @@ import io.mockk.mockk
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres
 import no.nav.syfo.utenlandsopphold.api.apiModule
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
+import no.nav.syfo.utenlandsopphold.application.JournalforVedtakService
 import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.infrastructure.database.Database
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseConfig
@@ -22,6 +23,7 @@ import kotlin.test.assertEquals
 
 class PodApiTest {
     private val soknadServiceMock = mockk<SoknadService>()
+    private val journalforVedtakServiceMock = mockk<JournalforVedtakService>(relaxed = true)
 
     companion object {
         private lateinit var embeddedPostgres: EmbeddedPostgres
@@ -60,6 +62,7 @@ class PodApiTest {
                     tilgangskontrollClient = mockTilgangskontrollClient(),
                     azureAppClientId = TEST_AZURE_APP_CLIENT_ID,
                     wellKnownInternalAzureAD = wellKnownInternalAzureAD(),
+                    journalforVedtakService = journalforVedtakServiceMock,
                 )
             }
             val response = client.get(POD_LIVENESS_PATH)
@@ -77,6 +80,7 @@ class PodApiTest {
                     tilgangskontrollClient = mockTilgangskontrollClient(),
                     azureAppClientId = TEST_AZURE_APP_CLIENT_ID,
                     wellKnownInternalAzureAD = wellKnownInternalAzureAD(),
+                    journalforVedtakService = journalforVedtakServiceMock,
                 )
             }
             val response = client.get(POD_READINESS_PATH)
@@ -94,6 +98,7 @@ class PodApiTest {
                     tilgangskontrollClient = mockTilgangskontrollClient(),
                     azureAppClientId = TEST_AZURE_APP_CLIENT_ID,
                     wellKnownInternalAzureAD = wellKnownInternalAzureAD(),
+                    journalforVedtakService = journalforVedtakServiceMock,
                 )
             }
             val response = client.get(POD_READINESS_PATH)
@@ -116,6 +121,7 @@ class PodApiTest {
                     tilgangskontrollClient = mockTilgangskontrollClient(),
                     azureAppClientId = TEST_AZURE_APP_CLIENT_ID,
                     wellKnownInternalAzureAD = wellKnownInternalAzureAD(),
+                    journalforVedtakService = journalforVedtakServiceMock,
                 )
             }
             val response = client.get(POD_READINESS_PATH)

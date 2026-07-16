@@ -59,19 +59,17 @@ fun main(args: Array<String>) {
 
     // Klientene (Azure AD, dokarkiv, PDL, ispdfgen) og leder-valg krever
     // miljøvariabler som ikke finnes lokalt.
-    val clientsModule = if (isLocal()) null else ClientsModule()
-    val journalforingCronjobConfig = if (isLocal()) null else JournalforingCronjobConfig.fromEnv()
+    val clientsModule = ClientsModule()
+    val journalforingCronjobConfig = JournalforingCronjobConfig.fromEnv()
     val journalforVedtakService =
-        clientsModule?.let {
-            JournalforVedtakService(
-                soknadRepository = soknadRepository,
-                personInfoClient = it.personInfoClient,
-                pdfClient = it.pdfClient,
-                journalforingService = it.journalforingService,
-                distribusjonService = it.distribusjonService,
-                freshVedtakGracePeriod = checkNotNull(journalforingCronjobConfig).freshVedtakGracePeriod,
-            )
-        }
+        JournalforVedtakService(
+            soknadRepository = soknadRepository,
+            personInfoClient = clientsModule.personInfoClient,
+            pdfClient = clientsModule.pdfClient,
+            journalforingService = clientsModule.journalforingService,
+            distribusjonService = clientsModule.distribusjonService,
+            freshVedtakGracePeriod = journalforingCronjobConfig.freshVedtakGracePeriod,
+        )
 
     val server =
         embeddedServer(
@@ -104,14 +102,12 @@ fun main(args: Array<String>) {
                         soknadService = soknadService,
                     )
 
-                    if (clientsModule != null && journalforVedtakService != null && journalforingCronjobConfig != null) {
-                        launchJournalforVedtakCronjob(
-                            applicationState = applicationState,
-                            leaderElection = clientsModule.leaderElection,
-                            journalforVedtakService = journalforVedtakService,
-                            interval = journalforingCronjobConfig.interval,
-                        )
-                    }
+                    launchJournalforVedtakCronjob(
+                        applicationState = applicationState,
+                        leaderElection = clientsModule.leaderElection,
+                        journalforVedtakService = journalforVedtakService,
+                        interval = journalforingCronjobConfig.interval,
+                    )
                 }
                 monitor.subscribe(ApplicationStopping) {
                     applicationState.ready = false

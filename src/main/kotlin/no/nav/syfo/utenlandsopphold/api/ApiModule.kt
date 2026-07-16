@@ -36,7 +36,7 @@ fun Application.apiModule(
     tilgangskontrollClient: TilgangskontrollClient,
     azureAppClientId: String,
     wellKnownInternalAzureAD: WellKnown,
-    journalforVedtakService: JournalforVedtakService? = null,
+    journalforVedtakService: JournalforVedtakService,
 ) {
     installContentNegotiation()
     installStatusPages()

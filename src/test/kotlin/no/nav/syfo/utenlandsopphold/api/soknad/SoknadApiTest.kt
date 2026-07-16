@@ -56,6 +56,7 @@ const val SOKNAD_VEDTAK_PATH = "/api/v1/soknader/%s/vedtak"
 class SoknadApiTest {
     private val repository = mockk<ISoknadRepository>()
     private val soknadService = SoknadService(soknadRepository = repository, transactionManager = TestTransactionManager)
+    private val journalforVedtakServiceMock = mockk<JournalforVedtakService>(relaxed = true)
 
     @BeforeEach
     fun resetMocks() {
@@ -85,7 +86,7 @@ class SoknadApiTest {
 
     private fun ApplicationTestBuilder.setupApiAndClient(
         tilgangskontrollClient: TilgangskontrollClient = mockTilgangskontrollClient(),
-        journalforVedtakService: JournalforVedtakService? = null,
+        journalforVedtakService: JournalforVedtakService = journalforVedtakServiceMock,
     ): HttpClient {
         application {
             apiModule(

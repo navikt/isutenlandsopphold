@@ -17,7 +17,7 @@ import java.util.UUID
 fun Route.registerSoknadApi(
     soknadService: SoknadService,
     tilgangskontrollClient: TilgangskontrollClient,
-    journalforVedtakService: JournalforVedtakService?,
+    journalforVedtakService: JournalforVedtakService,
 ) {
     route("/api/v1/soknader") {
         post("/query") {
@@ -64,16 +64,14 @@ fun Route.registerSoknadApi(
                         document = request.document,
                     )
 
-                if (journalforVedtakService != null) {
-                    // Forsøker journalføring umiddelbart som en fire-and-forget bakgrunnsoppgave.
-                    // Feiler dette, plukkes vedtaket likevel opp av den periodiske cronjobben
-                    // (launchJournalforVedtakCronjob) etter dens gradeperiode for ferske vedtak.
-                    launchAsyncTask {
-                        try {
-                            journalforVedtakService.journalforVedtak(soknadMedVedtak)
-                        } catch (exception: Exception) {
-                            log.error("Feil ved umiddelbar journalføring av vedtak for søknad $soknadId", exception)
-                        }
+                // Forsøker journalføring umiddelbart som en fire-and-forget bakgrunnsoppgave.
+                // Feiler dette, plukkes vedtaket likevel opp av den periodiske cronjobben
+                // (launchJournalforVedtakCronjob).
+                launchAsyncTask {
+                    try {
+                        journalforVedtakService.journalforVedtak(soknadMedVedtak)
+                    } catch (exception: Exception) {
+                        log.error("Feil ved umiddelbar journalføring av vedtak for søknad $soknadId", exception)
                     }
                 }
 
