@@ -5,6 +5,7 @@ import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.application.ISoknadRepository
 import no.nav.syfo.utenlandsopphold.application.LagreMottattSoknadResultat
 import no.nav.syfo.utenlandsopphold.application.Transaction
+import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.Vedtak
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
@@ -46,7 +47,7 @@ class SoknadRepository(
             val pSoknad = connection.createSoknad(soknad, now)
 
             if (pSoknad != null) {
-                connection.createPerioder(pSoknad.id, soknad)
+                connection.createSoknadPerioder(pSoknad.id, soknad.soktePerioder)
                 LagreMottattSoknadResultat.LAGRET
             } else {
                 LagreMottattSoknadResultat.ALLEREDE_LAGRET
@@ -139,7 +140,7 @@ class SoknadRepository(
         if (pSoknader.isEmpty()) return emptyList()
 
         val soknadIds = pSoknader.map { it.id }
-        val perioderPerSoknad = getPerioder(soknadIds).groupBy { it.soknadId }
+        val perioderPerSoknad = getSoknadPerioder(soknadIds).groupBy { it.soknadId }
         val vedtakPerSoknad = getVedtak(soknadIds).associateBy { it.soknadId }
         val vedtakPerioderPerVedtak =
             getVedtakPerioder(vedtakPerSoknad.values.map { it.id })
@@ -173,8 +174,8 @@ class SoknadRepository(
             it.executeQuery().toList { toPSoknad() }
         }
 
-    private fun Connection.getPerioder(soknadIds: List<Int>): List<PSoknadPeriode> =
-        prepareStatement(GET_PERIODER).use {
+    private fun Connection.getSoknadPerioder(soknadIds: List<Int>): List<PSoknadPeriode> =
+        prepareStatement(GET_SOKNAD_PERIODER).use {
             it.setArray(1, createArrayOf("integer", soknadIds.toTypedArray()))
             it.executeQuery().toList { toPSoknadPeriode() }
         }
@@ -217,18 +218,17 @@ class SoknadRepository(
             it.executeQuery().toList { toPSoknad() }.singleOrNull()
         }
 
-    private fun Connection.createPerioder(
+    private fun Connection.createSoknadPerioder(
         soknadId: Int,
-        soknad: Soknad,
+        soknadPerioder: List<Periode>,
     ) {
-        val fomDates = soknad.soktePerioder.map { Date.valueOf(it.fom) }.toTypedArray()
-        val tomDates = soknad.soktePerioder.map { Date.valueOf(it.tom) }.toTypedArray()
-
-        prepareStatement(CREATE_PERIODER).use {
-            it.setInt(1, soknadId)
-            it.setArray(2, createArrayOf("date", fomDates))
-            it.setArray(3, createArrayOf("date", tomDates))
-            it.executeUpdate()
+        soknadPerioder.forEach { periode ->
+            prepareStatement(CREATE_SOKNAD_PERIODE).use {
+                it.setInt(1, soknadId)
+                it.setDate(2, Date.valueOf(periode.fom))
+                it.setDate(3, Date.valueOf(periode.tom))
+                it.executeUpdate()
+            }
         }
     }
 
@@ -252,21 +252,20 @@ class SoknadRepository(
                 it.executeQuery().toList { toPVedtak() }.singleOrNull()
                     ?: throw IllegalArgumentException("Fant ikke søknad med id $soknadId")
             }
-        vedtak.innvilgetePerioder.forEach { periode ->
-            createVedtakPeriode(pVedtak.id, periode.fom, periode.tom)
-        }
+        createVedtakPerioder(pVedtak.id, vedtak.innvilgetePerioder)
     }
 
-    private fun Connection.createVedtakPeriode(
+    private fun Connection.createVedtakPerioder(
         vedtakId: Int,
-        fom: LocalDate,
-        tom: LocalDate,
+        vedtakPerioder: List<Periode>,
     ) {
-        prepareStatement(CREATE_VEDTAK_PERIODE).use {
-            it.setInt(1, vedtakId)
-            it.setDate(2, Date.valueOf(fom))
-            it.setDate(3, Date.valueOf(tom))
-            it.executeUpdate()
+        vedtakPerioder.forEach { periode ->
+            prepareStatement(CREATE_VEDTAK_PERIODE).use {
+                it.setInt(1, vedtakId)
+                it.setDate(2, Date.valueOf(periode.fom))
+                it.setDate(3, Date.valueOf(periode.tom))
+                it.executeUpdate()
+            }
         }
     }
 
@@ -286,7 +285,7 @@ class SoknadRepository(
                 SELECT * FROM soknad WHERE personident = ? ORDER BY innsendt_tidspunkt DESC
             """
 
-        private const val GET_PERIODER =
+        private const val GET_SOKNAD_PERIODER =
             """
                 SELECT * FROM soknad_periode WHERE soknad_id = ANY(?) ORDER BY fom ASC
             """
@@ -342,15 +341,13 @@ class SoknadRepository(
                 RETURNING *
             """
 
-        private const val CREATE_PERIODER =
+        private const val CREATE_SOKNAD_PERIODE =
             """
                 INSERT INTO soknad_periode (
                     soknad_id,
                     fom,
                     tom
-                )
-                SELECT ?, periode.fom, periode.tom
-                FROM unnest(?::date[], ?::date[]) AS periode(fom, tom)
+                ) VALUES (?, ?, ?)
             """
 
         private const val CREATE_VEDTAK =
