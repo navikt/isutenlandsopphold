@@ -9,9 +9,9 @@ import no.nav.syfo.utenlandsopphold.getEnvVar
  */
 object TilgangskontrollClientConfig {
     /**
-     * Leser [ClientConfig] for istilgangskontroll fra NAIS-injiserte miljøvariabler
-     * `ISTILGANGSKONTROLL_URL` og `ISTILGANGSKONTROLL_CLIENT_ID`. Sistnevnte brukes av
-     * [no.nav.syfo.common.token.azuread.AzureAdClient] for å hente OBO-token på vegne av
+     * Leser [ClientConfig] for istilgangskontroll fra miljøvariabler
+     * `ISTILGANGSKONTROLL_URL` og `ISTILGANGSKONTROLL_CLIENT_ID`. Sistnevnte brukes av en
+     * [no.nav.syfo.common.token.OboTokenProvider] for å hente OBO-token på vegne av
      * innlogget veileder.
      */
     fun fromEnv(): ClientConfig =

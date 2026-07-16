@@ -14,7 +14,7 @@ data class JournalforingCronjobConfig(
 ) {
     companion object {
         /**
-         * Leser [JournalforingCronjobConfig] fra NAIS-injisert miljøvariabel
+         * Leser [JournalforingCronjobConfig] fra miljøvariabel
          * `JOURNALFORING_CRONJOB_INTERVAL_MINUTES` (default 10 minutter).
          */
         fun fromEnv(): JournalforingCronjobConfig =

@@ -11,9 +11,6 @@ data class PdfClientConfig(
     val baseUrl: String,
 ) {
     companion object {
-        /**
-         * Leser [PdfClientConfig] fra NAIS-injisert miljøvariabel `ISPDFGEN_URL`.
-         */
         fun fromEnv(): PdfClientConfig = PdfClientConfig(baseUrl = getEnvVar("ISPDFGEN_URL"))
     }
 }

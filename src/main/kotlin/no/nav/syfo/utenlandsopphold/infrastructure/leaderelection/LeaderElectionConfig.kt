@@ -12,9 +12,6 @@ data class LeaderElectionConfig(
     val electorGetUrl: String,
 ) {
     companion object {
-        /**
-         * Leser [LeaderElectionConfig] fra NAIS-injisert miljøvariabel `ELECTOR_GET_URL`.
-         */
         fun fromEnv(): LeaderElectionConfig = LeaderElectionConfig(electorGetUrl = getEnvVar("ELECTOR_GET_URL"))
     }
 }

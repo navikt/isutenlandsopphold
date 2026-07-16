@@ -88,8 +88,6 @@ fun main(args: Array<String>) {
                         soknadService = soknadService,
                     )
 
-                    // Klientene (Azure AD, dokarkiv, PDL, ispdfgen) og leder-valg krever
-                    // NAIS-injiserte miljøvariabler som ikke finnes lokalt.
                     if (!isLocal()) {
                         val clientsModule = ClientsModule(systemTokenProvider = entraIdClient)
 
