@@ -23,12 +23,12 @@ data class JournalforingCronjobConfig(
         /**
          * Leser [JournalforingCronjobConfig] fra NAIS-injiserte miljøvariabler
          * `JOURNALFORING_CRONJOB_INTERVAL_MINUTES` (default 10 minutter) og
-         * `JOURNALFORING_FRESH_VEDTAK_GRACE_SECONDS` (default 60 sekunder).
+         * `JOURNALFORING_FRESH_VEDTAK_GRACE_SECONDS` (default 7 sekunder).
          */
         fun fromEnv(): JournalforingCronjobConfig =
             JournalforingCronjobConfig(
                 interval = getEnvVar("JOURNALFORING_CRONJOB_INTERVAL_MINUTES", "10").toLong().minutes,
-                freshVedtakGracePeriod = getEnvVar("JOURNALFORING_FRESH_VEDTAK_GRACE_SECONDS", "60").toLong().seconds,
+                freshVedtakGracePeriod = getEnvVar("JOURNALFORING_FRESH_VEDTAK_GRACE_SECONDS", "7").toLong().seconds,
             )
     }
 }
