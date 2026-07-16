@@ -4,7 +4,7 @@ import no.nav.syfo.common.distribusjon.client.DokdistfordelingClient
 import no.nav.syfo.common.http.defaultHttpClient
 import no.nav.syfo.common.http.proxyHttpClient
 import no.nav.syfo.common.journalforing.client.DokarkivClient
-import no.nav.syfo.common.token.azuread.AzureAdClient
+import no.nav.syfo.common.token.SystemTokenProvider
 import no.nav.syfo.common.util.ClientConfig
 import no.nav.syfo.utenlandsopphold.application.IDistribusjonService
 import no.nav.syfo.utenlandsopphold.application.IJournalforingService
@@ -26,21 +26,18 @@ import no.nav.syfo.utenlandsopphold.infrastructure.pdl.PdlClientConfig
  * Holdes utenfor App.kt for å gjøre wiring av infrastruktur enkel å teste/erstatte isolert.
  */
 class ClientsModule(
+    private val systemTokenProvider: SystemTokenProvider,
     dokarkivClientConfig: DokarkivClientConfig = DokarkivClientConfig.fromEnv(),
     dokdistfordelingClientConfig: DokdistfordelingClientConfig = DokdistfordelingClientConfig.fromEnv(),
     pdlClientConfig: PdlClientConfig = PdlClientConfig.fromEnv(),
     pdfClientConfig: PdfClientConfig = PdfClientConfig.fromEnv(),
     leaderElectionConfig: LeaderElectionConfig = LeaderElectionConfig.fromEnv(),
 ) {
-    // AzureAdClient brukes for både PDL og dokarkiv, siden begge autentiseres via Entra ID
-    // system-token (client credentials) — appen kaller dem som seg selv, ikke på vegne av en bruker.
-    private val azureAdClient = AzureAdClient()
-
     val journalforingService: IJournalforingService =
         JournalforingService(
             dokarkivClient =
                 DokarkivClient(
-                    systemTokenProvider = azureAdClient,
+                    systemTokenProvider = systemTokenProvider,
                     // Dokarkiv nås som ekstern host (utenfor NAIS-clusteret), derfor proxyHttpClient.
                     clientConfig = ClientConfig(baseUrl = dokarkivClientConfig.baseUrl, clientId = dokarkivClientConfig.clientId),
                     httpClient = proxyHttpClient(),
@@ -52,7 +49,7 @@ class ClientsModule(
         DistribusjonService(
             dokdistfordelingClient =
                 DokdistfordelingClient(
-                    systemTokenProvider = azureAdClient,
+                    systemTokenProvider = systemTokenProvider,
                     // Dokdistfordeling nås som ekstern host (utenfor NAIS-clusteret), derfor proxyHttpClient.
                     clientConfig =
                         ClientConfig(
@@ -66,7 +63,7 @@ class ClientsModule(
 
     val personInfoClient: IPdlClient =
         PdlClient(
-            systemTokenProvider = azureAdClient,
+            systemTokenProvider = systemTokenProvider,
             config = pdlClientConfig,
             httpClient = defaultHttpClient(),
         )

@@ -5,7 +5,7 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import no.nav.syfo.common.auth.getWellKnown
 import no.nav.syfo.common.tilgangskontroll.client.TilgangskontrollClient
-import no.nav.syfo.common.token.azuread.AzureAdClient
+import no.nav.syfo.common.token.texas.EntraIdClient
 import no.nav.syfo.utenlandsopphold.api.apiModule
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
 import no.nav.syfo.utenlandsopphold.application.JournalforVedtakService
@@ -49,11 +49,12 @@ fun main(args: Array<String>) {
             soknadRepository = soknadRepository,
         )
 
+    val entraIdClient = EntraIdClient()
     val wellKnownInternalAzureAD = getWellKnown(environment.azure.appWellKnownUrl)
 
     val tilgangskontrollClient =
         TilgangskontrollClient(
-            oboTokenProvider = AzureAdClient(),
+            oboTokenProvider = entraIdClient,
             clientConfig = TilgangskontrollClientConfig.fromEnv(),
         )
 
@@ -90,7 +91,8 @@ fun main(args: Array<String>) {
                     // Klientene (Azure AD, dokarkiv, PDL, ispdfgen) og leder-valg krever
                     // NAIS-injiserte miljøvariabler som ikke finnes lokalt.
                     if (!isLocal()) {
-                        val clientsModule = ClientsModule()
+                        val clientsModule = ClientsModule(systemTokenProvider = entraIdClient)
+
                         val journalforVedtakService =
                             JournalforVedtakService(
                                 soknadRepository = soknadRepository,
