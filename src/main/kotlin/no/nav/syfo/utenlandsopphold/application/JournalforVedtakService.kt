@@ -37,7 +37,6 @@ class JournalforVedtakService(
         soknaderMedIkkeJournalforteVedtak.forEach { soknad ->
             try {
                 journalforVedtak(soknad)
-                log.info("Vedtak for søknad ${soknad.id} journalført med journalpostId ${soknad.vedtak?.journalpostId?.value}")
             } catch (exception: Exception) {
                 log.error("Feil ved journalføring av vedtak for søknad ${soknad.id}", exception)
             }
@@ -90,7 +89,9 @@ class JournalforVedtakService(
             journalpostId = journalpostId,
             journalfortTidspunkt = checkNotNull(journalfortVedtak.journalfortTidspunkt),
         )
-
+        log.info(
+            "Vedtak ${journalfortVedtak.vedtakId} for søknad ${soknad.id} journalført med journalpostId ${journalfortVedtak.journalpostId?.value}",
+        )
         return journalfortSoknad
     }
 
@@ -108,7 +109,6 @@ class JournalforVedtakService(
         soknaderMedIkkeDistribuerteVedtak.forEach { soknad ->
             try {
                 distribuerVedtak(soknad)
-                log.info("Vedtak for søknad ${soknad.id} distribuert med journalpostId ${soknad.vedtak?.journalpostId?.value}")
             } catch (exception: Exception) {
                 log.error("Feil ved distribusjon av vedtak for søknad ${soknad.id}", exception)
             }
