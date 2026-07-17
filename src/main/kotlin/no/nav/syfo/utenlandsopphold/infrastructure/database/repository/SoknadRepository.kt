@@ -244,7 +244,7 @@ class SoknadRepository(
             }
         val pVedtak =
             prepareStatement(CREATE_VEDTAK).use {
-                it.setObject(1, UUID.randomUUID())
+                it.setObject(1, vedtak.vedtakId)
                 it.setString(2, vedtak.utfall.dbValue())
                 it.setString(3, vedtak.fattetAv.value)
                 it.setObject(4, vedtak.fattetTidspunkt.atOffset(ZoneOffset.UTC))
