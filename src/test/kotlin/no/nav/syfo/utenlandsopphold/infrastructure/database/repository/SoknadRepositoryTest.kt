@@ -153,15 +153,17 @@ class SoknadRepositoryTest {
         val soktePerioder = listOf(Periode(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 10)))
         val soknad = soknad(soktePerioder = soktePerioder)
         repository.lagreMottattSoknad(soknad)
+        val vedtak = vedtak(innvilgetePerioder = soktePerioder)
         transactionManager.inTransaction { transaction ->
             val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
-            repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = vedtak(innvilgetePerioder = soktePerioder)))
+            repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = vedtak))
         }
 
         val hentetPaNytt = repository.hentSoknader(personident).single()
 
         assertEquals(SoknadStatus.INNVILGET, hentetPaNytt.status)
         assertEquals(soktePerioder, hentetPaNytt.vedtak?.innvilgetePerioder)
+        assertEquals(vedtak.vedtakId, hentetPaNytt.vedtak?.vedtakId)
     }
 
     @Test
