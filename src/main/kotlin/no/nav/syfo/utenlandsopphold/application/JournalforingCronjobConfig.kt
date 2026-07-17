@@ -30,7 +30,7 @@ data class JournalforingCronjobConfig(
         fun fromEnv(): JournalforingCronjobConfig =
             JournalforingCronjobConfig(
                 interval = getEnvVar("JOURNALFORING_CRONJOB_INTERVAL_MINUTES", "10").toLong().minutes,
-                freshVedtakGracePeriod = getEnvVar("JOURNALFORING_FRESH_VEDTAK_GRACE_SECONDS", "30").toLong().seconds,
+                freshVedtakGracePeriod = getEnvVar("JOURNALFORING_FRESH_VEDTAK_GRACE_SECONDS", "60").toLong().seconds,
             )
     }
 }
