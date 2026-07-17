@@ -27,6 +27,37 @@ class VedtakTest {
     }
 
     @Test
+    fun `delvis innvilget vedtak krever samme innvilgede perioder på utfall og vedtak`() {
+        val innvilgetPeriode = Periode(LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 7))
+
+        val vedtak =
+            lagVedtak().copy(
+                utfall = Utfall.DelvisInnvilget(listOf(innvilgetPeriode)),
+                innvilgetePerioder = listOf(innvilgetPeriode),
+            )
+
+        assertEquals(Utfall.DelvisInnvilget(listOf(innvilgetPeriode)), vedtak.utfall)
+        assertEquals(listOf(innvilgetPeriode), vedtak.innvilgetePerioder)
+    }
+
+    @Test
+    fun `delvis innvilget vedtak uten innvilgede perioder kaster`() {
+        assertFailsWith<IllegalArgumentException> {
+            lagVedtak().copy(
+                utfall = Utfall.DelvisInnvilget(emptyList()),
+                innvilgetePerioder = emptyList(),
+            )
+        }
+    }
+
+    @Test
+    fun `avslatt vedtak med innvilgede perioder kaster`() {
+        assertFailsWith<IllegalArgumentException> {
+            lagVedtak().copy(utfall = Utfall.Avslag)
+        }
+    }
+
+    @Test
     fun `journalfor setter journalpostId og journalfortTidspunkt`() {
         val vedtak = lagVedtak()
         val journalpostId = JournalpostId("123")

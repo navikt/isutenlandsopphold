@@ -414,6 +414,122 @@ class SoknadApiTest {
         }
 
     @Test
+    fun `vedtak med delvis innvilgelse returnerer 200 med delvis innvilget soknad`() =
+        testApplication {
+            val soknadId = UUID.randomUUID()
+            val soktePerioder = listOf(Periode(fom = LocalDate.of(2026, 4, 1), tom = LocalDate.of(2026, 4, 10)))
+            val innvilgetPeriode = Periode(fom = LocalDate.of(2026, 4, 3), tom = LocalDate.of(2026, 4, 5))
+            var lagretSoknad: Soknad? = null
+
+            val mottattSoknad =
+                Soknad(
+                    id = soknadId,
+                    eksternId = UUID.randomUUID(),
+                    personident = Personident("11111111111"),
+                    soktePerioder = soktePerioder,
+                    innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
+                )
+            stubHentSoknadOgLagreVedtak(mottattSoknad) { soknadMedVedtak -> lagretSoknad = soknadMedVedtak }
+            val client = setupApiAndClient()
+
+            val response =
+                client.post(SOKNAD_VEDTAK_PATH.format(soknadId.toString())) {
+                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
+                    contentType(ContentType.Application.Json)
+                    setBody(
+                        validSoknadVedtakPostDTO().copy(
+                            utfall = "DELVIS_INNVILGET",
+                            innvilgetePerioder = listOf(PeriodeDTO(fom = innvilgetPeriode.fom, tom = innvilgetPeriode.tom)),
+                        ),
+                    )
+                }
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(Utfall.DelvisInnvilget(listOf(innvilgetPeriode)), lagretSoknad?.vedtak?.utfall)
+            assertEquals(listOf(innvilgetPeriode), lagretSoknad?.vedtak?.innvilgetePerioder)
+
+            val body = response.body<SoknadVedtakResponseDTO>()
+            assertEquals(SoknadStatusDTO.DELVIS_INNVILGET, body.soknad.status)
+            assertEquals("DELVIS_INNVILGET", body.soknad.vedtak?.utfall)
+            assertEquals(listOf(PeriodeDTO(fom = innvilgetPeriode.fom, tom = innvilgetPeriode.tom)), body.soknad.vedtak?.innvilgetePerioder)
+        }
+
+    @Test
+    fun `vedtak med avslag returnerer 200 med avslatt soknad uten innvilgete perioder`() =
+        testApplication {
+            val soknadId = UUID.randomUUID()
+            var lagretSoknad: Soknad? = null
+
+            val mottattSoknad =
+                Soknad(
+                    id = soknadId,
+                    eksternId = UUID.randomUUID(),
+                    personident = Personident("11111111111"),
+                    soktePerioder = listOf(Periode(fom = LocalDate.of(2026, 4, 1), tom = LocalDate.of(2026, 4, 10))),
+                    innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
+                )
+            stubHentSoknadOgLagreVedtak(mottattSoknad) { soknadMedVedtak -> lagretSoknad = soknadMedVedtak }
+            val client = setupApiAndClient()
+
+            val response =
+                client.post(SOKNAD_VEDTAK_PATH.format(soknadId.toString())) {
+                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
+                    contentType(ContentType.Application.Json)
+                    setBody(validSoknadVedtakPostDTO().copy(utfall = "AVSLAG"))
+                }
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(Utfall.Avslag, lagretSoknad?.vedtak?.utfall)
+            assertEquals(emptyList(), lagretSoknad?.vedtak?.innvilgetePerioder)
+
+            val body = response.body<SoknadVedtakResponseDTO>()
+            assertEquals(SoknadStatusDTO.AVSLATT, body.soknad.status)
+            assertEquals("AVSLAG", body.soknad.vedtak?.utfall)
+            assertEquals(emptyList(), body.soknad.vedtak?.innvilgetePerioder)
+        }
+
+    @Test
+    fun `vedtak med delvis innvilgelse uten innvilgete perioder gir 400`() =
+        testApplication {
+            stubHentSoknadOgLagreVedtak(ubruktSoknad)
+            val client = setupApiAndClient()
+
+            val response =
+                client.post(SOKNAD_VEDTAK_PATH.format(UUID.randomUUID())) {
+                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
+                    contentType(ContentType.Application.Json)
+                    setBody(validSoknadVedtakPostDTO().copy(utfall = "DELVIS_INNVILGET"))
+                }
+
+            assertEquals(HttpStatusCode.BadRequest, response.status)
+        }
+
+    @Test
+    fun `vedtak med delvis innvilgelse med overlappende innvilgete perioder gir 400`() =
+        testApplication {
+            stubHentSoknadOgLagreVedtak(ubruktSoknad)
+            val client = setupApiAndClient()
+
+            val response =
+                client.post(SOKNAD_VEDTAK_PATH.format(UUID.randomUUID())) {
+                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
+                    contentType(ContentType.Application.Json)
+                    setBody(
+                        validSoknadVedtakPostDTO().copy(
+                            utfall = "DELVIS_INNVILGET",
+                            innvilgetePerioder =
+                                listOf(
+                                    PeriodeDTO(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 5)),
+                                    PeriodeDTO(LocalDate.of(2026, 4, 5), LocalDate.of(2026, 4, 7)),
+                                ),
+                        ),
+                    )
+                }
+
+            assertEquals(HttpStatusCode.BadRequest, response.status)
+        }
+
+    @Test
     fun `vedtak trigger umiddelbar journalføring og distribusjon async når journalforVedtakService er satt`() =
         testApplication {
             val soknadId = UUID.randomUUID()

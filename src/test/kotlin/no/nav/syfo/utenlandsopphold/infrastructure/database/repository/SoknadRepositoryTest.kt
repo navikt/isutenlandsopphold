@@ -167,6 +167,42 @@ class SoknadRepositoryTest {
     }
 
     @Test
+    fun `lagreVedtak persisterer og henter delvis innvilget vedtak`() {
+        val soktePerioder = listOf(Periode(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 10)))
+        val innvilgetePerioder = listOf(Periode(LocalDate.of(2026, 4, 3), LocalDate.of(2026, 4, 5)))
+        val soknad = soknad(soktePerioder = soktePerioder)
+        repository.lagreMottattSoknad(soknad)
+        val vedtak = vedtak(utfall = Utfall.DelvisInnvilget(innvilgetePerioder), innvilgetePerioder = innvilgetePerioder)
+        transactionManager.inTransaction { transaction ->
+            val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
+            repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = vedtak))
+        }
+
+        val hentetPaNytt = repository.hentSoknader(personident).single()
+
+        assertEquals(SoknadStatus.DELVIS_INNVILGET, hentetPaNytt.status)
+        assertEquals(Utfall.DelvisInnvilget(innvilgetePerioder), hentetPaNytt.vedtak?.utfall)
+        assertEquals(innvilgetePerioder, hentetPaNytt.vedtak?.innvilgetePerioder)
+    }
+
+    @Test
+    fun `lagreVedtak persisterer og henter avslag uten innvilgete perioder`() {
+        val soknad = soknad()
+        repository.lagreMottattSoknad(soknad)
+        val vedtak = vedtak(utfall = Utfall.Avslag, innvilgetePerioder = emptyList())
+        transactionManager.inTransaction { transaction ->
+            val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
+            repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = vedtak))
+        }
+
+        val hentetPaNytt = repository.hentSoknader(personident).single()
+
+        assertEquals(SoknadStatus.AVSLATT, hentetPaNytt.status)
+        assertEquals(Utfall.Avslag, hentetPaNytt.vedtak?.utfall)
+        assertEquals(emptyList(), hentetPaNytt.vedtak?.innvilgetePerioder)
+    }
+
+    @Test
     fun `lagreVedtak for ukjent soknadId kaster IllegalArgumentException`() {
         val ukjentSoknadId = UUID.randomUUID()
         assertFailsWith<IllegalArgumentException> {
@@ -381,6 +417,7 @@ class SoknadRepositoryTest {
     }
 
     private fun vedtak(
+        utfall: Utfall = Utfall.Innvilget,
         innvilgetePerioder: List<Periode> =
             listOf(
                 Periode(
@@ -390,7 +427,7 @@ class SoknadRepositoryTest {
             ),
     ): Vedtak =
         Vedtak(
-            utfall = Utfall.Innvilget,
+            utfall = utfall,
             fattetAv = Navident("Z999999"),
             fattetTidspunkt = Instant.parse("2026-03-05T10:00:00Z"),
             innvilgetePerioder = innvilgetePerioder,
