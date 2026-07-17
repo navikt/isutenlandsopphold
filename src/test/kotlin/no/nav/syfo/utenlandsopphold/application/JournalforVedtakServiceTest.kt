@@ -56,7 +56,7 @@ class JournalforVedtakServiceTest {
         runTest {
             val soknad = soknadMedVedtak()
 
-            every { repositoryMock.getIkkeJournalforteSoknader() } returns listOf(soknad)
+            every { repositoryMock.getIkkeJournalforteSoknader(any()) } returns listOf(soknad)
             every { repositoryMock.setVedtakJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
             coEvery { pdfClientMock.createVedtakPdf(testPersonident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
@@ -77,7 +77,7 @@ class JournalforVedtakServiceTest {
             val soknadSomFeiler = soknadMedVedtak()
             val soknadSomLykkes = soknadMedVedtak()
 
-            every { repositoryMock.getIkkeJournalforteSoknader() } returns listOf(soknadSomFeiler, soknadSomLykkes)
+            every { repositoryMock.getIkkeJournalforteSoknader(any()) } returns listOf(soknadSomFeiler, soknadSomLykkes)
             every { repositoryMock.setVedtakJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
             coEvery { pdfClientMock.createVedtakPdf(testPersonident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
@@ -99,7 +99,7 @@ class JournalforVedtakServiceTest {
             val soknadUtenVedtak = lagSoknad()
             val soknadMedVedtak = soknadMedVedtak()
 
-            every { repositoryMock.getIkkeJournalforteSoknader() } returns listOf(soknadUtenVedtak, soknadMedVedtak)
+            every { repositoryMock.getIkkeJournalforteSoknader(any()) } returns listOf(soknadUtenVedtak, soknadMedVedtak)
             every { repositoryMock.setVedtakJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
             coEvery { pdfClientMock.createVedtakPdf(testPersonident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
@@ -112,14 +112,31 @@ class JournalforVedtakServiceTest {
         }
 
     @Test
+    fun `journalfører enkelt vedtak direkte, uten å gå via getIkkeJournalforteSoknader`() =
+        runTest {
+            val soknad = soknadMedVedtak()
+
+            every { repositoryMock.setVedtakJournalfort(any(), any(), any()) } just Runs
+            coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
+            coEvery { pdfClientMock.createVedtakPdf(testPersonident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
+            coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any()) } returns Result.success(JournalpostId("999"))
+
+            service.journalforVedtak(soknad)
+
+            coVerify(exactly = 1) { journalforingServiceMock.journalfor(testPersonident, any(), any()) }
+            verify(exactly = 1) {
+                repositoryMock.setVedtakJournalfort(soknad.vedtak!!.vedtakId, JournalpostId("999"), any())
+            }
+            verify(exactly = 0) { repositoryMock.getIkkeJournalforteSoknader(any()) }
+        }
+
+    @Test
     fun `distribuerer og oppdaterer journalfort, ikke-distribuert vedtak`() =
         runTest {
             val soknad =
-                soknadMedVedtak().let {
-                    it.journalforVedtak(JournalpostId("999"), Instant.parse("2026-01-11T08:00:00Z"))
-                }
+                soknadMedVedtak().journalforVedtak(JournalpostId("999"), Instant.parse("2026-01-11T08:00:00Z"))
 
-            every { repositoryMock.getSoknaderMedIkkeDistribuerteVedtak() } returns listOf(soknad)
+            every { repositoryMock.getSoknaderMedIkkeDistribuerteVedtak(any()) } returns listOf(soknad)
             every { repositoryMock.setVedtakDistribuert(any(), any()) } just Runs
             coEvery { distribusjonServiceMock.distribuer(any()) } returns Result.success("bestilling-1")
 
@@ -137,7 +154,7 @@ class JournalforVedtakServiceTest {
             val soknadSomLykkes =
                 soknadMedVedtak().journalforVedtak(JournalpostId("222"), Instant.parse("2026-01-11T08:00:00Z"))
 
-            every { repositoryMock.getSoknaderMedIkkeDistribuerteVedtak() } returns listOf(soknadSomFeiler, soknadSomLykkes)
+            every { repositoryMock.getSoknaderMedIkkeDistribuerteVedtak(any()) } returns listOf(soknadSomFeiler, soknadSomLykkes)
             every { repositoryMock.setVedtakDistribuert(any(), any()) } just Runs
             coEvery { distribusjonServiceMock.distribuer(any()) } returnsMany
                 listOf(

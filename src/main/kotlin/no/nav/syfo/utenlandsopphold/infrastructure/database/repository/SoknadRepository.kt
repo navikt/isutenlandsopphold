@@ -84,9 +84,9 @@ class SoknadRepository(
         return soknadMedVedtak
     }
 
-    override fun getIkkeJournalforteSoknader(): List<Soknad> =
+    override fun getIkkeJournalforteSoknader(fattetBefore: Instant): List<Soknad> =
         withConnection(Connection.TRANSACTION_REPEATABLE_READ) { connection ->
-            val pSoknader = connection.getIkkeJournalforteSoknader()
+            val pSoknader = connection.getIkkeJournalforteSoknader(fattetBefore)
             connection.toSoknader(pSoknader)
         }
 
@@ -105,9 +105,9 @@ class SoknadRepository(
         }
     }
 
-    override fun getSoknaderMedIkkeDistribuerteVedtak(): List<Soknad> =
+    override fun getSoknaderMedIkkeDistribuerteVedtak(fattetBefore: Instant): List<Soknad> =
         withConnection(Connection.TRANSACTION_REPEATABLE_READ) { connection ->
-            val pSoknader = connection.getSoknaderMedIkkeDistribuerteVedtak()
+            val pSoknader = connection.getSoknaderMedIkkeDistribuerteVedtak(fattetBefore)
             connection.toSoknader(pSoknader)
         }
 
@@ -186,13 +186,15 @@ class SoknadRepository(
             it.executeQuery().toList { toPVedtak() }
         }
 
-    private fun Connection.getIkkeJournalforteSoknader(): List<PSoknad> =
+    private fun Connection.getIkkeJournalforteSoknader(fattetBefore: Instant): List<PSoknad> =
         prepareStatement(GET_IKKE_JOURNALFORTE_SOKNADER).use {
+            it.setTimestamp(1, Timestamp.from(fattetBefore))
             it.executeQuery().toList { toPSoknad() }
         }
 
-    private fun Connection.getSoknaderMedIkkeDistribuerteVedtak(): List<PSoknad> =
+    private fun Connection.getSoknaderMedIkkeDistribuerteVedtak(fattetBefore: Instant): List<PSoknad> =
         prepareStatement(GET_IKKE_DISTRIBUERTE_SOKNADER).use {
+            it.setTimestamp(1, Timestamp.from(fattetBefore))
             it.executeQuery().toList { toPSoknad() }
         }
 
@@ -298,7 +300,7 @@ class SoknadRepository(
             """
                 SELECT DISTINCT s.* FROM soknad s
                     INNER JOIN vedtak v ON v.soknad_id = s.id
-                WHERE v.journalpost_id IS NULL
+                WHERE v.journalpost_id IS NULL AND v.fattet_tidspunkt < ?
             """
 
         private const val GET_IKKE_DISTRIBUERTE_SOKNADER =
@@ -306,6 +308,7 @@ class SoknadRepository(
                 SELECT DISTINCT s.* FROM soknad s
                     INNER JOIN vedtak v ON v.soknad_id = s.id
                 WHERE v.journalpost_id IS NOT NULL AND v.distribuert_tidspunkt IS NULL
+                    AND v.fattet_tidspunkt < ?
             """
 
         private const val SET_VEDTAK_JOURNALFORT =

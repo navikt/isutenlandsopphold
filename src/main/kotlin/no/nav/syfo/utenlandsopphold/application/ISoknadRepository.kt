@@ -24,8 +24,12 @@ interface ISoknadRepository {
     /**
      * Henter søknader hvor det fattede vedtaket ennå ikke er journalført
      * (`vedtak.journalpost_id IS NULL`). Brukes av journalføringsjobben.
+     *
+     * @param fattetBefore Kun vedtak fattet før dette tidspunktet inkluderes. Brukes til å gi
+     * API-laget (som forsøker journalføring umiddelbart etter at et vedtak er fattet) rom til
+     * å journalføre selv, uten at cronjobben forsøker det samme vedtaket samtidig.
      */
-    fun getIkkeJournalforteSoknader(): List<Soknad>
+    fun getIkkeJournalforteSoknader(fattetBefore: Instant): List<Soknad>
 
     /**
      * Markerer at et vedtak er journalført ved å sette `journalpost_id` og
@@ -41,8 +45,12 @@ interface ISoknadRepository {
      * Henter søknader hvor det fattede vedtaket er journalført, men ennå ikke distribuert
      * (`vedtak.journalpost_id IS NOT NULL AND vedtak.distribuert_tidspunkt IS NULL`).
      * Brukes av distribusjonsjobben.
+     *
+     * @param fattetBefore Kun vedtak fattet før dette tidspunktet inkluderes. Brukes til å gi
+     * API-laget (som forsøker distribusjon umiddelbart etter at et vedtak er journalført) rom til
+     * å distribuere selv, uten at cronjobben forsøker det samme vedtaket samtidig.
      */
-    fun getSoknaderMedIkkeDistribuerteVedtak(): List<Soknad>
+    fun getSoknaderMedIkkeDistribuerteVedtak(fattetBefore: Instant): List<Soknad>
 
     /**
      * Markerer at et vedtak er distribuert ved å sette `distribuert_tidspunkt` på raden.

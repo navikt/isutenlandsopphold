@@ -31,6 +31,20 @@ fun launchBackgroundTask(
         }
     }
 
+/**
+ * Starter en enkeltstående (one-shot), fire-and-forget bakgrunnsoppgave, f.eks. et umiddelbart
+ * forsøk på journalføring rett etter at et vedtak er fattet via API-et.
+ */
+@OptIn(DelicateCoroutinesApi::class)
+fun launchAsyncTask(action: suspend CoroutineScope.() -> Unit): Job =
+    GlobalScope.launch(Dispatchers.Unbounded) {
+        try {
+            action()
+        } catch (ex: Exception) {
+            logger.error("Uncaught exception in async task, ignoring", ex)
+        }
+    }
+
 /*
 Use Dispatchers.Unbounded to allow unlimited number of coroutines to be dispatched. Without this
 only a few will be allowed simultaneously (depending on the number of available cores) which may result

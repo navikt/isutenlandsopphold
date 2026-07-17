@@ -43,11 +43,6 @@ fun main(args: Array<String>) {
 
     val transactionManager = JdbcTransactionManager(database = database)
     val soknadRepository = SoknadRepository(database = database)
-    val soknadService =
-        SoknadService(
-            transactionManager = transactionManager,
-            soknadRepository = soknadRepository,
-        )
 
     val entraIdClient = EntraIdClient()
     val wellKnownInternalAzureAD = getWellKnown(environment.azure.appWellKnownUrl)
@@ -56,6 +51,25 @@ fun main(args: Array<String>) {
         TilgangskontrollClient(
             oboTokenProvider = entraIdClient,
             clientConfig = TilgangskontrollClientConfig.fromEnv(),
+        )
+
+    val clientsModule = ClientsModule(systemTokenProvider = entraIdClient)
+    val journalforingCronjobConfig = JournalforingCronjobConfig.fromEnv()
+    val journalforVedtakService =
+        JournalforVedtakService(
+            soknadRepository = soknadRepository,
+            personInfoClient = clientsModule.personInfoClient,
+            pdfClient = clientsModule.pdfClient,
+            journalforingService = clientsModule.journalforingService,
+            distribusjonService = clientsModule.distribusjonService,
+            freshVedtakGracePeriod = journalforingCronjobConfig.freshVedtakGracePeriod,
+        )
+
+    val soknadService =
+        SoknadService(
+            transactionManager = transactionManager,
+            soknadRepository = soknadRepository,
+            journalforVedtakService = journalforVedtakService,
         )
 
     val server =
@@ -88,25 +102,12 @@ fun main(args: Array<String>) {
                         soknadService = soknadService,
                     )
 
-                    if (!isLocal()) {
-                        val clientsModule = ClientsModule(systemTokenProvider = entraIdClient)
-
-                        val journalforVedtakService =
-                            JournalforVedtakService(
-                                soknadRepository = soknadRepository,
-                                personInfoClient = clientsModule.personInfoClient,
-                                pdfClient = clientsModule.pdfClient,
-                                journalforingService = clientsModule.journalforingService,
-                                distribusjonService = clientsModule.distribusjonService,
-                            )
-
-                        launchJournalforVedtakCronjob(
-                            applicationState = applicationState,
-                            leaderElection = clientsModule.leaderElection,
-                            journalforVedtakService = journalforVedtakService,
-                            interval = JournalforingCronjobConfig.fromEnv().interval,
-                        )
-                    }
+                    launchJournalforVedtakCronjob(
+                        applicationState = applicationState,
+                        leaderElection = clientsModule.leaderElection,
+                        journalforVedtakService = journalforVedtakService,
+                        interval = journalforingCronjobConfig.interval,
+                    )
                 }
                 monitor.subscribe(ApplicationStopping) {
                     applicationState.ready = false

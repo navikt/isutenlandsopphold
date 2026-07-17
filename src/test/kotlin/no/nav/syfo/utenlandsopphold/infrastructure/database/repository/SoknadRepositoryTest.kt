@@ -195,17 +195,28 @@ class SoknadRepositoryTest {
         opprettSoknadMedVedtak(journalpostId = null)
         opprettSoknadMedVedtak(journalpostId = "111")
 
-        val ikkeJournalforte = repository.getIkkeJournalforteSoknader()
+        val ikkeJournalforte = repository.getIkkeJournalforteSoknader(fattetBefore = etterAlleTestVedtak)
 
         assertEquals(1, ikkeJournalforte.size)
         assertTrue(ikkeJournalforte.single().vedtak?.erJournalfort == false)
     }
 
     @Test
+    fun `getIkkeJournalforteSoknader ekskluderer vedtak fattet etter fattetBefore`() {
+        opprettSoknadMedVedtak(journalpostId = null, fattetTidspunkt = Instant.parse("2026-01-10T12:00:00Z"))
+        opprettSoknadMedVedtak(journalpostId = null, fattetTidspunkt = Instant.parse("2026-01-12T12:00:00Z"))
+
+        val ikkeJournalforte = repository.getIkkeJournalforteSoknader(fattetBefore = Instant.parse("2026-01-11T00:00:00Z"))
+
+        assertEquals(1, ikkeJournalforte.size)
+        assertEquals(Instant.parse("2026-01-10T12:00:00Z"), ikkeJournalforte.single().vedtak?.fattetTidspunkt)
+    }
+
+    @Test
     fun `getIkkeJournalforteSoknader leser document og perioder`() {
         val vedtakId = opprettSoknadMedVedtak(journalpostId = null)
 
-        val soknad = repository.getIkkeJournalforteSoknader().single()
+        val soknad = repository.getIkkeJournalforteSoknader(fattetBefore = etterAlleTestVedtak).single()
 
         assertEquals(vedtakId, soknad.vedtak?.vedtakId)
         assertEquals(1, soknad.vedtak?.document?.size)
@@ -228,7 +239,7 @@ class SoknadRepositoryTest {
 
         repository.setVedtakJournalfort(vedtakId, journalpostId, journalfortTidspunkt)
 
-        assertTrue(repository.getIkkeJournalforteSoknader().isEmpty())
+        assertTrue(repository.getIkkeJournalforteSoknader(fattetBefore = etterAlleTestVedtak).isEmpty())
     }
 
     @Test
@@ -237,12 +248,26 @@ class SoknadRepositoryTest {
         opprettSoknadMedVedtak(journalpostId = "111", distribuertTidspunkt = null)
         opprettSoknadMedVedtak(journalpostId = "222", distribuertTidspunkt = Instant.now())
 
-        val ikkeDistribuerte = repository.getSoknaderMedIkkeDistribuerteVedtak()
+        val ikkeDistribuerte = repository.getSoknaderMedIkkeDistribuerteVedtak(fattetBefore = etterAlleTestVedtak)
 
         assertEquals(1, ikkeDistribuerte.size)
         val vedtak = ikkeDistribuerte.single().vedtak
         assertEquals(true, vedtak?.erJournalfort)
         assertEquals(false, vedtak?.erDistribuert)
+    }
+
+    @Test
+    fun `getSoknaderMedIkkeDistribuerteVedtak ekskluderer vedtak fattet etter fattetBefore (grace)`() {
+        opprettSoknadMedVedtak(
+            journalpostId = "111",
+            distribuertTidspunkt = null,
+            fattetTidspunkt = Instant.parse("2026-05-01T12:00:00Z"),
+        )
+
+        val foerFattetTidspunkt = Instant.parse("2026-04-01T00:00:00Z")
+
+        assertTrue(repository.getSoknaderMedIkkeDistribuerteVedtak(fattetBefore = foerFattetTidspunkt).isEmpty())
+        assertEquals(1, repository.getSoknaderMedIkkeDistribuerteVedtak(fattetBefore = etterAlleTestVedtak).size)
     }
 
     @Test
@@ -252,12 +277,13 @@ class SoknadRepositoryTest {
 
         repository.setVedtakDistribuert(vedtakId, distribuertTidspunkt)
 
-        assertTrue(repository.getSoknaderMedIkkeDistribuerteVedtak().isEmpty())
+        assertTrue(repository.getSoknaderMedIkkeDistribuerteVedtak(fattetBefore = etterAlleTestVedtak).isEmpty())
     }
 
     private fun opprettSoknadMedVedtak(
         journalpostId: String?,
         distribuertTidspunkt: Instant? = null,
+        fattetTidspunkt: Instant = Instant.parse("2026-01-10T12:00:00Z"),
     ): UUID {
         val soknadUuid = UUID.randomUUID()
         val vedtakUuid = UUID.randomUUID()
@@ -317,7 +343,7 @@ class SoknadRepositoryTest {
                     ).use { statement ->
                         statement.setObject(1, vedtakUuid)
                         statement.setInt(2, soknadId)
-                        statement.setTimestamp(3, Timestamp.from(Instant.parse("2026-01-10T12:00:00Z")))
+                        statement.setTimestamp(3, Timestamp.from(fattetTidspunkt))
                         statement.setString(4, DOCUMENT_JSON)
                         statement.setString(5, journalpostId)
                         statement.setTimestamp(6, journalpostId?.let { Timestamp.from(Instant.now()) })
@@ -347,6 +373,11 @@ class SoknadRepositoryTest {
     companion object {
         private const val DOCUMENT_JSON =
             """[{"type": "PARAGRAPH", "title": "Tittel", "texts": ["Innhold"]}]"""
+
+        // Cutoff langt etter alle fattet_tidspunkt brukt i disse testene, slik at
+        // getIkkeJournalforteSoknader/getSoknaderMedIkkeDistribuerteVedtak sine
+        // eksisterende asserts ikke påvirkes av grace-vinduet.
+        private val etterAlleTestVedtak = Instant.parse("2026-06-01T00:00:00Z")
     }
 
     private fun vedtak(

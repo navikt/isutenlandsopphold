@@ -102,6 +102,6 @@ spec:
     - name: JOURNALFORING_RETRY_ENABLED
       value: "false"
     - name: JOURNALFORING_CRONJOB_INTERVAL_MINUTES
-      value: "1"
+      value: "5"
     - name: KAFKA_SOKNAD_CONSUMER_ENABLED
       value: "true"
