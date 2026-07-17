@@ -17,6 +17,7 @@ import no.nav.syfo.utenlandsopphold.infrastructure.database.dropData
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.TestInstance
+import org.postgresql.util.PSQLException
 import java.sql.Timestamp
 import java.time.Instant
 import java.time.LocalDate
@@ -164,6 +165,23 @@ class SoknadRepositoryTest {
         assertEquals(SoknadStatus.INNVILGET, hentetPaNytt.status)
         assertEquals(soktePerioder, hentetPaNytt.vedtak?.innvilgetePerioder)
         assertEquals(vedtak.vedtakId, hentetPaNytt.vedtak?.vedtakId)
+    }
+
+    @Test
+    fun `lagreVedtak kan kun lagre ett vedtak per soknad`() {
+        val soknad = soknad()
+        repository.lagreMottattSoknad(soknad)
+        transactionManager.inTransaction { transaction ->
+            val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
+            repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = vedtak()))
+        }
+
+        assertFailsWith<PSQLException> {
+            transactionManager.inTransaction { transaction ->
+                val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
+                repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = vedtak()))
+            }
+        }
     }
 
     @Test
