@@ -7,7 +7,7 @@ import no.nav.syfo.utenlandsopphold.getEnvVar
  * [DistribusjonService].
  *
  * @param baseUrl Base-URL til dokdistfordeling.
- * @param clientId Scope til dokdistfordeling, brukt av [no.nav.syfo.common.token.azuread.AzureAdClient]
+ * @param clientId Client ID til dokdistfordeling, brukes av en [no.nav.syfo.common.token.SystemTokenProvider]
  * for å hente system-token.
  */
 data class DokdistfordelingClientConfig(
@@ -15,10 +15,6 @@ data class DokdistfordelingClientConfig(
     val clientId: String,
 ) {
     companion object {
-        /**
-         * Leser [DokdistfordelingClientConfig] fra NAIS-injiserte miljøvariabler
-         * `DOKDISTFORDELING_URL` og `DOKDISTFORDELING_SCOPE`.
-         */
         fun fromEnv(): DokdistfordelingClientConfig =
             DokdistfordelingClientConfig(
                 baseUrl = getEnvVar("DOKDISTFORDELING_URL"),

@@ -7,7 +7,7 @@ import no.nav.syfo.utenlandsopphold.getEnvVar
  * [JournalforingService].
  *
  * @param baseUrl Base-URL til dokarkiv.
- * @param clientId Scope til dokarkiv, brukt av [no.nav.syfo.common.token.azuread.AzureAdClient]
+ * @param clientId Client ID til dokarkiv, brukes av en [no.nav.syfo.common.token.SystemTokenProvider]
  * for å hente system-token.
  * @param isRetryEnabled Skal kun være true i prod (se README/naiserator for hvilket miljø
  * som setter denne) — i dev-gcp mangler mange brukere aktør-id i dokarkiv, og vi ønsker
@@ -20,7 +20,7 @@ data class DokarkivClientConfig(
 ) {
     companion object {
         /**
-         * Leser [DokarkivClientConfig] fra NAIS-injiserte miljøvariabler `DOKARKIV_URL`,
+         * Leser [DokarkivClientConfig] fra miljøvariabler `DOKARKIV_URL`,
          * `DOKARKIV_SCOPE` og `JOURNALFORING_RETRY_ENABLED`.
          */
         fun fromEnv(): DokarkivClientConfig =

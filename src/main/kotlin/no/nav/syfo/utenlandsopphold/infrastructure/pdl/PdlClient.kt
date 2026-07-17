@@ -34,10 +34,6 @@ private const val HENT_PERSON_QUERY =
  *
  * Rød sone: fødselsnummer og navn er personopplysninger (PII). Ikke logg
  * request/response-innhold fra denne klienten.
- *
- * Bruker en [SystemTokenProvider] (typisk [no.nav.syfo.common.token.azuread.AzureAdClient])
- * til å hente system-token for PDL, siden oppslaget skjer som applikasjonen selv
- * (bak en cronjob), ikke på vegne av en innlogget veileder.
  */
 class PdlClient(
     private val systemTokenProvider: SystemTokenProvider,
