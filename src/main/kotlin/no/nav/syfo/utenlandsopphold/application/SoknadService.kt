@@ -23,7 +23,7 @@ class SoknadService(
     fun fattVedtak(
         soknadId: UUID,
         fattetAv: Navident,
-        utfall: Utfall.Innvilget,
+        utfall: Utfall,
         document: List<DocumentComponent>,
     ): Soknad {
         val lagretSoknad =

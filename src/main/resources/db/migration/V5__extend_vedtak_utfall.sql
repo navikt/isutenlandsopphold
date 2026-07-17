@@ -1,0 +1,5 @@
+ALTER TABLE VEDTAK
+    DROP CONSTRAINT check_vedtak_utfall;
+
+ALTER TABLE VEDTAK
+    ADD CONSTRAINT check_vedtak_utfall CHECK (utfall IN ('INNVILGET', 'DELVIS_INNVILGET', 'AVSLAG'));
