@@ -28,13 +28,11 @@ data class Environment(
     val azure: AzureEnvironment =
         AzureEnvironment(
             appClientId = getEnvVar("AZURE_APP_CLIENT_ID"),
-            appWellKnownUrl = getEnvVar("AZURE_APP_WELL_KNOWN_URL"),
         ),
 )
 
 data class AzureEnvironment(
     val appClientId: String,
-    val appWellKnownUrl: String,
 )
 
 data class DatabaseEnvironment(
