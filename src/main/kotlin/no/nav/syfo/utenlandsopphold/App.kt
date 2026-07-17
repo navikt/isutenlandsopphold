@@ -43,11 +43,6 @@ fun main(args: Array<String>) {
 
     val transactionManager = JdbcTransactionManager(database = database)
     val soknadRepository = SoknadRepository(database = database)
-    val soknadService =
-        SoknadService(
-            transactionManager = transactionManager,
-            soknadRepository = soknadRepository,
-        )
 
     val entraIdClient = EntraIdClient()
     val wellKnownInternalAzureAD = getWellKnown(environment.azure.appWellKnownUrl)
@@ -70,6 +65,13 @@ fun main(args: Array<String>) {
             freshVedtakGracePeriod = journalforingCronjobConfig.freshVedtakGracePeriod,
         )
 
+    val soknadService =
+        SoknadService(
+            transactionManager = transactionManager,
+            soknadRepository = soknadRepository,
+            journalforVedtakService = journalforVedtakService,
+        )
+
     val server =
         embeddedServer(
             Netty,
@@ -89,7 +91,6 @@ fun main(args: Array<String>) {
                     tilgangskontrollClient = tilgangskontrollClient,
                     azureAppClientId = environment.azure.appClientId,
                     wellKnownInternalAzureAD = wellKnownInternalAzureAD,
-                    journalforVedtakService = journalforVedtakService,
                 )
                 monitor.subscribe(ApplicationStarted) {
                     applicationState.ready = true

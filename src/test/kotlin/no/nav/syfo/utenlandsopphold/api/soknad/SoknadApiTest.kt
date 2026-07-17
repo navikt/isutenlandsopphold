@@ -55,7 +55,6 @@ const val SOKNAD_VEDTAK_PATH = "/api/v1/soknader/%s/vedtak"
 
 class SoknadApiTest {
     private val repository = mockk<ISoknadRepository>()
-    private val soknadService = SoknadService(soknadRepository = repository, transactionManager = TestTransactionManager)
     private val journalforVedtakServiceMock = mockk<JournalforVedtakService>(relaxed = true)
 
     @BeforeEach
@@ -88,6 +87,12 @@ class SoknadApiTest {
         tilgangskontrollClient: TilgangskontrollClient = mockTilgangskontrollClient(),
         journalforVedtakService: JournalforVedtakService = journalforVedtakServiceMock,
     ): HttpClient {
+        val soknadService =
+            SoknadService(
+                soknadRepository = repository,
+                transactionManager = TestTransactionManager,
+                journalforVedtakService = journalforVedtakService,
+            )
         application {
             apiModule(
                 applicationState = ApplicationState(),
@@ -96,7 +101,6 @@ class SoknadApiTest {
                 tilgangskontrollClient = tilgangskontrollClient,
                 azureAppClientId = TEST_AZURE_APP_CLIENT_ID,
                 wellKnownInternalAzureAD = wellKnownInternalAzureAD(),
-                journalforVedtakService = journalforVedtakService,
             )
         }
         return createClient {
