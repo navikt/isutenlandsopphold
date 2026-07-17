@@ -23,7 +23,7 @@ data class JournalforingCronjobConfig(
 ) {
     companion object {
         /**
-         * Leser [JournalforingCronjobConfig] fra NAIS-injiserte miljøvariabler
+         * Leser [JournalforingCronjobConfig] fra miljøvariabler
          * `JOURNALFORING_CRONJOB_INTERVAL_MINUTES` (default 10 minutter) og
          * `JOURNALFORING_FRESH_VEDTAK_GRACE_SECONDS` (default 30 sekunder).
          */
