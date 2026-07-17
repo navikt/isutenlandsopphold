@@ -186,9 +186,9 @@ class SoknadRepository(
             it.executeQuery().toList { toPVedtak() }
         }
 
-    private fun Connection.getIkkeJournalforteSoknader(fattetFor: Instant): List<PSoknad> =
+    private fun Connection.getIkkeJournalforteSoknader(fattetBefore: Instant): List<PSoknad> =
         prepareStatement(GET_IKKE_JOURNALFORTE_SOKNADER).use {
-            it.setTimestamp(1, Timestamp.from(fattetFor))
+            it.setTimestamp(1, Timestamp.from(fattetBefore))
             it.executeQuery().toList { toPSoknad() }
         }
 

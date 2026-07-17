@@ -31,8 +31,8 @@ class JournalforVedtakService(
 ) {
     suspend fun journalforVedtak() {
         log.debug("Starter journalføring av ujournalførte vedtak")
-        val fattetFor = Instant.now().minus(freshVedtakGracePeriod.toJavaDuration())
-        val soknaderMedIkkeJournalforteVedtak = soknadRepository.getIkkeJournalforteSoknader(fattetFor)
+        val fattetBefore = Instant.now().minus(freshVedtakGracePeriod.toJavaDuration())
+        val soknaderMedIkkeJournalforteVedtak = soknadRepository.getIkkeJournalforteSoknader(fattetBefore)
 
         soknaderMedIkkeJournalforteVedtak.forEach { soknad ->
             try {

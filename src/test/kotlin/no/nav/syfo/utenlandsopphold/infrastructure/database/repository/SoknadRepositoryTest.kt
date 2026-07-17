@@ -200,7 +200,7 @@ class SoknadRepositoryTest {
     }
 
     @Test
-    fun `getIkkeJournalforteSoknader ekskluderer vedtak fattet etter fattetFor`() {
+    fun `getIkkeJournalforteSoknader ekskluderer vedtak fattet etter fattetBefore`() {
         opprettSoknadMedVedtak(journalpostId = null, fattetTidspunkt = Instant.parse("2026-01-10T12:00:00Z"))
         opprettSoknadMedVedtak(journalpostId = null, fattetTidspunkt = Instant.parse("2026-01-12T12:00:00Z"))
 
