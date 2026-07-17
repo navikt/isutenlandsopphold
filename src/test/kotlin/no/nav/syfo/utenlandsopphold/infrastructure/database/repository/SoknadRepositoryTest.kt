@@ -246,12 +246,26 @@ class SoknadRepositoryTest {
         opprettSoknadMedVedtak(journalpostId = "111", distribuertTidspunkt = null)
         opprettSoknadMedVedtak(journalpostId = "222", distribuertTidspunkt = Instant.now())
 
-        val ikkeDistribuerte = repository.getSoknaderMedIkkeDistribuerteVedtak()
+        val ikkeDistribuerte = repository.getSoknaderMedIkkeDistribuerteVedtak(fattetBefore = etterAlleTestVedtak)
 
         assertEquals(1, ikkeDistribuerte.size)
         val vedtak = ikkeDistribuerte.single().vedtak
         assertEquals(true, vedtak?.erJournalfort)
         assertEquals(false, vedtak?.erDistribuert)
+    }
+
+    @Test
+    fun `getSoknaderMedIkkeDistribuerteVedtak ekskluderer vedtak fattet etter fattetBefore (grace)`() {
+        opprettSoknadMedVedtak(
+            journalpostId = "111",
+            distribuertTidspunkt = null,
+            fattetTidspunkt = Instant.parse("2026-05-01T12:00:00Z"),
+        )
+
+        val foerFattetTidspunkt = Instant.parse("2026-04-01T00:00:00Z")
+
+        assertTrue(repository.getSoknaderMedIkkeDistribuerteVedtak(fattetBefore = foerFattetTidspunkt).isEmpty())
+        assertEquals(1, repository.getSoknaderMedIkkeDistribuerteVedtak(fattetBefore = etterAlleTestVedtak).size)
     }
 
     @Test
@@ -261,7 +275,7 @@ class SoknadRepositoryTest {
 
         repository.setVedtakDistribuert(vedtakId, distribuertTidspunkt)
 
-        assertTrue(repository.getSoknaderMedIkkeDistribuerteVedtak().isEmpty())
+        assertTrue(repository.getSoknaderMedIkkeDistribuerteVedtak(fattetBefore = etterAlleTestVedtak).isEmpty())
     }
 
     private fun opprettSoknadMedVedtak(

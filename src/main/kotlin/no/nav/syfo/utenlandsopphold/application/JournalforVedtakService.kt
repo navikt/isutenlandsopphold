@@ -51,8 +51,11 @@ class JournalforVedtakService(
      * Idempotent: [Soknad.journalforVedtak] håndhever at et vedtak kun journalføres én gang,
      * og dokarkiv dedupliserer på `eksternReferanseId` (vedtakId) dersom denne likevel
      * skulle bli kalt samtidig fra flere steder for samme vedtak.
+     *
+     * @return den oppdaterte [Soknad]-en med det journalførte vedtaket, slik at API-laget kan
+     * kjede umiddelbar distribusjon ([distribuerVedtak]) rett etter.
      */
-    suspend fun journalforVedtak(soknad: Soknad) {
+    suspend fun journalforVedtak(soknad: Soknad): Soknad {
         val vedtak =
             checkNotNull(soknad.vedtak) {
                 "Søknad ${soknad.id} har ikke fattet vedtak, kan ikke journalføre"
@@ -87,6 +90,8 @@ class JournalforVedtakService(
             journalpostId = journalpostId,
             journalfortTidspunkt = checkNotNull(journalfortVedtak.journalfortTidspunkt),
         )
+
+        return journalfortSoknad
     }
 
     /**
@@ -97,7 +102,8 @@ class JournalforVedtakService(
      */
     suspend fun distribuerVedtak() {
         log.debug("Starter distribusjon av journalførte, ikke-distribuerte vedtak")
-        val soknaderMedIkkeDistribuerteVedtak = soknadRepository.getSoknaderMedIkkeDistribuerteVedtak()
+        val fattetBefore = Instant.now().minus(freshVedtakGracePeriod.toJavaDuration())
+        val soknaderMedIkkeDistribuerteVedtak = soknadRepository.getSoknaderMedIkkeDistribuerteVedtak(fattetBefore)
 
         soknaderMedIkkeDistribuerteVedtak.forEach { soknad ->
             try {
@@ -109,7 +115,17 @@ class JournalforVedtakService(
         }
     }
 
-    private suspend fun distribuerVedtak(soknad: Soknad) {
+    /**
+     * Distribuerer (bestiller utsending av) vedtaket for én søknad. Gjenbrukes både av den
+     * periodiske cronjobben ([distribuerVedtak]) og av API-laget, som forsøker distribusjon
+     * umiddelbart etter en vellykket umiddelbar journalføring (se
+     * [no.nav.syfo.utenlandsopphold.api.soknad.registerSoknadApi]).
+     * Idempotent: [Soknad.distribuerVedtak] håndhever at et vedtak må være journalført og kun
+     * distribueres én gang, og dokdistfordeling behandler gjentatte bestillinger på samme
+     * journalpost som suksess (409 Conflict) dersom denne likevel skulle bli kalt samtidig
+     * fra flere steder for samme vedtak.
+     */
+    suspend fun distribuerVedtak(soknad: Soknad) {
         val vedtak =
             checkNotNull(soknad.vedtak) {
                 "Søknad ${soknad.id} har ikke fattet vedtak, kan ikke distribuere"

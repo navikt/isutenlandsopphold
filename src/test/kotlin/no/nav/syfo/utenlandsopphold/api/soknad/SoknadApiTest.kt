@@ -410,7 +410,7 @@ class SoknadApiTest {
         }
 
     @Test
-    fun `vedtak trigger umiddelbar journalføring async når journalforVedtakService er satt`() =
+    fun `vedtak trigger umiddelbar journalføring og distribusjon async når journalforVedtakService er satt`() =
         testApplication {
             val soknadId = UUID.randomUUID()
             val innvilgetePerioder = listOf(Periode(fom = LocalDate.of(2026, 4, 1), tom = LocalDate.of(2026, 4, 10)))
@@ -434,7 +434,9 @@ class SoknadApiTest {
             coEvery { pdfClientMock.createVedtakPdf(personident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
             coEvery { journalforingServiceMock.journalfor(personident, any(), any()) } returns
                 Result.success(JournalpostId("999"))
+            coEvery { distribusjonServiceMock.distribuer(any()) } returns Result.success("bestilling-1")
             every { repository.setVedtakJournalfort(any(), any(), any()) } returns Unit
+            every { repository.setVedtakDistribuert(any(), any()) } returns Unit
 
             val journalforVedtakService =
                 JournalforVedtakService(
@@ -454,8 +456,9 @@ class SoknadApiTest {
                 }
 
             assertEquals(HttpStatusCode.OK, response.status)
-            // Journalføringen skjer i en fire-and-forget bakgrunnsoppgave, derfor timeout her.
+            // Journalføring og distribusjon skjer i en fire-and-forget bakgrunnsoppgave, derfor timeout her.
             coVerify(timeout = 2000) { journalforingServiceMock.journalfor(personident, any(), any()) }
+            coVerify(timeout = 2000) { distribusjonServiceMock.distribuer(JournalpostId("999")) }
         }
 
     @Test

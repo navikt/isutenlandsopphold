@@ -64,14 +64,15 @@ fun Route.registerSoknadApi(
                         document = request.document,
                     )
 
-                // Forsøker journalføring umiddelbart som en fire-and-forget bakgrunnsoppgave.
-                // Feiler dette, plukkes vedtaket likevel opp av den periodiske cronjobben
-                // (launchJournalforVedtakCronjob).
+                // Forsøker journalføring og deretter distribusjon umiddelbart som en
+                // fire-and-forget bakgrunnsoppgave. Feiler noe av dette, plukkes vedtaket
+                // likevel opp av den periodiske cronjobben (launchJournalforVedtakCronjob).
                 launchAsyncTask {
                     try {
-                        journalforVedtakService.journalforVedtak(soknadMedVedtak)
+                        val journalfortSoknad = journalforVedtakService.journalforVedtak(soknadMedVedtak)
+                        journalforVedtakService.distribuerVedtak(journalfortSoknad)
                     } catch (exception: Exception) {
-                        log.error("Feil ved umiddelbar journalføring av vedtak for søknad $soknadId", exception)
+                        log.error("Feil ved umiddelbar journalføring/distribusjon av vedtak for søknad $soknadId", exception)
                     }
                 }
 
