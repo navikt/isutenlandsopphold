@@ -7,6 +7,12 @@ import java.util.UUID
 
 sealed interface Utfall {
     data object Innvilget : Utfall
+
+    data class DelvisInnvilget(
+        val innvilgetePerioder: List<Periode>,
+    ) : Utfall
+
+    data object Avslag : Utfall
 }
 
 data class Vedtak(
@@ -20,6 +26,19 @@ data class Vedtak(
     val journalfortTidspunkt: Instant? = null,
     val distribuertTidspunkt: Instant? = null,
 ) {
+    init {
+        when (utfall) {
+            Utfall.Innvilget -> require(innvilgetePerioder.isNotEmpty()) { "Innvilget vedtak må ha innvilgede perioder" }
+            is Utfall.DelvisInnvilget -> {
+                require(utfall.innvilgetePerioder.isNotEmpty()) { "Delvis innvilget vedtak må ha innvilgede perioder" }
+                require(utfall.innvilgetePerioder == innvilgetePerioder) {
+                    "Innvilgede perioder på utfall og vedtak må være like"
+                }
+            }
+            Utfall.Avslag -> require(innvilgetePerioder.isEmpty()) { "Avslått vedtak skal ikke ha innvilgede perioder" }
+        }
+    }
+
     val erJournalfort: Boolean
         get() = journalpostId != null
 

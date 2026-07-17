@@ -71,7 +71,7 @@ data class PVedtak(
     fun toVedtak(innvilgetePerioder: List<Periode>): Vedtak =
         Vedtak(
             vedtakId = uuid,
-            utfall = utfall.toUtfall(),
+            utfall = utfall.toUtfall(innvilgetePerioder),
             fattetAv = Navident(fattetAv),
             fattetTidspunkt = fattetTidspunkt.toInstant(),
             innvilgetePerioder = innvilgetePerioder,
@@ -91,10 +91,14 @@ private fun String.toDocumentComponents(): List<DocumentComponent> = documentMap
 fun Utfall.dbValue(): String =
     when (this) {
         Utfall.Innvilget -> "INNVILGET"
+        is Utfall.DelvisInnvilget -> "DELVIS_INNVILGET"
+        Utfall.Avslag -> "AVSLAG"
     }
 
-private fun String.toUtfall(): Utfall =
+private fun String.toUtfall(innvilgetePerioder: List<Periode>): Utfall =
     when (this) {
         "INNVILGET" -> Utfall.Innvilget
+        "DELVIS_INNVILGET" -> Utfall.DelvisInnvilget(innvilgetePerioder)
+        "AVSLAG" -> Utfall.Avslag
         else -> throw IllegalStateException("Ukjent utfall lagret i database: $this")
     }

@@ -45,9 +45,18 @@ fun Route.registerSoknadApi(
                 tilgangskontrollClient = tilgangskontrollClient,
                 requiresWriteAccess = true,
             ) { authorizedUser, _, _ ->
+                val innvilgetePerioder = request.innvilgetePerioder.map { it.toDomain() }
+
                 val utfall =
                     when (request.utfall) {
                         "INNVILGET" -> Utfall.Innvilget
+                        "DELVIS_INNVILGET" -> Utfall.DelvisInnvilget(innvilgetePerioder)
+                        "AVSLAG" -> {
+                            require(request.innvilgetePerioder.isEmpty()) {
+                                "innvilgetePerioder skal være tom ved avslag"
+                            }
+                            Utfall.Avslag
+                        }
                         else -> throw IllegalArgumentException("Invalid utfall: ${request.utfall}")
                     }
                 require(request.document.isNotEmpty()) { "document kan ikke være tom" }

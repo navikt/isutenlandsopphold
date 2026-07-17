@@ -50,12 +50,14 @@ data class VedtakDTO(
     val fattetTidspunkt: Instant,
 )
 
-enum class SoknadStatusDTO { MOTTATT, INNVILGET }
+enum class SoknadStatusDTO { MOTTATT, INNVILGET, DELVIS_INNVILGET, AVSLATT }
 
 fun SoknadStatus.toDTO(): SoknadStatusDTO =
     when (this) {
         SoknadStatus.MOTTATT -> SoknadStatusDTO.MOTTATT
         SoknadStatus.INNVILGET -> SoknadStatusDTO.INNVILGET
+        SoknadStatus.DELVIS_INNVILGET -> SoknadStatusDTO.DELVIS_INNVILGET
+        SoknadStatus.AVSLATT -> SoknadStatusDTO.AVSLATT
     }
 
 fun List<Soknad>.toResponseDTO(): SoknaderResponseDTO = SoknaderResponseDTO(soknader = map { it.toDTO() })
@@ -79,8 +81,12 @@ private fun Vedtak.toDTO(): VedtakDTO =
         utfall =
             when (utfall) {
                 Utfall.Innvilget -> "INNVILGET"
+                is Utfall.DelvisInnvilget -> "DELVIS_INNVILGET"
+                Utfall.Avslag -> "AVSLAG"
             },
         innvilgetePerioder = innvilgetePerioder.map { it.toDTO() },
         fattetAv = fattetAv.value,
         fattetTidspunkt = fattetTidspunkt,
     )
+
+fun PeriodeDTO.toDomain(): Periode = Periode(fom = fom, tom = tom)
