@@ -57,8 +57,6 @@ fun main(args: Array<String>) {
             clientConfig = TilgangskontrollClientConfig.fromEnv(),
         )
 
-    // Klientene (Azure AD, dokarkiv, PDL, ispdfgen) og leder-valg krever
-    // miljøvariabler som ikke finnes lokalt.
     val clientsModule = ClientsModule()
     val journalforingCronjobConfig = JournalforingCronjobConfig.fromEnv()
     val journalforVedtakService =
