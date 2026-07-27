@@ -30,6 +30,7 @@ dependencies {
 
     implementation(libs.logback.classic)
     implementation(libs.logstash.logback.encoder)
+    implementation(platform(libs.jackson.tools.bom))
 
     // Database
     implementation(libs.postgresql)
@@ -37,7 +38,9 @@ dependencies {
     implementation(libs.flyway.database.postgresql)
 
     // Kafka
-    implementation(libs.kafka)
+    implementation(libs.kafka) {
+        exclude(group = "org.apache.logging.log4j")
+    }
 
     // Metrics
     implementation(libs.micrometer.registry.prometheus)
