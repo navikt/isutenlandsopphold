@@ -3,7 +3,7 @@ package no.nav.syfo.utenlandsopphold
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
-import no.nav.syfo.common.auth.getWellKnown
+import no.nav.syfo.common.auth.getWellKnownFromEnv
 import no.nav.syfo.common.tilgangskontroll.client.TilgangskontrollClient
 import no.nav.syfo.common.token.texas.EntraIdClient
 import no.nav.syfo.utenlandsopphold.api.apiModule
@@ -45,7 +45,7 @@ fun main(args: Array<String>) {
     val soknadRepository = SoknadRepository(database = database)
 
     val entraIdClient = EntraIdClient()
-    val wellKnownInternalAzureAD = getWellKnown(environment.azure.appWellKnownUrl)
+    val wellKnownInternalAzureAD = getWellKnownFromEnv()
 
     val tilgangskontrollClient =
         TilgangskontrollClient(
