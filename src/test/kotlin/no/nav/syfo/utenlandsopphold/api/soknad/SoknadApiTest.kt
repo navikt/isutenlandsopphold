@@ -483,7 +483,7 @@ class SoknadApiTest {
             assertEquals(emptyList(), lagretSoknad?.vedtak?.innvilgetePerioder)
 
             val body = response.body<SoknadVedtakResponseDTO>()
-            assertEquals(SoknadStatusDTO.AVSLATT, body.soknad.status)
+            assertEquals(SoknadStatusDTO.AVSLAG, body.soknad.status)
             assertEquals("AVSLAG", body.soknad.vedtak?.utfall)
             assertEquals(emptyList(), body.soknad.vedtak?.innvilgetePerioder)
         }

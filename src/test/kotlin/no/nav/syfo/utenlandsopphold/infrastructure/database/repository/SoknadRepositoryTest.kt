@@ -215,7 +215,7 @@ class SoknadRepositoryTest {
 
         val hentetPaNytt = repository.hentSoknader(personident).single()
 
-        assertEquals(SoknadStatus.AVSLATT, hentetPaNytt.status)
+        assertEquals(SoknadStatus.AVSLAG, hentetPaNytt.status)
         assertEquals(Utfall.Avslag, hentetPaNytt.vedtak?.utfall)
         assertEquals(emptyList(), hentetPaNytt.vedtak?.innvilgetePerioder)
     }

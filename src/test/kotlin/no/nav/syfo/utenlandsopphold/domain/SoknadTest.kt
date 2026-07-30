@@ -30,7 +30,7 @@ class SoknadTest {
     }
 
     @Test
-    fun `fattVedtak om delvis innvilgelse lagrer innvilgede perioder`() {
+    fun `fattVedtak om delvis innvilgelse setter innvilgede perioder`() {
         val innvilgetPeriode = Periode(LocalDate.of(2026, 1, 6), LocalDate.of(2026, 1, 7))
 
         val resultat =
@@ -48,7 +48,7 @@ class SoknadTest {
     }
 
     @Test
-    fun `fattVedtak om delvis innvilgelse kan gaa paa tvers av sammenhengende sokte perioder`() {
+    fun `fattVedtak om delvis innvilgelse kan gå på tvers av sammenhengende søkte perioder`() {
         val soktePerioder =
             listOf(
                 Periode(LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 9)),
@@ -69,7 +69,7 @@ class SoknadTest {
     }
 
     @Test
-    fun `fattVedtak om delvis innvilgelse kan ikke gaa gjennom hull mellom sokte perioder`() {
+    fun `fattVedtak om delvis innvilgelse kan ikke gå gjennom hull mellom søkte perioder`() {
         val soktePerioder =
             listOf(
                 Periode(LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 9)),
@@ -87,7 +87,7 @@ class SoknadTest {
     }
 
     @Test
-    fun `fattVedtak om delvis innvilgelse med overlappende innvilgede perioder kaster`() {
+    fun `fattVedtak om delvis innvilgelse med overlappende innvilgede perioder kaster feil`() {
         assertFailsWith<IllegalArgumentException> {
             lagSoknad().fattVedtak(
                 utfall =
@@ -105,7 +105,7 @@ class SoknadTest {
     }
 
     @Test
-    fun `fattVedtak om delvis innvilgelse uten innvilgede perioder kaster`() {
+    fun `fattVedtak om delvis innvilgelse uten innvilgede perioder kaster feil`() {
         assertFailsWith<IllegalArgumentException> {
             lagSoknad().fattVedtak(
                 utfall = Utfall.DelvisInnvilget(emptyList()),
@@ -117,7 +117,7 @@ class SoknadTest {
     }
 
     @Test
-    fun `fattVedtak om delvis innvilgelse med periode utenfor sokte perioder kaster`() {
+    fun `fattVedtak om delvis innvilgelse med periode utenfor søkte perioder kaster feil`() {
         assertFailsWith<IllegalArgumentException> {
             lagSoknad().fattVedtak(
                 utfall =
@@ -141,7 +141,7 @@ class SoknadTest {
                 document = vedtakDocument,
             )
 
-        assertEquals(SoknadStatus.AVSLATT, resultat.status)
+        assertEquals(SoknadStatus.AVSLAG, resultat.status)
         val vedtak = assertNotNull(resultat.vedtak)
         assertEquals(Utfall.Avslag, vedtak.utfall)
         assertEquals(emptyList(), vedtak.innvilgetePerioder)
@@ -194,7 +194,7 @@ class SoknadTest {
     }
 
     @Test
-    fun `journalforVedtak på søknad uten vedtak kaster`() {
+    fun `journalforVedtak på søknad uten vedtak kaster feil`() {
         assertFailsWith<IllegalStateException> {
             lagSoknad().journalforVedtak(JournalpostId("123"), Instant.parse("2026-01-11T08:00:00Z"))
         }

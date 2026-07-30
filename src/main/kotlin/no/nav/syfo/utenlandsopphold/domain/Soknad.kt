@@ -4,7 +4,6 @@ import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.common.types.ident.Navident
 import no.nav.syfo.common.types.ident.Personident
 import java.time.Instant
-import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -12,7 +11,7 @@ enum class SoknadStatus {
     MOTTATT,
     INNVILGET,
     DELVIS_INNVILGET,
-    AVSLATT,
+    AVSLAG,
 }
 
 data class Soknad(
@@ -31,7 +30,7 @@ data class Soknad(
                     when (vedtak.utfall) {
                         Utfall.Innvilget -> SoknadStatus.INNVILGET
                         is Utfall.DelvisInnvilget -> SoknadStatus.DELVIS_INNVILGET
-                        Utfall.Avslag -> SoknadStatus.AVSLATT
+                        Utfall.Avslag -> SoknadStatus.AVSLAG
                     }
             }
 
@@ -114,17 +113,3 @@ data class Soknad(
         return copy(vedtak = gjeldendeVedtak.distribuer(now))
     }
 }
-
-private fun List<Periode>.harOverlapp(): Boolean =
-    sortedBy { it.fom }
-        .zipWithNext()
-        .any { (forrige, neste) -> !neste.fom.isAfter(forrige.tom) }
-
-private fun List<Periode>.alleDagerErInnenfor(perioder: List<Periode>): Boolean = dager().all { it in perioder.dager() }
-
-private fun List<Periode>.dager(): Set<LocalDate> =
-    flatMap { periode ->
-        generateSequence(periode.fom) { dato ->
-            dato.plusDays(1).takeIf { !it.isAfter(periode.tom) }
-        }.toList()
-    }.toSet()

@@ -13,6 +13,22 @@ sealed interface Utfall {
     ) : Utfall
 
     data object Avslag : Utfall
+
+    companion object {
+        fun from(
+            utfall: String,
+            innvilgetePerioder: List<Periode>,
+        ): Utfall =
+            when (utfall) {
+                "INNVILGET" -> Innvilget
+                "DELVIS_INNVILGET" -> DelvisInnvilget(innvilgetePerioder)
+                "AVSLAG" -> {
+                    require(innvilgetePerioder.isEmpty()) { "innvilgetePerioder skal være tom ved avslag" }
+                    Avslag
+                }
+                else -> throw IllegalArgumentException("Invalid utfall: $utfall")
+            }
+    }
 }
 
 data class Vedtak(

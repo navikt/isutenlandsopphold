@@ -50,14 +50,14 @@ data class VedtakDTO(
     val fattetTidspunkt: Instant,
 )
 
-enum class SoknadStatusDTO { MOTTATT, INNVILGET, DELVIS_INNVILGET, AVSLATT }
+enum class SoknadStatusDTO { MOTTATT, INNVILGET, DELVIS_INNVILGET, AVSLAG }
 
 fun SoknadStatus.toDTO(): SoknadStatusDTO =
     when (this) {
         SoknadStatus.MOTTATT -> SoknadStatusDTO.MOTTATT
         SoknadStatus.INNVILGET -> SoknadStatusDTO.INNVILGET
         SoknadStatus.DELVIS_INNVILGET -> SoknadStatusDTO.DELVIS_INNVILGET
-        SoknadStatus.AVSLATT -> SoknadStatusDTO.AVSLATT
+        SoknadStatus.AVSLAG -> SoknadStatusDTO.AVSLAG
     }
 
 fun List<Soknad>.toResponseDTO(): SoknaderResponseDTO = SoknaderResponseDTO(soknader = map { it.toDTO() })
