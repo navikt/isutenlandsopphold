@@ -9,7 +9,7 @@ sealed interface Utfall {
     data object Innvilget : Utfall
 
     data class DelvisInnvilget(
-        val innvilgetePerioder: List<Periode>,
+        val innvilgedePerioder: List<Periode>,
     ) : Utfall
 
     data object Avslag : Utfall
@@ -17,13 +17,13 @@ sealed interface Utfall {
     companion object {
         fun from(
             utfall: String,
-            innvilgetePerioder: List<Periode>,
+            innvilgedePerioder: List<Periode>,
         ): Utfall =
             when (utfall) {
                 "INNVILGET" -> Innvilget
-                "DELVIS_INNVILGET" -> DelvisInnvilget(innvilgetePerioder)
+                "DELVIS_INNVILGET" -> DelvisInnvilget(innvilgedePerioder)
                 "AVSLAG" -> {
-                    require(innvilgetePerioder.isEmpty()) { "innvilgetePerioder skal være tom ved avslag" }
+                    require(innvilgedePerioder.isEmpty()) { "innvilgedePerioder skal være tom ved avslag" }
                     Avslag
                 }
                 else -> throw IllegalArgumentException("Invalid utfall: $utfall")
@@ -35,7 +35,7 @@ data class Vedtak(
     val utfall: Utfall,
     val fattetAv: Navident,
     val fattetTidspunkt: Instant,
-    val innvilgetePerioder: List<Periode>,
+    val innvilgedePerioder: List<Periode>,
     val vedtakId: UUID = UUID.randomUUID(),
     val document: List<DocumentComponent>,
     val journalpostId: JournalpostId? = null,
@@ -44,14 +44,14 @@ data class Vedtak(
 ) {
     init {
         when (utfall) {
-            Utfall.Innvilget -> require(innvilgetePerioder.isNotEmpty()) { "Innvilget vedtak må ha innvilgede perioder" }
+            Utfall.Innvilget -> require(innvilgedePerioder.isNotEmpty()) { "Innvilget vedtak må ha innvilgede perioder" }
             is Utfall.DelvisInnvilget -> {
-                require(utfall.innvilgetePerioder.isNotEmpty()) { "Delvis innvilget vedtak må ha innvilgede perioder" }
-                require(utfall.innvilgetePerioder == innvilgetePerioder) {
+                require(utfall.innvilgedePerioder.isNotEmpty()) { "Delvis innvilget vedtak må ha innvilgede perioder" }
+                require(utfall.innvilgedePerioder == innvilgedePerioder) {
                     "Innvilgede perioder på utfall og vedtak må være like"
                 }
             }
-            Utfall.Avslag -> require(innvilgetePerioder.isEmpty()) { "Avslått vedtak skal ikke ha innvilgede perioder" }
+            Utfall.Avslag -> require(innvilgedePerioder.isEmpty()) { "Avslått vedtak skal ikke ha innvilgede perioder" }
         }
     }
 

@@ -15,7 +15,7 @@ class VedtakTest {
             utfall = Utfall.Innvilget,
             fattetAv = veileder,
             fattetTidspunkt = Instant.parse("2026-01-10T12:00:00Z"),
-            innvilgetePerioder = listOf(Periode(LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 9))),
+            innvilgedePerioder = listOf(Periode(LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 9))),
             document = vedtakDocument,
         )
 
@@ -33,11 +33,11 @@ class VedtakTest {
         val vedtak =
             lagVedtak().copy(
                 utfall = Utfall.DelvisInnvilget(listOf(innvilgetPeriode)),
-                innvilgetePerioder = listOf(innvilgetPeriode),
+                innvilgedePerioder = listOf(innvilgetPeriode),
             )
 
         assertEquals(Utfall.DelvisInnvilget(listOf(innvilgetPeriode)), vedtak.utfall)
-        assertEquals(listOf(innvilgetPeriode), vedtak.innvilgetePerioder)
+        assertEquals(listOf(innvilgetPeriode), vedtak.innvilgedePerioder)
     }
 
     @Test
@@ -45,7 +45,7 @@ class VedtakTest {
         assertFailsWith<IllegalArgumentException> {
             lagVedtak().copy(
                 utfall = Utfall.DelvisInnvilget(emptyList()),
-                innvilgetePerioder = emptyList(),
+                innvilgedePerioder = emptyList(),
             )
         }
     }
