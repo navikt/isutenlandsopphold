@@ -10,6 +10,8 @@ import java.util.UUID
 enum class SoknadStatus {
     MOTTATT,
     INNVILGET,
+    DELVIS_INNVILGET,
+    AVSLAG,
 }
 
 data class Soknad(
@@ -24,7 +26,12 @@ data class Soknad(
         get() =
             when (vedtak) {
                 null -> SoknadStatus.MOTTATT
-                else -> SoknadStatus.INNVILGET
+                else ->
+                    when (vedtak.utfall) {
+                        Utfall.Innvilget -> SoknadStatus.INNVILGET
+                        is Utfall.DelvisInnvilget -> SoknadStatus.DELVIS_INNVILGET
+                        Utfall.Avslag -> SoknadStatus.AVSLAG
+                    }
             }
 
     init {
@@ -43,13 +50,33 @@ data class Soknad(
             "Vedtak kan kun fattes på en MOTTATT soknad, men status er $status"
         }
 
+        val innvilgetePerioder =
+            when (utfall) {
+                Utfall.Innvilget -> soktePerioder
+                is Utfall.DelvisInnvilget -> {
+                    require(utfall.innvilgetePerioder.isNotEmpty()) {
+                        "Delvis innvilgelse må ha minst én innvilget periode"
+                    }
+                    require(!utfall.innvilgetePerioder.harOverlapp()) {
+                        "Innvilgede perioder ved delvis innvilgelse kan ikke overlappe"
+                    }
+                    require(
+                        utfall.innvilgetePerioder.alleDagerErInnenfor(soktePerioder),
+                    ) {
+                        "Innvilgede perioder ved delvis innvilgelse må være innenfor søkte perioder"
+                    }
+                    utfall.innvilgetePerioder
+                }
+                Utfall.Avslag -> emptyList()
+            }
+
         return copy(
             vedtak =
                 Vedtak(
                     utfall = utfall,
                     fattetAv = fattetAv,
                     fattetTidspunkt = now,
-                    innvilgetePerioder = soktePerioder,
+                    innvilgetePerioder = innvilgetePerioder,
                     document = document,
                 ),
         )

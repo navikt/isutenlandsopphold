@@ -1,6 +1,6 @@
 package no.nav.syfo.utenlandsopphold.api.soknad
 
-import io.ktor.server.plugins.NotFoundException
+import io.ktor.server.plugins.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -33,6 +33,7 @@ fun Route.registerSoknadApi(
 
         post("/{soknadId}/vedtak") {
             val request = call.receive<SoknadVedtakPostDTO>()
+            require(request.document.isNotEmpty()) { "document kan ikke være tomt" }
 
             val soknadId = UUID.fromString(requireNotNull(call.parameters["soknadId"]) { "Missing soknadId" })
             val soknad =
@@ -46,12 +47,10 @@ fun Route.registerSoknadApi(
                 requiresWriteAccess = true,
             ) { authorizedUser, _, _ ->
                 val utfall =
-                    when (request.utfall) {
-                        "INNVILGET" -> Utfall.Innvilget
-                        else -> throw IllegalArgumentException("Invalid utfall: ${request.utfall}")
-                    }
-                require(request.document.isNotEmpty()) { "document kan ikke være tom" }
-
+                    Utfall.from(
+                        utfall = request.utfall,
+                        innvilgetePerioder = request.innvilgetePerioder.map { it.toDomain() },
+                    )
                 val soknadMedVedtak =
                     soknadService.fattVedtak(
                         soknadId = soknadId,
