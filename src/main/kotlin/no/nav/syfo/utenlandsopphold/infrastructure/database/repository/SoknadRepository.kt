@@ -253,7 +253,7 @@ class SoknadRepository(
                 it.executeQuery().toList { toPVedtak() }.singleOrNull()
                     ?: throw IllegalArgumentException("Fant ikke søknad med id $soknadId")
             }
-        createVedtakPerioder(pVedtak.id, vedtak.innvilgetePerioder)
+        createVedtakPerioder(pVedtak.id, vedtak.innvilgedePerioder)
     }
 
     private fun Connection.createVedtakPerioder(

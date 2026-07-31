@@ -26,7 +26,7 @@ class SoknadTest {
         assertEquals(Utfall.Innvilget, vedtak.utfall)
         assertEquals(veileder, vedtak.fattetAv)
         assertEquals(now, vedtak.fattetTidspunkt)
-        assertEquals(resultat.soktePerioder, vedtak.innvilgetePerioder)
+        assertEquals(resultat.soktePerioder, vedtak.innvilgedePerioder)
     }
 
     @Test
@@ -44,7 +44,7 @@ class SoknadTest {
         assertEquals(SoknadStatus.DELVIS_INNVILGET, resultat.status)
         val vedtak = assertNotNull(resultat.vedtak)
         assertEquals(Utfall.DelvisInnvilget(listOf(innvilgetPeriode)), vedtak.utfall)
-        assertEquals(listOf(innvilgetPeriode), vedtak.innvilgetePerioder)
+        assertEquals(listOf(innvilgetPeriode), vedtak.innvilgedePerioder)
     }
 
     @Test
@@ -65,7 +65,7 @@ class SoknadTest {
             )
 
         assertEquals(SoknadStatus.DELVIS_INNVILGET, resultat.status)
-        assertEquals(listOf(innvilgetPeriode), resultat.vedtak?.innvilgetePerioder)
+        assertEquals(listOf(innvilgetPeriode), resultat.vedtak?.innvilgedePerioder)
     }
 
     @Test
@@ -144,7 +144,7 @@ class SoknadTest {
         assertEquals(SoknadStatus.AVSLAG, resultat.status)
         val vedtak = assertNotNull(resultat.vedtak)
         assertEquals(Utfall.Avslag, vedtak.utfall)
-        assertEquals(emptyList(), vedtak.innvilgetePerioder)
+        assertEquals(emptyList(), vedtak.innvilgedePerioder)
     }
 
     @Test

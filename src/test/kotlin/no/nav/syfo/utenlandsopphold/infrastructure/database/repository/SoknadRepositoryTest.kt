@@ -134,7 +134,7 @@ class SoknadRepositoryTest {
         val soknad = soknad(soktePerioder = soktePerioder)
         repository.lagreMottattSoknad(soknad)
 
-        val vedtak = vedtak(innvilgetePerioder = soktePerioder)
+        val vedtak = generateVedtak(innvilgedePerioder = soktePerioder)
         val oppdatertSoknad =
             transactionManager.inTransaction { transaction ->
                 val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
@@ -145,7 +145,7 @@ class SoknadRepositoryTest {
         assertEquals(Utfall.Innvilget, oppdatertSoknad.vedtak?.utfall)
         assertEquals(vedtak.fattetAv, oppdatertSoknad.vedtak?.fattetAv)
         assertEquals(vedtak.fattetTidspunkt, oppdatertSoknad.vedtak?.fattetTidspunkt)
-        assertEquals(soktePerioder, oppdatertSoknad.vedtak?.innvilgetePerioder)
+        assertEquals(soktePerioder, oppdatertSoknad.vedtak?.innvilgedePerioder)
         assertEquals(vedtak.document, oppdatertSoknad.vedtak?.document)
     }
 
@@ -154,7 +154,7 @@ class SoknadRepositoryTest {
         val soktePerioder = listOf(Periode(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 10)))
         val soknad = soknad(soktePerioder = soktePerioder)
         repository.lagreMottattSoknad(soknad)
-        val vedtak = vedtak(innvilgetePerioder = soktePerioder)
+        val vedtak = generateVedtak(innvilgedePerioder = soktePerioder)
         transactionManager.inTransaction { transaction ->
             val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
             repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = vedtak))
@@ -163,7 +163,7 @@ class SoknadRepositoryTest {
         val hentetPaNytt = repository.hentSoknader(personident).single()
 
         assertEquals(SoknadStatus.INNVILGET, hentetPaNytt.status)
-        assertEquals(soktePerioder, hentetPaNytt.vedtak?.innvilgetePerioder)
+        assertEquals(soktePerioder, hentetPaNytt.vedtak?.innvilgedePerioder)
         assertEquals(vedtak.vedtakId, hentetPaNytt.vedtak?.vedtakId)
     }
 
@@ -173,13 +173,13 @@ class SoknadRepositoryTest {
         repository.lagreMottattSoknad(soknad)
         transactionManager.inTransaction { transaction ->
             val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
-            repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = vedtak()))
+            repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = generateVedtak()))
         }
 
         assertFailsWith<PSQLException> {
             transactionManager.inTransaction { transaction ->
                 val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
-                repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = vedtak()))
+                repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = generateVedtak()))
             }
         }
     }
@@ -187,10 +187,10 @@ class SoknadRepositoryTest {
     @Test
     fun `lagreVedtak persisterer og henter delvis innvilget vedtak`() {
         val soktePerioder = listOf(Periode(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 10)))
-        val innvilgetePerioder = listOf(Periode(LocalDate.of(2026, 4, 3), LocalDate.of(2026, 4, 5)))
+        val innvilgedePerioder = listOf(Periode(LocalDate.of(2026, 4, 3), LocalDate.of(2026, 4, 5)))
         val soknad = soknad(soktePerioder = soktePerioder)
         repository.lagreMottattSoknad(soknad)
-        val vedtak = vedtak(utfall = Utfall.DelvisInnvilget(innvilgetePerioder), innvilgetePerioder = innvilgetePerioder)
+        val vedtak = generateVedtak(utfall = Utfall.DelvisInnvilget(innvilgedePerioder), innvilgedePerioder = innvilgedePerioder)
         transactionManager.inTransaction { transaction ->
             val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
             repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = vedtak))
@@ -199,15 +199,15 @@ class SoknadRepositoryTest {
         val hentetPaNytt = repository.hentSoknader(personident).single()
 
         assertEquals(SoknadStatus.DELVIS_INNVILGET, hentetPaNytt.status)
-        assertEquals(Utfall.DelvisInnvilget(innvilgetePerioder), hentetPaNytt.vedtak?.utfall)
-        assertEquals(innvilgetePerioder, hentetPaNytt.vedtak?.innvilgetePerioder)
+        assertEquals(Utfall.DelvisInnvilget(innvilgedePerioder), hentetPaNytt.vedtak?.utfall)
+        assertEquals(innvilgedePerioder, hentetPaNytt.vedtak?.innvilgedePerioder)
     }
 
     @Test
     fun `lagreVedtak persisterer og henter avslag uten innvilgete perioder`() {
         val soknad = soknad()
         repository.lagreMottattSoknad(soknad)
-        val vedtak = vedtak(utfall = Utfall.Avslag, innvilgetePerioder = emptyList())
+        val vedtak = generateVedtak(utfall = Utfall.Avslag, innvilgedePerioder = emptyList())
         transactionManager.inTransaction { transaction ->
             val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
             repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = vedtak))
@@ -217,7 +217,7 @@ class SoknadRepositoryTest {
 
         assertEquals(SoknadStatus.AVSLAG, hentetPaNytt.status)
         assertEquals(Utfall.Avslag, hentetPaNytt.vedtak?.utfall)
-        assertEquals(emptyList(), hentetPaNytt.vedtak?.innvilgetePerioder)
+        assertEquals(emptyList(), hentetPaNytt.vedtak?.innvilgedePerioder)
     }
 
     @Test
@@ -225,7 +225,7 @@ class SoknadRepositoryTest {
         val ukjentSoknadId = UUID.randomUUID()
         assertFailsWith<IllegalArgumentException> {
             transactionManager.inTransaction { transaction ->
-                repository.lagreVedtak(transaction, soknad().copy(id = ukjentSoknadId, vedtak = vedtak()))
+                repository.lagreVedtak(transaction, soknad().copy(id = ukjentSoknadId, vedtak = generateVedtak()))
             }
         }
     }
@@ -282,7 +282,7 @@ class SoknadRepositoryTest {
                 ?.title,
         )
         assertEquals(1, soknad.soktePerioder.size)
-        assertEquals(soknad.soktePerioder, soknad.vedtak?.innvilgetePerioder)
+        assertEquals(soknad.soktePerioder, soknad.vedtak?.innvilgedePerioder)
     }
 
     @Test
@@ -434,9 +434,9 @@ class SoknadRepositoryTest {
         private val etterAlleTestVedtak = Instant.parse("2026-06-01T00:00:00Z")
     }
 
-    private fun vedtak(
+    private fun generateVedtak(
         utfall: Utfall = Utfall.Innvilget,
-        innvilgetePerioder: List<Periode> =
+        innvilgedePerioder: List<Periode> =
             listOf(
                 Periode(
                     LocalDate.of(2026, 4, 1),
@@ -448,7 +448,7 @@ class SoknadRepositoryTest {
             utfall = utfall,
             fattetAv = Navident("Z999999"),
             fattetTidspunkt = Instant.parse("2026-03-05T10:00:00Z"),
-            innvilgetePerioder = innvilgetePerioder,
+            innvilgedePerioder = innvilgedePerioder,
             document =
                 listOf(
                     DocumentComponent(

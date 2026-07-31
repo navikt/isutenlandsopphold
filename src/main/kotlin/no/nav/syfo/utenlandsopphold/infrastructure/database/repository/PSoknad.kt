@@ -33,7 +33,7 @@ data class PSoknad(
             personident = personident,
             soktePerioder = soktePerioder.map { it.toPeriode() },
             innsendtTidspunkt = innsendtTidspunkt,
-            vedtak = vedtak?.toVedtak(innvilgetePerioder = vedtakPerioder.map { it.toPeriode() }),
+            vedtak = vedtak?.toVedtak(innvilgedePerioder = vedtakPerioder.map { it.toPeriode() }),
         )
 }
 
@@ -68,13 +68,13 @@ data class PVedtak(
     val journalfortTidspunkt: OffsetDateTime?,
     val distribuertTidspunkt: OffsetDateTime?,
 ) {
-    fun toVedtak(innvilgetePerioder: List<Periode>): Vedtak =
+    fun toVedtak(innvilgedePerioder: List<Periode>): Vedtak =
         Vedtak(
             vedtakId = uuid,
-            utfall = utfall.toUtfall(innvilgetePerioder),
+            utfall = utfall.toUtfall(innvilgedePerioder),
             fattetAv = Navident(fattetAv),
             fattetTidspunkt = fattetTidspunkt.toInstant(),
-            innvilgetePerioder = innvilgetePerioder,
+            innvilgedePerioder = innvilgedePerioder,
             document = document.toDocumentComponents(),
             journalpostId = journalpostId?.let { JournalpostId(it) },
             journalfortTidspunkt = journalfortTidspunkt?.toInstant(),
@@ -95,10 +95,10 @@ fun Utfall.dbValue(): String =
         Utfall.Avslag -> "AVSLAG"
     }
 
-private fun String.toUtfall(innvilgetePerioder: List<Periode>): Utfall =
+private fun String.toUtfall(innvilgedePerioder: List<Periode>): Utfall =
     when (this) {
         "INNVILGET" -> Utfall.Innvilget
-        "DELVIS_INNVILGET" -> Utfall.DelvisInnvilget(innvilgetePerioder)
+        "DELVIS_INNVILGET" -> Utfall.DelvisInnvilget(innvilgedePerioder)
         "AVSLAG" -> Utfall.Avslag
         else -> throw IllegalStateException("Ukjent utfall lagret i database: $this")
     }

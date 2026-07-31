@@ -369,7 +369,7 @@ class SoknadApiTest {
     fun `vedtak returnerer 200 med oppdatert soknad fra service`() =
         testApplication {
             val soknadId = UUID.randomUUID()
-            val innvilgetePerioder = listOf(Periode(fom = LocalDate.of(2026, 4, 1), tom = LocalDate.of(2026, 4, 10)))
+            val innvilgedePerioder = listOf(Periode(fom = LocalDate.of(2026, 4, 1), tom = LocalDate.of(2026, 4, 10)))
             var lagretSoknad: Soknad? = null
 
             val mottattSoknad =
@@ -377,7 +377,7 @@ class SoknadApiTest {
                     id = soknadId,
                     eksternId = UUID.randomUUID(),
                     personident = Personident("11111111111"),
-                    soktePerioder = innvilgetePerioder,
+                    soktePerioder = innvilgedePerioder,
                     innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
                 )
             stubHentSoknadOgLagreVedtak(mottattSoknad) { soknadMedVedtak -> lagretSoknad = soknadMedVedtak }
@@ -390,7 +390,7 @@ class SoknadApiTest {
                     setBody(
                         SoknadVedtakPostDTO(
                             utfall = "INNVILGET",
-                            innvilgetePerioder = innvilgetePerioder.map { PeriodeDTO(fom = it.fom, tom = it.tom) },
+                            innvilgetePerioder = innvilgedePerioder.map { PeriodeDTO(fom = it.fom, tom = it.tom) },
                             document =
                                 listOf(
                                     DocumentComponent(
@@ -406,7 +406,7 @@ class SoknadApiTest {
             assertEquals(HttpStatusCode.OK, response.status)
             assertEquals(soknadId, lagretSoknad?.id)
             assertEquals(Utfall.Innvilget, lagretSoknad?.vedtak?.utfall)
-            assertEquals(innvilgetePerioder, lagretSoknad?.vedtak?.innvilgetePerioder)
+            assertEquals(innvilgedePerioder, lagretSoknad?.vedtak?.innvilgedePerioder)
 
             val body = response.body<SoknadVedtakResponseDTO>()
             assertEquals(soknadId.toString(), body.soknad.soknadId)
@@ -446,7 +446,7 @@ class SoknadApiTest {
 
             assertEquals(HttpStatusCode.OK, response.status)
             assertEquals(Utfall.DelvisInnvilget(listOf(innvilgetPeriode)), lagretSoknad?.vedtak?.utfall)
-            assertEquals(listOf(innvilgetPeriode), lagretSoknad?.vedtak?.innvilgetePerioder)
+            assertEquals(listOf(innvilgetPeriode), lagretSoknad?.vedtak?.innvilgedePerioder)
 
             val body = response.body<SoknadVedtakResponseDTO>()
             assertEquals(SoknadStatusDTO.DELVIS_INNVILGET, body.soknad.status)
@@ -480,7 +480,7 @@ class SoknadApiTest {
 
             assertEquals(HttpStatusCode.OK, response.status)
             assertEquals(Utfall.Avslag, lagretSoknad?.vedtak?.utfall)
-            assertEquals(emptyList(), lagretSoknad?.vedtak?.innvilgetePerioder)
+            assertEquals(emptyList(), lagretSoknad?.vedtak?.innvilgedePerioder)
 
             val body = response.body<SoknadVedtakResponseDTO>()
             assertEquals(SoknadStatusDTO.AVSLAG, body.soknad.status)
@@ -533,7 +533,7 @@ class SoknadApiTest {
     fun `vedtak trigger umiddelbar journalføring og distribusjon async når journalforVedtakService er satt`() =
         testApplication {
             val soknadId = UUID.randomUUID()
-            val innvilgetePerioder = listOf(Periode(fom = LocalDate.of(2026, 4, 1), tom = LocalDate.of(2026, 4, 10)))
+            val innvilgedePerioder = listOf(Periode(fom = LocalDate.of(2026, 4, 1), tom = LocalDate.of(2026, 4, 10)))
             val personident = Personident("11111111111")
 
             val mottattSoknad =
@@ -541,7 +541,7 @@ class SoknadApiTest {
                     id = soknadId,
                     eksternId = UUID.randomUUID(),
                     personident = personident,
-                    soktePerioder = innvilgetePerioder,
+                    soktePerioder = innvilgedePerioder,
                     innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
                 )
             stubHentSoknadOgLagreVedtak(mottattSoknad) { _ -> }
@@ -585,20 +585,20 @@ class SoknadApiTest {
     fun `vedtak på soknad som allerede har vedtak gir 409`() =
         testApplication {
             val soknadId = UUID.randomUUID()
-            val innvilgetePerioder = listOf(Periode(fom = LocalDate.of(2026, 4, 1), tom = LocalDate.of(2026, 4, 10)))
+            val innvilgedePerioder = listOf(Periode(fom = LocalDate.of(2026, 4, 1), tom = LocalDate.of(2026, 4, 10)))
             val soknadMedVedtak =
                 Soknad(
                     id = soknadId,
                     eksternId = UUID.randomUUID(),
                     personident = UserConstants.PERSON_VEILEDERE_HAR_TILGANG_TIL,
-                    soktePerioder = innvilgetePerioder,
+                    soktePerioder = innvilgedePerioder,
                     innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
                     vedtak =
                         Vedtak(
                             utfall = Utfall.Innvilget,
                             fattetAv = Navident(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG),
                             fattetTidspunkt = Instant.parse("2026-03-02T09:00:00Z"),
-                            innvilgetePerioder = innvilgetePerioder,
+                            innvilgedePerioder = innvilgedePerioder,
                             document = validSoknadVedtakPostDTO().document,
                         ),
                 )

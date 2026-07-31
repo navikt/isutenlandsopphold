@@ -50,22 +50,22 @@ data class Soknad(
             "Vedtak kan kun fattes på en MOTTATT soknad, men status er $status"
         }
 
-        val innvilgetePerioder =
+        val innvilgedePerioder =
             when (utfall) {
                 Utfall.Innvilget -> soktePerioder
                 is Utfall.DelvisInnvilget -> {
-                    require(utfall.innvilgetePerioder.isNotEmpty()) {
+                    require(utfall.innvilgedePerioder.isNotEmpty()) {
                         "Delvis innvilgelse må ha minst én innvilget periode"
                     }
-                    require(!utfall.innvilgetePerioder.harOverlapp()) {
+                    require(!utfall.innvilgedePerioder.harOverlapp()) {
                         "Innvilgede perioder ved delvis innvilgelse kan ikke overlappe"
                     }
                     require(
-                        utfall.innvilgetePerioder.alleDagerErInnenfor(soktePerioder),
+                        utfall.innvilgedePerioder.alleDagerErInnenfor(soktePerioder),
                     ) {
                         "Innvilgede perioder ved delvis innvilgelse må være innenfor søkte perioder"
                     }
-                    utfall.innvilgetePerioder
+                    utfall.innvilgedePerioder
                 }
                 Utfall.Avslag -> emptyList()
             }
@@ -76,7 +76,7 @@ data class Soknad(
                     utfall = utfall,
                     fattetAv = fattetAv,
                     fattetTidspunkt = now,
-                    innvilgetePerioder = innvilgetePerioder,
+                    innvilgedePerioder = innvilgedePerioder,
                     document = document,
                 ),
         )

@@ -84,7 +84,7 @@ private fun Vedtak.toDTO(): VedtakDTO =
                 is Utfall.DelvisInnvilget -> "DELVIS_INNVILGET"
                 Utfall.Avslag -> "AVSLAG"
             },
-        innvilgetePerioder = innvilgetePerioder.map { it.toDTO() },
+        innvilgetePerioder = innvilgedePerioder.map { it.toDTO() },
         fattetAv = fattetAv.value,
         fattetTidspunkt = fattetTidspunkt,
     )
