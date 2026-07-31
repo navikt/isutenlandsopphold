@@ -6,7 +6,7 @@ import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.Utfall
 import org.slf4j.LoggerFactory
-import java.time.Instant
+import java.time.OffsetDateTime
 import java.util.UUID
 
 class SoknadService(
@@ -38,7 +38,7 @@ class SoknadService(
                     soknad.fattVedtak(
                         utfall = utfall,
                         fattetAv = fattetAv,
-                        now = Instant.now(),
+                        now = OffsetDateTime.now(),
                         document = document,
                     )
 

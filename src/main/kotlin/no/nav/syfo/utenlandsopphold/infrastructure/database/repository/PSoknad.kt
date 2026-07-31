@@ -73,12 +73,12 @@ data class PVedtak(
             vedtakId = uuid,
             utfall = utfall.toUtfall(innvilgedePerioder),
             fattetAv = Navident(fattetAv),
-            fattetTidspunkt = fattetTidspunkt.toInstant(),
+            fattetTidspunkt = fattetTidspunkt,
             innvilgedePerioder = innvilgedePerioder,
             document = document.toDocumentComponents(),
             journalpostId = journalpostId?.let { JournalpostId(it) },
-            journalfortTidspunkt = journalfortTidspunkt?.toInstant(),
-            distribuertTidspunkt = distribuertTidspunkt?.toInstant(),
+            journalfortTidspunkt = journalfortTidspunkt,
+            distribuertTidspunkt = distribuertTidspunkt,
         )
 }
 

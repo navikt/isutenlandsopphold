@@ -4,7 +4,7 @@ import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.infrastructure.journalforing.JournalforingService.Companion.DEFAULT_FAILED_JP_ID
 import org.slf4j.LoggerFactory
-import java.time.Instant
+import java.time.OffsetDateTime
 import kotlin.time.Duration
 import kotlin.time.toJavaDuration
 
@@ -31,7 +31,7 @@ class JournalforVedtakService(
 ) {
     suspend fun journalforVedtak() {
         log.debug("Starter journalføring av ujournalførte vedtak")
-        val fattetBefore = Instant.now().minus(freshVedtakGracePeriod.toJavaDuration())
+        val fattetBefore = OffsetDateTime.now().minus(freshVedtakGracePeriod.toJavaDuration())
         val soknaderMedIkkeJournalforteVedtak = soknadRepository.getIkkeJournalforteSoknader(fattetBefore)
 
         soknaderMedIkkeJournalforteVedtak.forEach { soknad ->
@@ -77,7 +77,7 @@ class JournalforVedtakService(
                     eksternReferanseId = vedtak.vedtakId.toString(),
                 ).getOrThrow()
 
-        val journalfortTidspunkt = Instant.now()
+        val journalfortTidspunkt = OffsetDateTime.now()
 
         // Bygger den oppdaterte søknaden gjennom aggregatroten for å håndheve
         // idempotens-invarianten før vi lar den slå gjennom i databasen.
@@ -103,7 +103,7 @@ class JournalforVedtakService(
      */
     suspend fun distribuerVedtak() {
         log.debug("Starter distribusjon av journalførte, ikke-distribuerte vedtak")
-        val fattetBefore = Instant.now().minus(freshVedtakGracePeriod.toJavaDuration())
+        val fattetBefore = OffsetDateTime.now().minus(freshVedtakGracePeriod.toJavaDuration())
         val soknaderMedIkkeDistribuerteVedtak = soknadRepository.getSoknaderMedIkkeDistribuerteVedtak(fattetBefore)
 
         soknaderMedIkkeDistribuerteVedtak.forEach { soknad ->
@@ -140,7 +140,7 @@ class JournalforVedtakService(
             // Hvis journalpostId er DEFAULT_FAILED_JP_ID, betyr det at journalføringen feilet i dev-gcp, og vi skal ikke forsøke å distribuere dette vedtaket.
             soknadRepository.setVedtakDistribuert(
                 vedtakId = vedtak.vedtakId,
-                distribuertTidspunkt = Instant.now(),
+                distribuertTidspunkt = OffsetDateTime.now(),
             )
             return
         }
@@ -149,7 +149,7 @@ class JournalforVedtakService(
 
         log.info("Distribusjon av vedtak ${vedtak.vedtakId} for søknad ${soknad.id} bestilt, bestillingsId: $bestillingsId")
 
-        val distribuertTidspunkt = Instant.now()
+        val distribuertTidspunkt = OffsetDateTime.now()
 
         // Bygger den oppdaterte søknaden gjennom aggregatroten for å håndheve
         // idempotens-invarianten før vi lar den slå gjennom i databasen.

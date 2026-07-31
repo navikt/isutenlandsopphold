@@ -2,7 +2,7 @@ package no.nav.syfo.utenlandsopphold.domain
 
 import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.common.types.ident.Navident
-import java.time.Instant
+import java.time.OffsetDateTime
 import java.util.UUID
 
 sealed interface Utfall {
@@ -34,13 +34,13 @@ sealed interface Utfall {
 data class Vedtak(
     val utfall: Utfall,
     val fattetAv: Navident,
-    val fattetTidspunkt: Instant,
+    val fattetTidspunkt: OffsetDateTime,
     val innvilgedePerioder: List<Periode>,
     val vedtakId: UUID = UUID.randomUUID(),
     val document: List<DocumentComponent>,
     val journalpostId: JournalpostId? = null,
-    val journalfortTidspunkt: Instant? = null,
-    val distribuertTidspunkt: Instant? = null,
+    val journalfortTidspunkt: OffsetDateTime? = null,
+    val distribuertTidspunkt: OffsetDateTime? = null,
 ) {
     init {
         when (utfall) {
@@ -68,7 +68,7 @@ data class Vedtak(
      */
     fun journalfor(
         journalpostId: JournalpostId,
-        tidspunkt: Instant,
+        tidspunkt: OffsetDateTime,
     ): Vedtak {
         check(!erJournalfort) {
             "Vedtak $vedtakId er allerede journalført med journalpostId ${this.journalpostId}"
@@ -82,7 +82,7 @@ data class Vedtak(
      * det er journalført, og skal aldri distribueres mer enn én gang (idempotens) — kall
      * denne kun etter en vellykket bestilling i dokdistfordeling, aldri på forhånd.
      */
-    fun distribuer(tidspunkt: Instant): Vedtak {
+    fun distribuer(tidspunkt: OffsetDateTime): Vedtak {
         check(erJournalfort) {
             "Vedtak $vedtakId må være journalført før det kan distribueres"
         }

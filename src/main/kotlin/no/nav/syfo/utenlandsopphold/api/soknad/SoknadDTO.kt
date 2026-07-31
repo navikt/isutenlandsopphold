@@ -6,9 +6,9 @@ import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.SoknadStatus
 import no.nav.syfo.utenlandsopphold.domain.Utfall
 import no.nav.syfo.utenlandsopphold.domain.Vedtak
-import java.time.Instant
+import no.nav.syfo.utenlandsopphold.util.toLocalDateTimeOslo
 import java.time.LocalDate
-import java.time.OffsetDateTime
+import java.time.LocalDateTime
 import java.util.UUID
 
 data class SoknaderQueryDTO(
@@ -33,7 +33,7 @@ data class SoknadDTO(
     val soknadId: String,
     val eksternId: UUID,
     val status: SoknadStatusDTO,
-    val innsendtTidspunkt: OffsetDateTime,
+    val innsendtTidspunkt: LocalDateTime,
     val soktePerioder: List<PeriodeDTO>,
     val vedtak: VedtakDTO?,
 )
@@ -47,7 +47,7 @@ data class VedtakDTO(
     val utfall: String,
     val innvilgedePerioder: List<PeriodeDTO>,
     val fattetAv: String,
-    val fattetTidspunkt: Instant,
+    val fattetTidspunkt: LocalDateTime,
 )
 
 enum class SoknadStatusDTO { MOTTATT, INNVILGET, DELVIS_INNVILGET, AVSLAG }
@@ -69,7 +69,7 @@ fun Soknad.toDTO(): SoknadDTO =
         soknadId = id.toString(),
         eksternId = eksternId,
         status = status.toDTO(),
-        innsendtTidspunkt = innsendtTidspunkt,
+        innsendtTidspunkt = innsendtTidspunkt.toLocalDateTimeOslo(),
         soktePerioder = soktePerioder.map { it.toDTO() },
         vedtak = vedtak?.toDTO(),
     )
@@ -86,7 +86,7 @@ private fun Vedtak.toDTO(): VedtakDTO =
             },
         innvilgedePerioder = innvilgedePerioder.map { it.toDTO() },
         fattetAv = fattetAv.value,
-        fattetTidspunkt = fattetTidspunkt,
+        fattetTidspunkt = fattetTidspunkt.toLocalDateTimeOslo(),
     )
 
 fun PeriodeDTO.toDomain(): Periode = Periode(fom = fom, tom = tom)

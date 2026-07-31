@@ -15,11 +15,8 @@ import org.postgresql.util.PGobject
 import java.sql.Connection
 import java.sql.Date
 import java.sql.ResultSet
-import java.sql.Timestamp
-import java.time.Instant
 import java.time.LocalDate
 import java.time.OffsetDateTime
-import java.time.ZoneOffset
 import java.util.UUID
 
 class SoknadRepository(
@@ -43,7 +40,7 @@ class SoknadRepository(
 
     override fun lagreMottattSoknad(soknad: Soknad): LagreMottattSoknadResultat =
         withConnection { connection ->
-            val now = OffsetDateTime.now(ZoneOffset.UTC)
+            val now = OffsetDateTime.now()
             val pSoknad = connection.createSoknad(soknad, now)
 
             if (pSoknad != null) {
@@ -84,7 +81,7 @@ class SoknadRepository(
         return soknadMedVedtak
     }
 
-    override fun getIkkeJournalforteSoknader(fattetBefore: Instant): List<Soknad> =
+    override fun getIkkeJournalforteSoknader(fattetBefore: OffsetDateTime): List<Soknad> =
         withConnection(Connection.TRANSACTION_REPEATABLE_READ) { connection ->
             val pSoknader = connection.getIkkeJournalforteSoknader(fattetBefore)
             connection.toSoknader(pSoknader)
@@ -93,19 +90,19 @@ class SoknadRepository(
     override fun setVedtakJournalfort(
         vedtakId: UUID,
         journalpostId: JournalpostId,
-        journalfortTidspunkt: Instant,
+        journalfortTidspunkt: OffsetDateTime,
     ) {
         withConnection { connection ->
             connection.prepareStatement(SET_VEDTAK_JOURNALFORT).use {
                 it.setString(1, journalpostId.value)
-                it.setTimestamp(2, Timestamp.from(journalfortTidspunkt))
+                it.setObject(2, journalfortTidspunkt)
                 it.setObject(3, vedtakId)
                 it.executeUpdate()
             }
         }
     }
 
-    override fun getSoknaderMedIkkeDistribuerteVedtak(fattetBefore: Instant): List<Soknad> =
+    override fun getSoknaderMedIkkeDistribuerteVedtak(fattetBefore: OffsetDateTime): List<Soknad> =
         withConnection(Connection.TRANSACTION_REPEATABLE_READ) { connection ->
             val pSoknader = connection.getSoknaderMedIkkeDistribuerteVedtak(fattetBefore)
             connection.toSoknader(pSoknader)
@@ -113,11 +110,11 @@ class SoknadRepository(
 
     override fun setVedtakDistribuert(
         vedtakId: UUID,
-        distribuertTidspunkt: Instant,
+        distribuertTidspunkt: OffsetDateTime,
     ) {
         withConnection { connection ->
             connection.prepareStatement(SET_VEDTAK_DISTRIBUERT).use {
-                it.setTimestamp(1, Timestamp.from(distribuertTidspunkt))
+                it.setObject(1, distribuertTidspunkt)
                 it.setObject(2, vedtakId)
                 it.executeUpdate()
             }
@@ -186,15 +183,15 @@ class SoknadRepository(
             it.executeQuery().toList { toPVedtak() }
         }
 
-    private fun Connection.getIkkeJournalforteSoknader(fattetBefore: Instant): List<PSoknad> =
+    private fun Connection.getIkkeJournalforteSoknader(fattetBefore: OffsetDateTime): List<PSoknad> =
         prepareStatement(GET_IKKE_JOURNALFORTE_SOKNADER).use {
-            it.setTimestamp(1, Timestamp.from(fattetBefore))
+            it.setObject(1, fattetBefore)
             it.executeQuery().toList { toPSoknad() }
         }
 
-    private fun Connection.getSoknaderMedIkkeDistribuerteVedtak(fattetBefore: Instant): List<PSoknad> =
+    private fun Connection.getSoknaderMedIkkeDistribuerteVedtak(fattetBefore: OffsetDateTime): List<PSoknad> =
         prepareStatement(GET_IKKE_DISTRIBUERTE_SOKNADER).use {
-            it.setTimestamp(1, Timestamp.from(fattetBefore))
+            it.setObject(1, fattetBefore)
             it.executeQuery().toList { toPSoknad() }
         }
 
@@ -247,7 +244,7 @@ class SoknadRepository(
                 it.setObject(1, vedtak.vedtakId)
                 it.setString(2, vedtak.utfall.dbValue())
                 it.setString(3, vedtak.fattetAv.value)
-                it.setObject(4, vedtak.fattetTidspunkt.atOffset(ZoneOffset.UTC))
+                it.setObject(4, vedtak.fattetTidspunkt)
                 it.setObject(5, documentJson)
                 it.setObject(6, soknadId)
                 it.executeQuery().toList { toPVedtak() }.singleOrNull()

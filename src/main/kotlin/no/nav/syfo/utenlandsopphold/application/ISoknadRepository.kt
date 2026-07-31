@@ -3,7 +3,7 @@ package no.nav.syfo.utenlandsopphold.application
 import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.domain.Soknad
-import java.time.Instant
+import java.time.OffsetDateTime
 import java.util.UUID
 
 interface ISoknadRepository {
@@ -29,7 +29,7 @@ interface ISoknadRepository {
      * API-laget (som forsøker journalføring umiddelbart etter at et vedtak er fattet) rom til
      * å journalføre selv, uten at cronjobben forsøker det samme vedtaket samtidig.
      */
-    fun getIkkeJournalforteSoknader(fattetBefore: Instant): List<Soknad>
+    fun getIkkeJournalforteSoknader(fattetBefore: OffsetDateTime): List<Soknad>
 
     /**
      * Markerer at et vedtak er journalført ved å sette `journalpost_id` og
@@ -38,7 +38,7 @@ interface ISoknadRepository {
     fun setVedtakJournalfort(
         vedtakId: UUID,
         journalpostId: JournalpostId,
-        journalfortTidspunkt: Instant,
+        journalfortTidspunkt: OffsetDateTime,
     )
 
     /**
@@ -50,7 +50,7 @@ interface ISoknadRepository {
      * API-laget (som forsøker distribusjon umiddelbart etter at et vedtak er journalført) rom til
      * å distribuere selv, uten at cronjobben forsøker det samme vedtaket samtidig.
      */
-    fun getSoknaderMedIkkeDistribuerteVedtak(fattetBefore: Instant): List<Soknad>
+    fun getSoknaderMedIkkeDistribuerteVedtak(fattetBefore: OffsetDateTime): List<Soknad>
 
     /**
      * Markerer at et vedtak er distribuert ved å sette `distribuert_tidspunkt` på raden.
@@ -58,7 +58,7 @@ interface ISoknadRepository {
      */
     fun setVedtakDistribuert(
         vedtakId: UUID,
-        distribuertTidspunkt: Instant,
+        distribuertTidspunkt: OffsetDateTime,
     )
 
     fun lagreMottattSoknad(soknad: Soknad): LagreMottattSoknadResultat

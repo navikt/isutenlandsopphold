@@ -18,8 +18,6 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.TestInstance
 import org.postgresql.util.PSQLException
-import java.sql.Timestamp
-import java.time.Instant
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
@@ -257,13 +255,13 @@ class SoknadRepositoryTest {
 
     @Test
     fun `getIkkeJournalforteSoknader ekskluderer vedtak fattet etter fattetBefore`() {
-        opprettSoknadMedVedtak(journalpostId = null, fattetTidspunkt = Instant.parse("2026-01-10T12:00:00Z"))
-        opprettSoknadMedVedtak(journalpostId = null, fattetTidspunkt = Instant.parse("2026-01-12T12:00:00Z"))
+        opprettSoknadMedVedtak(journalpostId = null, fattetTidspunkt = OffsetDateTime.parse("2026-01-10T12:00:00Z"))
+        opprettSoknadMedVedtak(journalpostId = null, fattetTidspunkt = OffsetDateTime.parse("2026-01-12T12:00:00Z"))
 
-        val ikkeJournalforte = repository.getIkkeJournalforteSoknader(fattetBefore = Instant.parse("2026-01-11T00:00:00Z"))
+        val ikkeJournalforte = repository.getIkkeJournalforteSoknader(fattetBefore = OffsetDateTime.parse("2026-01-11T00:00:00Z"))
 
         assertEquals(1, ikkeJournalforte.size)
-        assertEquals(Instant.parse("2026-01-10T12:00:00Z"), ikkeJournalforte.single().vedtak?.fattetTidspunkt)
+        assertEquals(OffsetDateTime.parse("2026-01-10T12:00:00Z"), ikkeJournalforte.single().vedtak?.fattetTidspunkt)
     }
 
     @Test
@@ -289,7 +287,7 @@ class SoknadRepositoryTest {
     fun `setVedtakJournalfort oppdaterer journalpost_id og journalfort_tidspunkt`() {
         val vedtakId = opprettSoknadMedVedtak(journalpostId = null)
         val journalpostId = JournalpostId("999")
-        val journalfortTidspunkt = Instant.now().truncatedTo(ChronoUnit.SECONDS)
+        val journalfortTidspunkt = OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS)
 
         repository.setVedtakJournalfort(vedtakId, journalpostId, journalfortTidspunkt)
 
@@ -300,7 +298,7 @@ class SoknadRepositoryTest {
     fun `getSoknaderMedIkkeDistribuerteVedtak returnerer kun journalforte, ikke-distribuerte vedtak`() {
         opprettSoknadMedVedtak(journalpostId = null)
         opprettSoknadMedVedtak(journalpostId = "111", distribuertTidspunkt = null)
-        opprettSoknadMedVedtak(journalpostId = "222", distribuertTidspunkt = Instant.now())
+        opprettSoknadMedVedtak(journalpostId = "222", distribuertTidspunkt = OffsetDateTime.now())
 
         val ikkeDistribuerte = repository.getSoknaderMedIkkeDistribuerteVedtak(fattetBefore = etterAlleTestVedtak)
 
@@ -315,10 +313,10 @@ class SoknadRepositoryTest {
         opprettSoknadMedVedtak(
             journalpostId = "111",
             distribuertTidspunkt = null,
-            fattetTidspunkt = Instant.parse("2026-05-01T12:00:00Z"),
+            fattetTidspunkt = OffsetDateTime.parse("2026-05-01T12:00:00Z"),
         )
 
-        val foerFattetTidspunkt = Instant.parse("2026-04-01T00:00:00Z")
+        val foerFattetTidspunkt = OffsetDateTime.parse("2026-04-01T00:00:00Z")
 
         assertTrue(repository.getSoknaderMedIkkeDistribuerteVedtak(fattetBefore = foerFattetTidspunkt).isEmpty())
         assertEquals(1, repository.getSoknaderMedIkkeDistribuerteVedtak(fattetBefore = etterAlleTestVedtak).size)
@@ -327,7 +325,7 @@ class SoknadRepositoryTest {
     @Test
     fun `setVedtakDistribuert oppdaterer distribuert_tidspunkt`() {
         val vedtakId = opprettSoknadMedVedtak(journalpostId = "111", distribuertTidspunkt = null)
-        val distribuertTidspunkt = Instant.now().truncatedTo(ChronoUnit.SECONDS)
+        val distribuertTidspunkt = OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS)
 
         repository.setVedtakDistribuert(vedtakId, distribuertTidspunkt)
 
@@ -336,8 +334,8 @@ class SoknadRepositoryTest {
 
     private fun opprettSoknadMedVedtak(
         journalpostId: String?,
-        distribuertTidspunkt: Instant? = null,
-        fattetTidspunkt: Instant = Instant.parse("2026-01-10T12:00:00Z"),
+        distribuertTidspunkt: OffsetDateTime? = null,
+        fattetTidspunkt: OffsetDateTime = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
     ): UUID {
         val soknadUuid = UUID.randomUUID()
         val vedtakUuid = UUID.randomUUID()
@@ -353,7 +351,7 @@ class SoknadRepositoryTest {
                     statement.setObject(1, soknadUuid)
                     statement.setObject(2, UUID.randomUUID())
                     statement.setString(3, personident.value)
-                    statement.setTimestamp(4, Timestamp.from(Instant.parse("2026-01-02T08:00:00Z")))
+                    statement.setObject(4, OffsetDateTime.parse("2026-01-02T08:00:00Z"))
                     statement.executeUpdate()
                 }
 
@@ -397,11 +395,11 @@ class SoknadRepositoryTest {
                     ).use { statement ->
                         statement.setObject(1, vedtakUuid)
                         statement.setInt(2, soknadId)
-                        statement.setTimestamp(3, Timestamp.from(fattetTidspunkt))
+                        statement.setObject(3, fattetTidspunkt)
                         statement.setString(4, DOCUMENT_JSON)
                         statement.setString(5, journalpostId)
-                        statement.setTimestamp(6, journalpostId?.let { Timestamp.from(Instant.now()) })
-                        statement.setTimestamp(7, distribuertTidspunkt?.let { Timestamp.from(it) })
+                        statement.setObject(6, journalpostId?.let { OffsetDateTime.now() })
+                        statement.setObject(7, distribuertTidspunkt)
                         statement.executeQuery().use { rs ->
                             rs.next()
                             rs.getInt("id")
@@ -431,7 +429,7 @@ class SoknadRepositoryTest {
         // Cutoff langt etter alle fattet_tidspunkt brukt i disse testene, slik at
         // getIkkeJournalforteSoknader/getSoknaderMedIkkeDistribuerteVedtak sine
         // eksisterende asserts ikke påvirkes av grace-vinduet.
-        private val etterAlleTestVedtak = Instant.parse("2026-06-01T00:00:00Z")
+        private val etterAlleTestVedtak = OffsetDateTime.parse("2026-06-01T00:00:00Z")
     }
 
     private fun generateVedtak(
@@ -447,7 +445,7 @@ class SoknadRepositoryTest {
         Vedtak(
             utfall = utfall,
             fattetAv = Navident("Z999999"),
-            fattetTidspunkt = Instant.parse("2026-03-05T10:00:00Z"),
+            fattetTidspunkt = OffsetDateTime.parse("2026-03-05T10:00:00Z"),
             innvilgedePerioder = innvilgedePerioder,
             document =
                 listOf(

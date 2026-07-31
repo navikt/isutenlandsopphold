@@ -17,7 +17,7 @@ import no.nav.syfo.utenlandsopphold.domain.lagSoknad
 import no.nav.syfo.utenlandsopphold.domain.vedtakDocument
 import no.nav.syfo.utenlandsopphold.domain.veileder
 import org.junit.jupiter.api.BeforeEach
-import java.time.Instant
+import java.time.OffsetDateTime
 import kotlin.test.Test
 
 class JournalforVedtakServiceTest {
@@ -47,7 +47,7 @@ class JournalforVedtakServiceTest {
         lagSoknad().fattVedtak(
             utfall = Utfall.Innvilget,
             fattetAv = veileder,
-            now = Instant.parse("2026-01-10T12:00:00Z"),
+            now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
             document = vedtakDocument,
         )
 
@@ -134,7 +134,7 @@ class JournalforVedtakServiceTest {
     fun `distribuerer og oppdaterer journalfort, ikke-distribuert vedtak`() =
         runTest {
             val soknad =
-                soknadMedVedtak().journalforVedtak(JournalpostId("999"), Instant.parse("2026-01-11T08:00:00Z"))
+                soknadMedVedtak().journalforVedtak(JournalpostId("999"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
 
             every { repositoryMock.getSoknaderMedIkkeDistribuerteVedtak(any()) } returns listOf(soknad)
             every { repositoryMock.setVedtakDistribuert(any(), any()) } just Runs
@@ -150,9 +150,9 @@ class JournalforVedtakServiceTest {
     fun `feil for ett vedtak stopper ikke distribusjon av de andre`() =
         runTest {
             val soknadSomFeiler =
-                soknadMedVedtak().journalforVedtak(JournalpostId("111"), Instant.parse("2026-01-11T08:00:00Z"))
+                soknadMedVedtak().journalforVedtak(JournalpostId("111"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
             val soknadSomLykkes =
-                soknadMedVedtak().journalforVedtak(JournalpostId("222"), Instant.parse("2026-01-11T08:00:00Z"))
+                soknadMedVedtak().journalforVedtak(JournalpostId("222"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
 
             every { repositoryMock.getSoknaderMedIkkeDistribuerteVedtak(any()) } returns listOf(soknadSomFeiler, soknadSomLykkes)
             every { repositoryMock.setVedtakDistribuert(any(), any()) } just Runs
