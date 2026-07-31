@@ -42,7 +42,6 @@ import no.nav.syfo.utenlandsopphold.testutil.TEST_AZURE_APP_CLIENT_ID
 import no.nav.syfo.utenlandsopphold.testutil.generateJWT
 import no.nav.syfo.utenlandsopphold.testutil.wellKnownInternalAzureAD
 import org.junit.jupiter.api.BeforeEach
-import java.time.Instant
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -142,8 +141,8 @@ class SoknadApiTest {
 
             val raatekst = response.bodyAsText()
             assertTrue(
-                raatekst.contains("\"innsendtTidspunkt\":\"2026-03-01T09:00:00Z\""),
-                "Instant skal serialiseres som ISO-8601",
+                raatekst.contains("\"innsendtTidspunkt\":\"2026-03-01T10:00:00\""),
+                "OffsetDateTime skal konverteres til lokal Oslo-tid og serialiseres uten offset",
             )
         }
 
@@ -597,7 +596,7 @@ class SoknadApiTest {
                         Vedtak(
                             utfall = Utfall.Innvilget,
                             fattetAv = Navident(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG),
-                            fattetTidspunkt = Instant.parse("2026-03-02T09:00:00Z"),
+                            fattetTidspunkt = OffsetDateTime.parse("2026-03-02T09:00:00Z"),
                             innvilgedePerioder = innvilgedePerioder,
                             document = validSoknadVedtakPostDTO().document,
                         ),

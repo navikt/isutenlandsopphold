@@ -1,8 +1,8 @@
 package no.nav.syfo.utenlandsopphold.domain
 
 import no.nav.syfo.common.journalforing.JournalpostId
-import java.time.Instant
 import java.time.LocalDate
+import java.time.OffsetDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -11,7 +11,7 @@ import kotlin.test.assertNotNull
 class SoknadTest {
     @Test
     fun `fattVedtak om innvilgelse på mottatt søknad gir vedtak om innvilgelse`() {
-        val now = Instant.parse("2026-01-10T12:00:00Z")
+        val now = OffsetDateTime.parse("2026-01-10T12:00:00Z")
 
         val resultat =
             lagSoknad().fattVedtak(
@@ -37,7 +37,7 @@ class SoknadTest {
             lagSoknad().fattVedtak(
                 utfall = Utfall.DelvisInnvilget(listOf(innvilgetPeriode)),
                 fattetAv = veileder,
-                now = Instant.parse("2026-01-10T12:00:00Z"),
+                now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = vedtakDocument,
             )
 
@@ -60,7 +60,7 @@ class SoknadTest {
             lagSoknad(soktePerioder = soktePerioder).fattVedtak(
                 utfall = Utfall.DelvisInnvilget(listOf(innvilgetPeriode)),
                 fattetAv = veileder,
-                now = Instant.parse("2026-01-10T12:00:00Z"),
+                now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = vedtakDocument,
             )
 
@@ -80,7 +80,7 @@ class SoknadTest {
             lagSoknad(soktePerioder = soktePerioder).fattVedtak(
                 utfall = Utfall.DelvisInnvilget(listOf(Periode(LocalDate.of(2026, 1, 8), LocalDate.of(2026, 1, 12)))),
                 fattetAv = veileder,
-                now = Instant.parse("2026-01-10T12:00:00Z"),
+                now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = vedtakDocument,
             )
         }
@@ -98,7 +98,7 @@ class SoknadTest {
                         ),
                     ),
                 fattetAv = veileder,
-                now = Instant.parse("2026-01-10T12:00:00Z"),
+                now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = vedtakDocument,
             )
         }
@@ -110,7 +110,7 @@ class SoknadTest {
             lagSoknad().fattVedtak(
                 utfall = Utfall.DelvisInnvilget(emptyList()),
                 fattetAv = veileder,
-                now = Instant.parse("2026-01-10T12:00:00Z"),
+                now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = vedtakDocument,
             )
         }
@@ -125,7 +125,7 @@ class SoknadTest {
                         listOf(Periode(LocalDate.of(2026, 1, 4), LocalDate.of(2026, 1, 7))),
                     ),
                 fattetAv = veileder,
-                now = Instant.parse("2026-01-10T12:00:00Z"),
+                now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = vedtakDocument,
             )
         }
@@ -137,7 +137,7 @@ class SoknadTest {
             lagSoknad().fattVedtak(
                 utfall = Utfall.Avslag,
                 fattetAv = veileder,
-                now = Instant.parse("2026-01-10T12:00:00Z"),
+                now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = vedtakDocument,
             )
 
@@ -153,7 +153,7 @@ class SoknadTest {
             lagSoknad().fattVedtak(
                 utfall = Utfall.Innvilget,
                 fattetAv = veileder,
-                now = Instant.parse("2026-01-10T12:00:00Z"),
+                now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = vedtakDocument,
             )
 
@@ -161,7 +161,7 @@ class SoknadTest {
             alleredeInnvilget.fattVedtak(
                 utfall = Utfall.Innvilget,
                 fattetAv = veileder,
-                now = Instant.parse("2026-01-11T12:00:00Z"),
+                now = OffsetDateTime.parse("2026-01-11T12:00:00Z"),
                 document = vedtakDocument,
             )
         }
@@ -180,11 +180,11 @@ class SoknadTest {
             lagSoknad().fattVedtak(
                 utfall = Utfall.Innvilget,
                 fattetAv = veileder,
-                now = Instant.parse("2026-01-10T12:00:00Z"),
+                now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = vedtakDocument,
             )
         val journalpostId = JournalpostId("123")
-        val journalfortTidspunkt = Instant.parse("2026-01-11T08:00:00Z")
+        val journalfortTidspunkt = OffsetDateTime.parse("2026-01-11T08:00:00Z")
 
         val journalfort = innvilget.journalforVedtak(journalpostId, journalfortTidspunkt)
 
@@ -196,7 +196,7 @@ class SoknadTest {
     @Test
     fun `journalforVedtak på søknad uten vedtak kaster feil`() {
         assertFailsWith<IllegalStateException> {
-            lagSoknad().journalforVedtak(JournalpostId("123"), Instant.parse("2026-01-11T08:00:00Z"))
+            lagSoknad().journalforVedtak(JournalpostId("123"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
         }
     }
 }

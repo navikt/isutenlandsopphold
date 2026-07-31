@@ -3,7 +3,6 @@ package no.nav.syfo.utenlandsopphold.domain
 import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.common.types.ident.Navident
 import no.nav.syfo.common.types.ident.Personident
-import java.time.Instant
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -43,7 +42,7 @@ data class Soknad(
     fun fattVedtak(
         utfall: Utfall,
         fattetAv: Navident,
-        now: Instant,
+        now: OffsetDateTime,
         document: List<DocumentComponent>,
     ): Soknad {
         check(status == SoknadStatus.MOTTATT) {
@@ -89,7 +88,7 @@ data class Soknad(
      */
     fun journalforVedtak(
         journalpostId: JournalpostId,
-        now: Instant,
+        now: OffsetDateTime,
     ): Soknad {
         val gjeldendeVedtak =
             checkNotNull(vedtak) {
@@ -104,7 +103,7 @@ data class Soknad(
      * på en søknad som faktisk har et vedtak. Selve idempotens- og rekkefølge-sjekken
      * (må være journalført, kan ikke distribueres to ganger) håndheves av Vedtak.distribuer().
      */
-    fun distribuerVedtak(now: Instant): Soknad {
+    fun distribuerVedtak(now: OffsetDateTime): Soknad {
         val gjeldendeVedtak =
             checkNotNull(vedtak) {
                 "Kan ikke distribuere en søknad som ikke har fått vedtak"

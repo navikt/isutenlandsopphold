@@ -1,8 +1,8 @@
 package no.nav.syfo.utenlandsopphold.domain
 
 import no.nav.syfo.common.journalforing.JournalpostId
-import java.time.Instant
 import java.time.LocalDate
+import java.time.OffsetDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -14,7 +14,7 @@ class VedtakTest {
         Vedtak(
             utfall = Utfall.Innvilget,
             fattetAv = veileder,
-            fattetTidspunkt = Instant.parse("2026-01-10T12:00:00Z"),
+            fattetTidspunkt = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
             innvilgedePerioder = listOf(Periode(LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 9))),
             document = vedtakDocument,
         )
@@ -61,7 +61,7 @@ class VedtakTest {
     fun `journalfor setter journalpostId og journalfortTidspunkt`() {
         val vedtak = lagVedtak()
         val journalpostId = JournalpostId("123")
-        val journalfortTidspunkt = Instant.parse("2026-01-11T08:00:00Z")
+        val journalfortTidspunkt = OffsetDateTime.parse("2026-01-11T08:00:00Z")
 
         val journalfort = vedtak.journalfor(journalpostId, journalfortTidspunkt)
 
@@ -72,10 +72,10 @@ class VedtakTest {
 
     @Test
     fun `journalfor på allerede journalført vedtak kaster`() {
-        val journalfort = lagVedtak().journalfor(JournalpostId("123"), Instant.parse("2026-01-11T08:00:00Z"))
+        val journalfort = lagVedtak().journalfor(JournalpostId("123"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
 
         assertFailsWith<IllegalStateException> {
-            journalfort.journalfor(JournalpostId("456"), Instant.parse("2026-01-12T08:00:00Z"))
+            journalfort.journalfor(JournalpostId("456"), OffsetDateTime.parse("2026-01-12T08:00:00Z"))
         }
     }
 
@@ -91,14 +91,14 @@ class VedtakTest {
         val vedtak = lagVedtak()
 
         assertFailsWith<IllegalStateException> {
-            vedtak.distribuer(Instant.parse("2026-01-12T08:00:00Z"))
+            vedtak.distribuer(OffsetDateTime.parse("2026-01-12T08:00:00Z"))
         }
     }
 
     @Test
     fun `distribuer setter distribuertTidspunkt for journalført vedtak`() {
-        val journalfort = lagVedtak().journalfor(JournalpostId("123"), Instant.parse("2026-01-11T08:00:00Z"))
-        val distribuertTidspunkt = Instant.parse("2026-01-12T08:00:00Z")
+        val journalfort = lagVedtak().journalfor(JournalpostId("123"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
+        val distribuertTidspunkt = OffsetDateTime.parse("2026-01-12T08:00:00Z")
 
         val distribuert = journalfort.distribuer(distribuertTidspunkt)
 
@@ -110,11 +110,11 @@ class VedtakTest {
     fun `distribuer på allerede distribuert vedtak kaster`() {
         val distribuert =
             lagVedtak()
-                .journalfor(JournalpostId("123"), Instant.parse("2026-01-11T08:00:00Z"))
-                .distribuer(Instant.parse("2026-01-12T08:00:00Z"))
+                .journalfor(JournalpostId("123"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
+                .distribuer(OffsetDateTime.parse("2026-01-12T08:00:00Z"))
 
         assertFailsWith<IllegalStateException> {
-            distribuert.distribuer(Instant.parse("2026-01-13T08:00:00Z"))
+            distribuert.distribuer(OffsetDateTime.parse("2026-01-13T08:00:00Z"))
         }
     }
 }

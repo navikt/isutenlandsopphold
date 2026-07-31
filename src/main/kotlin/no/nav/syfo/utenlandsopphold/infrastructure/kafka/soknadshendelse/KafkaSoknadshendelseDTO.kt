@@ -5,9 +5,9 @@ import no.nav.syfo.common.util.configuredJacksonMapper
 import no.nav.syfo.utenlandsopphold.domain.ManglerSendtNavException
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
+import no.nav.syfo.utenlandsopphold.util.osloZone
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.ZoneId
 import java.util.UUID
 
 private const val TAG_PERIODEUTLAND = "PERIODEUTLAND"
@@ -77,8 +77,6 @@ fun KafkaSykepengesoknadDTO.toSoknad(): Soknad {
             (sendtNav ?: throw ManglerSendtNavException(id)).atZone(osloZone).toOffsetDateTime(),
     )
 }
-
-val osloZone: ZoneId = ZoneId.of("Europe/Oslo")
 
 private fun String.tilPeriode(): Periode {
     val periodeSvar = objectMapper.readValue(this, KafkaPeriodeSvarDTO::class.java)
