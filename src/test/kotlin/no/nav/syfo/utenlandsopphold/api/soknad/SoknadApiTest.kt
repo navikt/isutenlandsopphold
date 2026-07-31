@@ -327,7 +327,7 @@ class SoknadApiTest {
                     setBody(
                         SoknadVedtakPostDTO(
                             utfall = "GODKJENT",
-                            innvilgetePerioder = emptyList(),
+                            innvilgedePerioder = emptyList(),
                             document =
                                 listOf(
                                     DocumentComponent(
@@ -356,7 +356,7 @@ class SoknadApiTest {
                     setBody(
                         SoknadVedtakPostDTO(
                             utfall = "INNVILGET",
-                            innvilgetePerioder = emptyList(),
+                            innvilgedePerioder = emptyList(),
                             document = emptyList(),
                         ),
                     )
@@ -390,7 +390,7 @@ class SoknadApiTest {
                     setBody(
                         SoknadVedtakPostDTO(
                             utfall = "INNVILGET",
-                            innvilgetePerioder = innvilgedePerioder.map { PeriodeDTO(fom = it.fom, tom = it.tom) },
+                            innvilgedePerioder = innvilgedePerioder.map { PeriodeDTO(fom = it.fom, tom = it.tom) },
                             document =
                                 listOf(
                                     DocumentComponent(
@@ -439,7 +439,7 @@ class SoknadApiTest {
                     setBody(
                         validSoknadVedtakPostDTO().copy(
                             utfall = "DELVIS_INNVILGET",
-                            innvilgetePerioder = listOf(PeriodeDTO(fom = innvilgetPeriode.fom, tom = innvilgetPeriode.tom)),
+                            innvilgedePerioder = listOf(PeriodeDTO(fom = innvilgetPeriode.fom, tom = innvilgetPeriode.tom)),
                         ),
                     )
                 }
@@ -451,11 +451,11 @@ class SoknadApiTest {
             val body = response.body<SoknadVedtakResponseDTO>()
             assertEquals(SoknadStatusDTO.DELVIS_INNVILGET, body.soknad.status)
             assertEquals("DELVIS_INNVILGET", body.soknad.vedtak?.utfall)
-            assertEquals(listOf(PeriodeDTO(fom = innvilgetPeriode.fom, tom = innvilgetPeriode.tom)), body.soknad.vedtak?.innvilgetePerioder)
+            assertEquals(listOf(PeriodeDTO(fom = innvilgetPeriode.fom, tom = innvilgetPeriode.tom)), body.soknad.vedtak?.innvilgedePerioder)
         }
 
     @Test
-    fun `vedtak med avslag returnerer 200 med avslatt soknad uten innvilgete perioder`() =
+    fun `vedtak med avslag returnerer 200 med avslatt soknad uten innvilgede perioder`() =
         testApplication {
             val soknadId = UUID.randomUUID()
             var lagretSoknad: Soknad? = null
@@ -485,11 +485,11 @@ class SoknadApiTest {
             val body = response.body<SoknadVedtakResponseDTO>()
             assertEquals(SoknadStatusDTO.AVSLAG, body.soknad.status)
             assertEquals("AVSLAG", body.soknad.vedtak?.utfall)
-            assertEquals(emptyList(), body.soknad.vedtak?.innvilgetePerioder)
+            assertEquals(emptyList(), body.soknad.vedtak?.innvilgedePerioder)
         }
 
     @Test
-    fun `vedtak med delvis innvilgelse uten innvilgete perioder gir 400`() =
+    fun `vedtak med delvis innvilgelse uten innvilgede perioder gir 400`() =
         testApplication {
             stubHentSoknadOgLagreVedtak(ubruktSoknad)
             val client = setupApiAndClient()
@@ -505,7 +505,7 @@ class SoknadApiTest {
         }
 
     @Test
-    fun `vedtak med delvis innvilgelse med overlappende innvilgete perioder gir 400`() =
+    fun `vedtak med delvis innvilgelse med overlappende innvilgede perioder gir 400`() =
         testApplication {
             stubHentSoknadOgLagreVedtak(ubruktSoknad)
             val client = setupApiAndClient()
@@ -517,7 +517,7 @@ class SoknadApiTest {
                     setBody(
                         validSoknadVedtakPostDTO().copy(
                             utfall = "DELVIS_INNVILGET",
-                            innvilgetePerioder =
+                            innvilgedePerioder =
                                 listOf(
                                     PeriodeDTO(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 5)),
                                     PeriodeDTO(LocalDate.of(2026, 4, 5), LocalDate.of(2026, 4, 7)),
@@ -627,7 +627,7 @@ private val ubruktSoknad =
 private fun validSoknadVedtakPostDTO() =
     SoknadVedtakPostDTO(
         utfall = "INNVILGET",
-        innvilgetePerioder = emptyList(),
+        innvilgedePerioder = emptyList(),
         document =
             listOf(
                 DocumentComponent(

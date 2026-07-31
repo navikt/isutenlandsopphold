@@ -49,7 +49,7 @@ fun Route.registerSoknadApi(
                 val utfall =
                     Utfall.from(
                         utfall = request.utfall,
-                        innvilgedePerioder = request.innvilgetePerioder.map { it.toDomain() },
+                        innvilgedePerioder = request.innvilgedePerioder.map { it.toDomain() },
                     )
                 val soknadMedVedtak =
                     soknadService.fattVedtak(
