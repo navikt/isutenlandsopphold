@@ -204,7 +204,7 @@ class SoknadRepositoryTest {
     }
 
     @Test
-    fun `lagreVedtak persisterer og henter avslag uten innvilgete perioder`() {
+    fun `lagreVedtak persisterer og henter avslag uten innvilgede perioder`() {
         val soknad = soknad()
         repository.lagreMottattSoknad(soknad)
         val vedtak = generateVedtak(utfall = Utfall.Avslag, innvilgedePerioder = emptyList())

@@ -21,7 +21,7 @@ data class SoknaderResponseDTO(
 
 data class SoknadVedtakPostDTO(
     val utfall: String,
-    val innvilgetePerioder: List<PeriodeDTO>,
+    val innvilgedePerioder: List<PeriodeDTO>,
     val document: List<DocumentComponent>,
 )
 
@@ -45,7 +45,7 @@ data class PeriodeDTO(
 
 data class VedtakDTO(
     val utfall: String,
-    val innvilgetePerioder: List<PeriodeDTO>,
+    val innvilgedePerioder: List<PeriodeDTO>,
     val fattetAv: String,
     val fattetTidspunkt: Instant,
 )
@@ -84,7 +84,7 @@ private fun Vedtak.toDTO(): VedtakDTO =
                 is Utfall.DelvisInnvilget -> "DELVIS_INNVILGET"
                 Utfall.Avslag -> "AVSLAG"
             },
-        innvilgetePerioder = innvilgedePerioder.map { it.toDTO() },
+        innvilgedePerioder = innvilgedePerioder.map { it.toDTO() },
         fattetAv = fattetAv.value,
         fattetTidspunkt = fattetTidspunkt,
     )
