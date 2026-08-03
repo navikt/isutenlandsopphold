@@ -1,6 +1,7 @@
-package no.nav.syfo.utenlandsopphold.infrastructure.cronjob
+package no.nav.syfo.utenlandsopphold.infrastructure.cronjob.journalforing
 
 import no.nav.syfo.utenlandsopphold.application.JournalforVedtakService
+import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.Cronjob
 
 /**
  * Cronjob som periodisk journalfører og distribuerer fattede vedtak.

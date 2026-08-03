@@ -11,8 +11,8 @@ import no.nav.syfo.utenlandsopphold.application.ApplicationState
 import no.nav.syfo.utenlandsopphold.application.JournalforVedtakService
 import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.infrastructure.clients.ClientsModule
-import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.JournalforVedtakCronjob
-import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.JournalforingCronjobConfig
+import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.journalforing.JournalforVedtakCronjob
+import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.journalforing.JournalforingCronjobConfig
 import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.launchCronjobs
 import no.nav.syfo.utenlandsopphold.infrastructure.database.Database
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseConfig

@@ -1,4 +1,4 @@
-package no.nav.syfo.utenlandsopphold.infrastructure.cronjob
+package no.nav.syfo.utenlandsopphold.infrastructure.cronjob.journalforing
 
 import no.nav.syfo.utenlandsopphold.getEnvVar
 import kotlin.time.Duration
