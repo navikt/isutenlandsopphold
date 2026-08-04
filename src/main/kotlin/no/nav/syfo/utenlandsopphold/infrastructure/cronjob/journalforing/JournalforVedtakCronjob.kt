@@ -16,9 +16,5 @@ class JournalforVedtakCronjob(
     override val initialDelayMinutes: Long,
     override val intervalDelayMinutes: Long,
 ) : Cronjob {
-    override suspend fun run(): List<Result<Any>> =
-        listOf(
-            runCatching { journalforVedtakService.journalforVedtak() },
-            runCatching { journalforVedtakService.distribuerVedtak() },
-        )
+    override suspend fun run() = journalforVedtakService.journalforVedtak() + journalforVedtakService.distribuerVedtak()
 }
