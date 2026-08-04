@@ -29,17 +29,14 @@ class JournalforVedtakService(
     private val distribusjonService: IDistribusjonService,
     private val freshVedtakGracePeriod: Duration = Duration.ZERO,
 ) {
-    suspend fun journalforVedtak() {
+    suspend fun journalforVedtak(): List<Result<Soknad>> {
         log.debug("Starter journalføring av ujournalførte vedtak")
         val fattetBefore = OffsetDateTime.now().minus(freshVedtakGracePeriod.toJavaDuration())
         val soknaderMedIkkeJournalforteVedtak = soknadRepository.getIkkeJournalforteSoknader(fattetBefore)
 
-        soknaderMedIkkeJournalforteVedtak.forEach { soknad ->
-            try {
-                journalforVedtak(soknad)
-            } catch (exception: Exception) {
-                log.error("Feil ved journalføring av vedtak for søknad ${soknad.id}", exception)
-            }
+        return soknaderMedIkkeJournalforteVedtak.map { soknad ->
+            runCatching { journalforVedtak(soknad) }
+                .onFailure { log.error("Feil ved journalføring av vedtak for søknad ${soknad.id}", it) }
         }
     }
 
@@ -101,17 +98,14 @@ class JournalforVedtakService(
      * feilet, siden dokdistfordeling selv behandler gjentatte bestillinger på samme
      * journalpost som suksess (409 Conflict).
      */
-    suspend fun distribuerVedtak() {
+    suspend fun distribuerVedtak(): List<Result<Unit>> {
         log.debug("Starter distribusjon av journalførte, ikke-distribuerte vedtak")
         val fattetBefore = OffsetDateTime.now().minus(freshVedtakGracePeriod.toJavaDuration())
         val soknaderMedIkkeDistribuerteVedtak = soknadRepository.getSoknaderMedIkkeDistribuerteVedtak(fattetBefore)
 
-        soknaderMedIkkeDistribuerteVedtak.forEach { soknad ->
-            try {
-                distribuerVedtak(soknad)
-            } catch (exception: Exception) {
-                log.error("Feil ved distribusjon av vedtak for søknad ${soknad.id}", exception)
-            }
+        return soknaderMedIkkeDistribuerteVedtak.map { soknad ->
+            runCatching { distribuerVedtak(soknad) }
+                .onFailure { log.error("Feil ved distribusjon av vedtak for søknad ${soknad.id}", it) }
         }
     }
 
