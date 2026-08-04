@@ -19,6 +19,7 @@ class SoknadTest {
                 fattetAv = veileder,
                 now = now,
                 document = vedtakDocument,
+                begrunnelse = null,
             )
 
         assertEquals(SoknadStatus.INNVILGET, resultat.status)
@@ -27,6 +28,7 @@ class SoknadTest {
         assertEquals(veileder, vedtak.fattetAv)
         assertEquals(now, vedtak.fattetTidspunkt)
         assertEquals(resultat.soktePerioder, vedtak.innvilgedePerioder)
+        assertEquals(null, vedtak.begrunnelse)
     }
 
     @Test
@@ -39,12 +41,14 @@ class SoknadTest {
                 fattetAv = veileder,
                 now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = vedtakDocument,
+                begrunnelse = "Delvis innvilget begrunnelse",
             )
 
         assertEquals(SoknadStatus.DELVIS_INNVILGET, resultat.status)
         val vedtak = assertNotNull(resultat.vedtak)
         assertEquals(Utfall.DelvisInnvilget(listOf(innvilgetPeriode)), vedtak.utfall)
         assertEquals(listOf(innvilgetPeriode), vedtak.innvilgedePerioder)
+        assertEquals("Delvis innvilget begrunnelse", vedtak.begrunnelse)
     }
 
     @Test
@@ -62,6 +66,7 @@ class SoknadTest {
                 fattetAv = veileder,
                 now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = vedtakDocument,
+                begrunnelse = "Delvis innvilget begrunnelse",
             )
 
         assertEquals(SoknadStatus.DELVIS_INNVILGET, resultat.status)
@@ -82,6 +87,7 @@ class SoknadTest {
                 fattetAv = veileder,
                 now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = vedtakDocument,
+                begrunnelse = "Delvis innvilget begrunnelse",
             )
         }
     }
@@ -100,6 +106,7 @@ class SoknadTest {
                 fattetAv = veileder,
                 now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = vedtakDocument,
+                begrunnelse = "Delvis innvilget begrunnelse",
             )
         }
     }
@@ -112,6 +119,7 @@ class SoknadTest {
                 fattetAv = veileder,
                 now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = vedtakDocument,
+                begrunnelse = "Delvis innvilget begrunnelse",
             )
         }
     }
@@ -127,6 +135,7 @@ class SoknadTest {
                 fattetAv = veileder,
                 now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = vedtakDocument,
+                begrunnelse = "Delvis innvilget begrunnelse",
             )
         }
     }
@@ -139,12 +148,40 @@ class SoknadTest {
                 fattetAv = veileder,
                 now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = vedtakDocument,
+                begrunnelse = "Avslag begrunnelse",
             )
 
         assertEquals(SoknadStatus.AVSLAG, resultat.status)
         val vedtak = assertNotNull(resultat.vedtak)
         assertEquals(Utfall.Avslag, vedtak.utfall)
         assertEquals(emptyList(), vedtak.innvilgedePerioder)
+        assertEquals("Avslag begrunnelse", vedtak.begrunnelse)
+    }
+
+    @Test
+    fun `fattVedtak om avslag uten begrunnelse kaster feil`() {
+        assertFailsWith<IllegalArgumentException> {
+            lagSoknad().fattVedtak(
+                utfall = Utfall.Avslag,
+                fattetAv = veileder,
+                now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
+                document = vedtakDocument,
+                begrunnelse = null,
+            )
+        }
+    }
+
+    @Test
+    fun `fattVedtak om innvilgelse med begrunnelse kaster feil`() {
+        assertFailsWith<IllegalArgumentException> {
+            lagSoknad().fattVedtak(
+                utfall = Utfall.Innvilget,
+                fattetAv = veileder,
+                now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
+                document = vedtakDocument,
+                begrunnelse = "Skal ikke være satt",
+            )
+        }
     }
 
     @Test
@@ -155,6 +192,7 @@ class SoknadTest {
                 fattetAv = veileder,
                 now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = vedtakDocument,
+                begrunnelse = null,
             )
 
         assertFailsWith<IllegalStateException> {
@@ -163,6 +201,7 @@ class SoknadTest {
                 fattetAv = veileder,
                 now = OffsetDateTime.parse("2026-01-11T12:00:00Z"),
                 document = vedtakDocument,
+                begrunnelse = null,
             )
         }
     }
@@ -182,6 +221,7 @@ class SoknadTest {
                 fattetAv = veileder,
                 now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = vedtakDocument,
+                begrunnelse = null,
             )
         val journalpostId = JournalpostId("123")
         val journalfortTidspunkt = OffsetDateTime.parse("2026-01-11T08:00:00Z")

@@ -43,12 +43,13 @@ class JournalforVedtakServiceTest {
         clearMocks(repositoryMock, pdlClientMock, pdfClientMock, journalforingServiceMock, distribusjonServiceMock)
     }
 
-    private fun soknadMedVedtak(): Soknad =
+    private fun soknadMedVedtak(utfall: Utfall = Utfall.Innvilget): Soknad =
         lagSoknad().fattVedtak(
-            utfall = Utfall.Innvilget,
+            utfall = utfall,
             fattetAv = veileder,
             now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
             document = vedtakDocument,
+            begrunnelse = if (utfall == Utfall.Innvilget) null else "begrunnelse",
         )
 
     @Test

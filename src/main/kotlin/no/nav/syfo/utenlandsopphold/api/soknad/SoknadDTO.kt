@@ -23,6 +23,7 @@ data class SoknadVedtakPostDTO(
     val utfall: String,
     val innvilgedePerioder: List<PeriodeDTO>,
     val document: List<DocumentComponent>,
+    val begrunnelse: String? = null,
 )
 
 data class SoknadVedtakResponseDTO(
@@ -48,6 +49,7 @@ data class VedtakDTO(
     val innvilgedePerioder: List<PeriodeDTO>,
     val fattetAv: String,
     val fattetTidspunkt: LocalDateTime,
+    val begrunnelse: String?,
 )
 
 enum class SoknadStatusDTO { MOTTATT, INNVILGET, DELVIS_INNVILGET, AVSLAG }
@@ -87,6 +89,7 @@ private fun Vedtak.toDTO(): VedtakDTO =
         innvilgedePerioder = innvilgedePerioder.map { it.toDTO() },
         fattetAv = fattetAv.value,
         fattetTidspunkt = fattetTidspunkt.toLocalDateTimeOslo(),
+        begrunnelse = begrunnelse,
     )
 
 fun PeriodeDTO.toDomain(): Periode = Periode(fom = fom, tom = tom)

@@ -44,6 +44,7 @@ data class Soknad(
         fattetAv: Navident,
         now: OffsetDateTime,
         document: List<DocumentComponent>,
+        begrunnelse: String?,
     ): Soknad {
         check(status == SoknadStatus.MOTTATT) {
             "Vedtak kan kun fattes på en MOTTATT soknad, men status er $status"
@@ -77,6 +78,7 @@ data class Soknad(
                     fattetTidspunkt = now,
                     innvilgedePerioder = innvilgedePerioder,
                     document = document,
+                    begrunnelse = begrunnelse,
                 ),
         )
     }

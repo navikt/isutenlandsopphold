@@ -25,6 +25,7 @@ class SoknadService(
         fattetAv: Navident,
         utfall: Utfall,
         document: List<DocumentComponent>,
+        begrunnelse: String?,
     ): Soknad {
         val lagretSoknad =
             transactionManager.inTransaction { transaction ->
@@ -40,6 +41,7 @@ class SoknadService(
                         fattetAv = fattetAv,
                         now = OffsetDateTime.now(),
                         document = document,
+                        begrunnelse = begrunnelse,
                     )
 
                 soknadRepository.lagreVedtak(
