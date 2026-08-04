@@ -15,9 +15,6 @@ data class SoknadstatusRecord(
 ) {
     companion object {
         fun fromSoknad(soknad: Soknad): SoknadstatusRecord {
-            require(soknad.vedtak == null) {
-                "Soknad må ikke ha vedtak for å lage SoknadstatusRecord uten vedtak"
-            }
             return SoknadstatusRecord(
                 uuid = soknad.eksternId,
                 createdAt = soknad.innsendtTidspunkt,
