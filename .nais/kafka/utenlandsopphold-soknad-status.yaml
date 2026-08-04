@@ -2,10 +2,10 @@ apiVersion: kafka.nais.io/v1
 kind: Topic
 metadata:
   annotations:
-    dcat.data.nav.no/title: "Vedtak for søknader om utenlandsopphold utenfor EØS under sykefravær"
+    dcat.data.nav.no/title: "Status for søknader om utenlandsopphold utenfor EØS under sykefravær"
     dcat.data.nav.no/description: >-
-      Topic inneholder vedtak for søknader om utenlandsopphold utenfor EØS under sykefravær
-  name: utenlandsopphold-vedtak
+      Topic inneholder status for søknader om utenlandsopphold utenfor EØS under sykefravær
+  name: utenlandsopphold-soknad-status
   namespace: teamsykefravr
   labels:
     team: teamsykefravr
@@ -22,6 +22,9 @@ spec:
     - team: teamsykefravr
       application: isutenlandsopphold
       access: readwrite
+    - team: teamsykefravr
+      application: syfooversiktsrv
+      access: read
     - team: disykefravar
       application: dvh-sykefravar-airflow-kafka
       access: read
