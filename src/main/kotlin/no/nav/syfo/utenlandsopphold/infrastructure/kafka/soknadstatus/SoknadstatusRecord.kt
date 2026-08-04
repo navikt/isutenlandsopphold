@@ -14,13 +14,10 @@ data class SoknadstatusRecord(
     val vedtak: VedtakRecord? = null,
 ) {
     companion object {
-        fun fromSoknad(
-            soknad: Soknad,
-        ): SoknadstatusRecord {
+        fun fromSoknad(soknad: Soknad): SoknadstatusRecord {
             require(soknad.vedtak == null) {
                 "Soknad må ikke ha vedtak for å lage SoknadstatusRecord uten vedtak"
             }
-
             return SoknadstatusRecord(
                 uuid = soknad.eksternId,
                 createdAt = soknad.innsendtTidspunkt,
@@ -29,9 +26,7 @@ data class SoknadstatusRecord(
             )
         }
 
-        fun fromSoknadMedVedtak(
-            soknad: Soknad,
-        ): SoknadstatusRecord {
+        fun fromSoknadMedVedtak(soknad: Soknad): SoknadstatusRecord {
             require(soknad.vedtak != null) {
                 "Soknad må ha vedtak for å lage SoknadstatusRecord med vedtak"
             }
@@ -40,13 +35,14 @@ data class SoknadstatusRecord(
                 createdAt = soknad.innsendtTidspunkt,
                 personident = soknad.personident.value,
                 status = Soknadstatus.BEHANDLET,
-                vedtak = VedtakRecord(
-                    uuid = soknad.vedtak.vedtakId,
-                    createdAt = soknad.vedtak.fattetTidspunkt,
-                    veilederident = soknad.vedtak.fattetAv.value,
-                    utfall = soknad.vedtak.utfall.toVedtakRecordUtfall(),
-                    innvilgedePerioder = soknad.vedtak.innvilgedePerioder.map { VedtakRecordPeriode(it.fom, it.tom) },
-                ),
+                vedtak =
+                    VedtakRecord(
+                        uuid = soknad.vedtak.vedtakId,
+                        createdAt = soknad.vedtak.fattetTidspunkt,
+                        veilederident = soknad.vedtak.fattetAv.value,
+                        utfall = soknad.vedtak.utfall.toVedtakRecordUtfall(),
+                        innvilgedePerioder = soknad.vedtak.innvilgedePerioder.map { VedtakRecordPeriode(it.fom, it.tom) },
+                    ),
             )
         }
     }
