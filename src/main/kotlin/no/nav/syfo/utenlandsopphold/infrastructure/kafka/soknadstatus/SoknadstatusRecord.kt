@@ -14,14 +14,13 @@ data class SoknadstatusRecord(
     val vedtak: VedtakRecord? = null,
 ) {
     companion object {
-        fun fromSoknad(soknad: Soknad): SoknadstatusRecord {
-            return SoknadstatusRecord(
+        fun fromSoknad(soknad: Soknad) =
+            SoknadstatusRecord(
                 uuid = soknad.eksternId,
                 createdAt = soknad.innsendtTidspunkt,
                 personident = soknad.personident.value,
                 status = Soknadstatus.MOTTATT,
             )
-        }
 
         fun fromSoknadMedVedtak(soknad: Soknad): SoknadstatusRecord {
             require(soknad.vedtak != null) {
