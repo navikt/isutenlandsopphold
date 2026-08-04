@@ -9,10 +9,11 @@ import no.nav.syfo.common.token.texas.EntraIdClient
 import no.nav.syfo.utenlandsopphold.api.apiModule
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
 import no.nav.syfo.utenlandsopphold.application.JournalforVedtakService
-import no.nav.syfo.utenlandsopphold.application.JournalforingCronjobConfig
 import no.nav.syfo.utenlandsopphold.application.SoknadService
-import no.nav.syfo.utenlandsopphold.application.launchJournalforVedtakCronjob
 import no.nav.syfo.utenlandsopphold.infrastructure.clients.ClientsModule
+import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.journalforing.JournalforVedtakCronjob
+import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.journalforing.JournalforingCronjobConfig
+import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.launchCronjobs
 import no.nav.syfo.utenlandsopphold.infrastructure.database.Database
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseConfig
 import no.nav.syfo.utenlandsopphold.infrastructure.database.JdbcTransactionManager
@@ -102,11 +103,17 @@ fun main(args: Array<String>) {
                         soknadService = soknadService,
                     )
 
-                    launchJournalforVedtakCronjob(
+                    launchCronjobs(
                         applicationState = applicationState,
                         leaderElection = clientsModule.leaderElection,
-                        journalforVedtakService = journalforVedtakService,
-                        interval = journalforingCronjobConfig.interval,
+                        cronjobs =
+                            listOf(
+                                JournalforVedtakCronjob(
+                                    journalforVedtakService = journalforVedtakService,
+                                    initialDelayMinutes = journalforingCronjobConfig.initialDelayMinutes,
+                                    intervalDelayMinutes = journalforingCronjobConfig.interval.inWholeMinutes,
+                                ),
+                            ),
                     )
                 }
                 monitor.subscribe(ApplicationStopping) {
