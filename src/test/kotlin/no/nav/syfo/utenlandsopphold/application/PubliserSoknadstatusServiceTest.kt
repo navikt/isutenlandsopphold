@@ -1,9 +1,7 @@
 package no.nav.syfo.utenlandsopphold.application
 
-import io.mockk.Runs
 import io.mockk.clearMocks
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import no.nav.syfo.common.types.ident.Navident
@@ -13,15 +11,11 @@ import no.nav.syfo.utenlandsopphold.domain.DocumentComponentType
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.Utfall
-import no.nav.syfo.utenlandsopphold.domain.lagSoknad
-import no.nav.syfo.utenlandsopphold.domain.vedtakDocument
-import no.nav.syfo.utenlandsopphold.domain.veileder
 import no.nav.syfo.utenlandsopphold.infrastructure.database.JdbcTransactionManager
 import no.nav.syfo.utenlandsopphold.infrastructure.database.TestDatabase
 import no.nav.syfo.utenlandsopphold.infrastructure.database.dropData
 import no.nav.syfo.utenlandsopphold.infrastructure.database.repository.SoknadRepository
 import no.nav.syfo.utenlandsopphold.infrastructure.kafka.soknadstatus.Soknadstatus
-import no.nav.syfo.utenlandsopphold.infrastructure.kafka.soknadstatus.SoknadstatusRecord
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -33,13 +27,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * Tester PubliserSoknadstatusService, både med mocket ISoknadRepository (rene enhetstester av
- * orkestreringslogikken) og mot en ekte database (via SoknadRepository/TestDatabase) med kun
- * Kafka-produsenten mocket, for å verifisere samspillet med reelle spørringer.
- */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class PubliserSoknadstatusServiceITest {
+class PubliserSoknadstatusServiceTest {
     private val database = TestDatabase()
     private val repository = SoknadRepository(database = database)
     private val transactionManager = JdbcTransactionManager(database = database)
@@ -51,16 +40,9 @@ class PubliserSoknadstatusServiceITest {
             soknadstatusProducer = soknadstatusProducerMock,
         )
 
-    private val repositoryMock = mockk<ISoknadRepository>()
-    private val serviceMedMocketRepository =
-        PubliserSoknadstatusService(
-            soknadRepository = repositoryMock,
-            soknadstatusProducer = soknadstatusProducerMock,
-        )
-
     @BeforeEach
     fun resetMocks() {
-        clearMocks(repositoryMock, soknadstatusProducerMock)
+        clearMocks(soknadstatusProducerMock)
     }
 
     @AfterEach
@@ -73,11 +55,11 @@ class PubliserSoknadstatusServiceITest {
         database.stop()
     }
 
-    private fun soknad(): Soknad =
+    private fun soknad(personident: Personident = Personident("11111111111")): Soknad =
         Soknad(
             id = UUID.randomUUID(),
             eksternId = UUID.randomUUID(),
-            personident = Personident("11111111111"),
+            personident = personident,
             soktePerioder = listOf(Periode(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 10))),
             innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
         )
@@ -104,15 +86,6 @@ class PubliserSoknadstatusServiceITest {
             repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = soknadMedVedtak.vedtak))
         }
     }
-
-    private fun soknadMedVedtak(): Soknad =
-        lagSoknad().fattVedtak(
-            utfall = Utfall.Innvilget,
-            fattetAv = veileder,
-            now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
-            document = vedtakDocument,
-            begrunnelse = null,
-        )
 
     @Test
     fun `publiserMottatteSoknader publiserer og markerer soknad som publisert i databasen`() {
@@ -184,87 +157,44 @@ class PubliserSoknadstatusServiceITest {
     }
 
     @Test
-    fun `publiserMottatteSoknader publiserer og oppdaterer upubliserte soknader (mocket repository)`() {
-        val soknad = lagSoknad()
+    fun `feil for en soknad stopper ikke publisering av MOTTATT for de andre`() {
+        val soknadSomFeiler = soknad()
+        val soknadSomLykkes = soknad()
+        repository.lagreMottattSoknad(soknadSomFeiler)
+        repository.lagreMottattSoknad(soknadSomLykkes)
 
-        every { repositoryMock.getUpubliserteSoknader() } returns listOf(soknad)
-        every { repositoryMock.setSoknadPublisert(any(), any()) } just Runs
-        every { soknadstatusProducerMock.publiser(any()) } returns Result.success(Unit)
+        every { soknadstatusProducerMock.publiser(match { it.uuid == soknadSomFeiler.eksternId }) } returns
+            Result.failure(RuntimeException("kafka er nede"))
+        every { soknadstatusProducerMock.publiser(match { it.uuid == soknadSomLykkes.eksternId }) } returns
+            Result.success(Unit)
 
-        val resultater = serviceMedMocketRepository.publiserMottatteSoknader()
+        val resultater = service.publiserMottatteSoknader()
 
-        assertTrue(resultater.single().isSuccess)
-        verify(exactly = 1) { soknadstatusProducerMock.publiser(SoknadstatusRecord.fromSoknad(soknad)) }
-        verify(exactly = 1) { repositoryMock.setSoknadPublisert(soknad.id, any()) }
+        assertEquals(1, resultater.count { it.isFailure })
+        assertEquals(1, resultater.count { it.isSuccess })
+        val upubliserte = repository.getUpubliserteSoknader()
+        assertEquals(1, upubliserte.size)
+        assertEquals(soknadSomFeiler.id, upubliserte.single().id)
     }
 
     @Test
-    fun `feil for en soknad stopper ikke publisering av MOTTATT for de andre (mocket repository)`() {
-        val soknadSomFeiler = lagSoknad()
-        val soknadSomLykkes = lagSoknad()
+    fun `feil for en soknad stopper ikke publisering av BEHANDLET for de andre`() {
+        val soknadSomFeiler = lagreSoknadMedVedtak(soknad())
+        val soknadSomLykkes = lagreSoknadMedVedtak(soknad(Personident("22222222222")))
+        repository.setSoknadPublisert(soknadSomFeiler.id, OffsetDateTime.now())
+        repository.setSoknadPublisert(soknadSomLykkes.id, OffsetDateTime.now())
 
-        every { repositoryMock.getUpubliserteSoknader() } returns listOf(soknadSomFeiler, soknadSomLykkes)
-        every { repositoryMock.setSoknadPublisert(any(), any()) } just Runs
-        every { soknadstatusProducerMock.publiser(any()) } returnsMany
-            listOf(
-                Result.failure(RuntimeException("kafka er nede")),
-                Result.success(Unit),
-            )
+        every { soknadstatusProducerMock.publiser(match { it.uuid == soknadSomFeiler.eksternId }) } returns
+            Result.failure(RuntimeException("kafka er nede"))
+        every { soknadstatusProducerMock.publiser(match { it.uuid == soknadSomLykkes.eksternId }) } returns
+            Result.success(Unit)
 
-        val resultater = serviceMedMocketRepository.publiserMottatteSoknader()
+        val resultater = service.publiserBehandledeSoknader()
 
-        assertTrue(resultater[0].isFailure)
-        assertTrue(resultater[1].isSuccess)
-        verify(exactly = 1) { repositoryMock.setSoknadPublisert(soknadSomLykkes.id, any()) }
-        verify(exactly = 0) { repositoryMock.setSoknadPublisert(soknadSomFeiler.id, any()) }
-    }
-
-    @Test
-    fun `publiserBehandledeSoknader publiserer og oppdaterer soknader med upublisert vedtak (mocket repository)`() {
-        val soknad = soknadMedVedtak()
-
-        every { repositoryMock.getSoknaderMedUpublisertVedtak() } returns listOf(soknad)
-        every { repositoryMock.setVedtakPublisert(any(), any()) } just Runs
-        every { soknadstatusProducerMock.publiser(any()) } returns Result.success(Unit)
-
-        val resultater = serviceMedMocketRepository.publiserBehandledeSoknader()
-
-        assertTrue(resultater.single().isSuccess)
-        verify(exactly = 1) { soknadstatusProducerMock.publiser(SoknadstatusRecord.fromSoknadMedVedtak(soknad)) }
-        verify(exactly = 1) { repositoryMock.setVedtakPublisert(soknad.vedtak!!.vedtakId, any()) }
-    }
-
-    @Test
-    fun `feil for en soknad stopper ikke publisering av BEHANDLET for de andre (mocket repository)`() {
-        val soknadSomFeiler = soknadMedVedtak()
-        val soknadSomLykkes = soknadMedVedtak()
-
-        every { repositoryMock.getSoknaderMedUpublisertVedtak() } returns listOf(soknadSomFeiler, soknadSomLykkes)
-        every { repositoryMock.setVedtakPublisert(any(), any()) } just Runs
-        every { soknadstatusProducerMock.publiser(any()) } returnsMany
-            listOf(
-                Result.failure(RuntimeException("kafka er nede")),
-                Result.success(Unit),
-            )
-
-        serviceMedMocketRepository.publiserBehandledeSoknader()
-
-        verify(exactly = 1) { repositoryMock.setVedtakPublisert(soknadSomLykkes.vedtak!!.vedtakId, any()) }
-        verify(exactly = 0) { repositoryMock.setVedtakPublisert(soknadSomFeiler.vedtak!!.vedtakId, any()) }
-    }
-
-    @Test
-    fun `soknad uten vedtak publiseres ikke som BEHANDLET, men stopper ikke andre (mocket repository)`() {
-        val soknadUtenVedtak = lagSoknad()
-        val soknadMedVedtak = soknadMedVedtak()
-
-        every { repositoryMock.getSoknaderMedUpublisertVedtak() } returns listOf(soknadUtenVedtak, soknadMedVedtak)
-        every { repositoryMock.setVedtakPublisert(any(), any()) } just Runs
-        every { soknadstatusProducerMock.publiser(any()) } returns Result.success(Unit)
-
-        serviceMedMocketRepository.publiserBehandledeSoknader()
-
-        verify(exactly = 1) { repositoryMock.setVedtakPublisert(soknadMedVedtak.vedtak!!.vedtakId, any()) }
-        verify(exactly = 1) { repositoryMock.setVedtakPublisert(any(), any()) }
+        assertEquals(1, resultater.count { it.isFailure })
+        assertEquals(1, resultater.count { it.isSuccess })
+        val upubliserte = repository.getSoknaderMedUpublisertVedtak()
+        assertEquals(1, upubliserte.size)
+        assertEquals(soknadSomFeiler.id, upubliserte.single().id)
     }
 }
