@@ -1,0 +1,5 @@
+ALTER TABLE SOKNAD
+    ADD COLUMN soknad_publisert_at TIMESTAMPTZ;
+
+ALTER TABLE VEDTAK
+    ADD COLUMN vedtak_publisert_at TIMESTAMPTZ;

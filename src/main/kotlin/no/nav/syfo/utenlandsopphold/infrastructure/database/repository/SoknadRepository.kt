@@ -121,6 +121,44 @@ class SoknadRepository(
         }
     }
 
+    override fun getUpubliserteSoknader(): List<Soknad> =
+        withConnection(Connection.TRANSACTION_REPEATABLE_READ) { connection ->
+            val pSoknader = connection.getUpubliserteSoknader()
+            connection.toSoknader(pSoknader)
+        }
+
+    override fun setSoknadPublisert(
+        soknadId: UUID,
+        publisertTidspunkt: OffsetDateTime,
+    ) {
+        withConnection { connection ->
+            connection.prepareStatement(SET_SOKNAD_PUBLISERT).use {
+                it.setObject(1, publisertTidspunkt)
+                it.setObject(2, soknadId)
+                it.executeUpdate()
+            }
+        }
+    }
+
+    override fun getSoknaderMedUpublisertVedtak(): List<Soknad> =
+        withConnection(Connection.TRANSACTION_REPEATABLE_READ) { connection ->
+            val pSoknader = connection.getSoknaderMedUpublisertVedtak()
+            connection.toSoknader(pSoknader)
+        }
+
+    override fun setVedtakPublisert(
+        vedtakId: UUID,
+        publisertTidspunkt: OffsetDateTime,
+    ) {
+        withConnection { connection ->
+            connection.prepareStatement(SET_VEDTAK_PUBLISERT).use {
+                it.setObject(1, publisertTidspunkt)
+                it.setObject(2, vedtakId)
+                it.executeUpdate()
+            }
+        }
+    }
+
     private fun Connection.getSoknad(soknadId: UUID): Soknad? =
         getSoknadBySoknadUuid(soknadId)?.let { pSoknad ->
             toSoknad(pSoknad)
@@ -192,6 +230,16 @@ class SoknadRepository(
     private fun Connection.getSoknaderMedIkkeDistribuerteVedtak(fattetBefore: OffsetDateTime): List<PSoknad> =
         prepareStatement(GET_IKKE_DISTRIBUERTE_SOKNADER).use {
             it.setObject(1, fattetBefore)
+            it.executeQuery().toList { toPSoknad() }
+        }
+
+    private fun Connection.getUpubliserteSoknader(): List<PSoknad> =
+        prepareStatement(GET_UPUBLISERTE_SOKNADER).use {
+            it.executeQuery().toList { toPSoknad() }
+        }
+
+    private fun Connection.getSoknaderMedUpublisertVedtak(): List<PSoknad> =
+        prepareStatement(GET_SOKNADER_MED_UPUBLISERT_VEDTAK).use {
             it.executeQuery().toList { toPSoknad() }
         }
 
@@ -309,6 +357,18 @@ class SoknadRepository(
                     AND v.fattet_tidspunkt < ?
             """
 
+        private const val GET_UPUBLISERTE_SOKNADER =
+            """
+                SELECT * FROM soknad WHERE soknad_publisert_at IS NULL
+            """
+
+        private const val GET_SOKNADER_MED_UPUBLISERT_VEDTAK =
+            """
+                SELECT DISTINCT s.* FROM soknad s
+                    INNER JOIN vedtak v ON v.soknad_id = s.id
+                WHERE v.vedtak_publisert_at IS NULL AND s.soknad_publisert_at IS NOT NULL
+            """
+
         private const val SET_VEDTAK_JOURNALFORT =
             """
                 UPDATE vedtak
@@ -320,6 +380,20 @@ class SoknadRepository(
             """
                 UPDATE vedtak
                 SET distribuert_tidspunkt = ?
+                WHERE uuid = ?
+            """
+
+        private const val SET_SOKNAD_PUBLISERT =
+            """
+                UPDATE soknad
+                SET soknad_publisert_at = ?
+                WHERE uuid = ?
+            """
+
+        private const val SET_VEDTAK_PUBLISERT =
+            """
+                UPDATE vedtak
+                SET vedtak_publisert_at = ?
                 WHERE uuid = ?
             """
 
