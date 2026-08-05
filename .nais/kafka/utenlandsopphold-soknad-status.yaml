@@ -1,0 +1,30 @@
+apiVersion: kafka.nais.io/v1
+kind: Topic
+metadata:
+  annotations:
+    dcat.data.nav.no/title: "Status for søknader om utenlandsopphold utenfor EØS under sykefravær"
+    dcat.data.nav.no/description: >-
+      Topic inneholder status for søknader om utenlandsopphold utenfor EØS under sykefravær
+  name: utenlandsopphold-soknad-status
+  namespace: teamsykefravr
+  labels:
+    team: teamsykefravr
+spec:
+  pool: {{ kafkaPool }}
+  config:
+    cleanupPolicy: delete
+    minimumInSyncReplicas: 1
+    partitions: 2
+    replication: 3
+    retentionBytes: -1  # -1 means unlimited
+    retentionHours: 8760  # 1 year
+  acl:
+    - team: teamsykefravr
+      application: isutenlandsopphold
+      access: readwrite
+    - team: teamsykefravr
+      application: syfooversiktsrv
+      access: read
+    - team: disykefravar
+      application: dvh-sykefravar-airflow-kafka
+      access: read
