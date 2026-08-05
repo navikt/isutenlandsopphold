@@ -38,20 +38,28 @@ data class Vedtak(
     val innvilgedePerioder: List<Periode>,
     val vedtakId: UUID = UUID.randomUUID(),
     val document: List<DocumentComponent>,
+    val begrunnelse: String? = null,
     val journalpostId: JournalpostId? = null,
     val journalfortTidspunkt: OffsetDateTime? = null,
     val distribuertTidspunkt: OffsetDateTime? = null,
 ) {
     init {
         when (utfall) {
-            Utfall.Innvilget -> require(innvilgedePerioder.isNotEmpty()) { "Innvilget vedtak må ha innvilgede perioder" }
+            Utfall.Innvilget -> {
+                require(innvilgedePerioder.isNotEmpty()) { "Innvilget vedtak må ha innvilgede perioder" }
+                require(begrunnelse == null) { "Innvilget vedtak skal ikke ha begrunnelse" }
+            }
             is Utfall.DelvisInnvilget -> {
                 require(utfall.innvilgedePerioder.isNotEmpty()) { "Delvis innvilget vedtak må ha innvilgede perioder" }
                 require(utfall.innvilgedePerioder == innvilgedePerioder) {
                     "Innvilgede perioder på utfall og vedtak må være like"
                 }
+                require(!begrunnelse.isNullOrBlank()) { "Delvis innvilget vedtak må ha begrunnelse" }
             }
-            Utfall.Avslag -> require(innvilgedePerioder.isEmpty()) { "Avslått vedtak skal ikke ha innvilgede perioder" }
+            Utfall.Avslag -> {
+                require(innvilgedePerioder.isEmpty()) { "Avslått vedtak skal ikke ha innvilgede perioder" }
+                require(!begrunnelse.isNullOrBlank()) { "Avslått vedtak må ha begrunnelse" }
+            }
         }
     }
 

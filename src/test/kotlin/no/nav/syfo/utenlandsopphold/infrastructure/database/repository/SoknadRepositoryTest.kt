@@ -188,7 +188,12 @@ class SoknadRepositoryTest {
         val innvilgedePerioder = listOf(Periode(LocalDate.of(2026, 4, 3), LocalDate.of(2026, 4, 5)))
         val soknad = soknad(soktePerioder = soktePerioder)
         repository.lagreMottattSoknad(soknad)
-        val vedtak = generateVedtak(utfall = Utfall.DelvisInnvilget(innvilgedePerioder), innvilgedePerioder = innvilgedePerioder)
+        val vedtak =
+            generateVedtak(
+                utfall = Utfall.DelvisInnvilget(innvilgedePerioder),
+                innvilgedePerioder = innvilgedePerioder,
+                begrunnelse = "Delvis innvilget begrunnelse",
+            )
         transactionManager.inTransaction { transaction ->
             val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
             repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = vedtak))
@@ -199,13 +204,19 @@ class SoknadRepositoryTest {
         assertEquals(SoknadStatus.DELVIS_INNVILGET, hentetPaNytt.status)
         assertEquals(Utfall.DelvisInnvilget(innvilgedePerioder), hentetPaNytt.vedtak?.utfall)
         assertEquals(innvilgedePerioder, hentetPaNytt.vedtak?.innvilgedePerioder)
+        assertEquals("Delvis innvilget begrunnelse", hentetPaNytt.vedtak?.begrunnelse)
     }
 
     @Test
     fun `lagreVedtak persisterer og henter avslag uten innvilgede perioder`() {
         val soknad = soknad()
         repository.lagreMottattSoknad(soknad)
-        val vedtak = generateVedtak(utfall = Utfall.Avslag, innvilgedePerioder = emptyList())
+        val vedtak =
+            generateVedtak(
+                utfall = Utfall.Avslag,
+                innvilgedePerioder = emptyList(),
+                begrunnelse = "Avslag begrunnelse",
+            )
         transactionManager.inTransaction { transaction ->
             val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
             repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = vedtak))
@@ -216,6 +227,24 @@ class SoknadRepositoryTest {
         assertEquals(SoknadStatus.AVSLAG, hentetPaNytt.status)
         assertEquals(Utfall.Avslag, hentetPaNytt.vedtak?.utfall)
         assertEquals(emptyList(), hentetPaNytt.vedtak?.innvilgedePerioder)
+        assertEquals("Avslag begrunnelse", hentetPaNytt.vedtak?.begrunnelse)
+    }
+
+    @Test
+    fun `lagreVedtak persisterer null begrunnelse for innvilget vedtak`() {
+        val soktePerioder = listOf(Periode(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 10)))
+        val soknad = soknad(soktePerioder = soktePerioder)
+        repository.lagreMottattSoknad(soknad)
+        val vedtak = generateVedtak(innvilgedePerioder = soktePerioder)
+        transactionManager.inTransaction { transaction ->
+            val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
+            repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = vedtak))
+        }
+
+        val hentetPaNytt = repository.hentSoknader(personident).single()
+
+        assertEquals(SoknadStatus.INNVILGET, hentetPaNytt.status)
+        assertNull(hentetPaNytt.vedtak?.begrunnelse)
     }
 
     @Test
@@ -441,12 +470,14 @@ class SoknadRepositoryTest {
                     LocalDate.of(2026, 4, 10),
                 ),
             ),
+        begrunnelse: String? = null,
     ): Vedtak =
         Vedtak(
             utfall = utfall,
             fattetAv = Navident("Z999999"),
             fattetTidspunkt = OffsetDateTime.parse("2026-03-05T10:00:00Z"),
             innvilgedePerioder = innvilgedePerioder,
+            begrunnelse = begrunnelse,
             document =
                 listOf(
                     DocumentComponent(

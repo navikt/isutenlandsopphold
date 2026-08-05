@@ -246,7 +246,8 @@ class SoknadRepository(
                 it.setString(3, vedtak.fattetAv.value)
                 it.setObject(4, vedtak.fattetTidspunkt)
                 it.setObject(5, documentJson)
-                it.setObject(6, soknadId)
+                it.setString(6, vedtak.begrunnelse)
+                it.setObject(7, soknadId)
                 it.executeQuery().toList { toPVedtak() }.singleOrNull()
                     ?: throw IllegalArgumentException("Fant ikke søknad med id $soknadId")
             }
@@ -357,9 +358,10 @@ class SoknadRepository(
                     utfall,
                     fattet_av,
                     fattet_tidspunkt,
-                    document
+                    document,
+                    begrunnelse
                 )
-                SELECT ?, s.id, ?, ?, ?, ?
+                SELECT ?, s.id, ?, ?, ?, ?, ?
                 FROM soknad s
                 WHERE s.uuid = ?
                 RETURNING *
@@ -412,6 +414,7 @@ internal fun ResultSet.toPVedtak(): PVedtak =
         fattetAv = getString("fattet_av"),
         fattetTidspunkt = getObject("fattet_tidspunkt", OffsetDateTime::class.java),
         document = getString("document"),
+        begrunnelse = getString("begrunnelse"),
         journalpostId = getString("journalpost_id"),
         journalfortTidspunkt = getObject("journalfort_tidspunkt", OffsetDateTime::class.java),
         distribuertTidspunkt = getObject("distribuert_tidspunkt", OffsetDateTime::class.java),

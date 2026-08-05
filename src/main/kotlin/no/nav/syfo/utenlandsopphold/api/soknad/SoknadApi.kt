@@ -34,6 +34,16 @@ fun Route.registerSoknadApi(
         post("/{soknadId}/vedtak") {
             val request = call.receive<SoknadVedtakPostDTO>()
             require(request.document.isNotEmpty()) { "document kan ikke være tomt" }
+            when (request.utfall) {
+                "AVSLAG", "DELVIS_INNVILGET" ->
+                    require(!request.begrunnelse.isNullOrBlank()) {
+                        "begrunnelse er påkrevd og kan ikke være blank for utfall ${request.utfall}"
+                    }
+                "INNVILGET" ->
+                    require(request.begrunnelse == null) {
+                        "begrunnelse skal ikke settes for utfall INNVILGET"
+                    }
+            }
 
             val soknadId = UUID.fromString(requireNotNull(call.parameters["soknadId"]) { "Missing soknadId" })
             val soknad =
@@ -57,6 +67,7 @@ fun Route.registerSoknadApi(
                         utfall = utfall,
                         fattetAv = authorizedUser.navident,
                         document = request.document,
+                        begrunnelse = request.begrunnelse,
                     )
 
                 call.respond(soknadMedVedtak.toResponseDTO())

@@ -34,6 +34,7 @@ class VedtakTest {
             lagVedtak().copy(
                 utfall = Utfall.DelvisInnvilget(listOf(innvilgetPeriode)),
                 innvilgedePerioder = listOf(innvilgetPeriode),
+                begrunnelse = "Delvis innvilget begrunnelse",
             )
 
         assertEquals(Utfall.DelvisInnvilget(listOf(innvilgetPeriode)), vedtak.utfall)
@@ -53,7 +54,54 @@ class VedtakTest {
     @Test
     fun `avslatt vedtak med innvilgede perioder kaster`() {
         assertFailsWith<IllegalArgumentException> {
-            lagVedtak().copy(utfall = Utfall.Avslag)
+            lagVedtak().copy(utfall = Utfall.Avslag, begrunnelse = "Avslag begrunnelse")
+        }
+    }
+
+    @Test
+    fun `avslatt vedtak uten begrunnelse kaster`() {
+        assertFailsWith<IllegalArgumentException> {
+            lagVedtak().copy(utfall = Utfall.Avslag, innvilgedePerioder = emptyList(), begrunnelse = null)
+        }
+    }
+
+    @Test
+    fun `avslatt vedtak med blank begrunnelse kaster`() {
+        assertFailsWith<IllegalArgumentException> {
+            lagVedtak().copy(utfall = Utfall.Avslag, innvilgedePerioder = emptyList(), begrunnelse = "   ")
+        }
+    }
+
+    @Test
+    fun `delvis innvilget vedtak uten begrunnelse kaster`() {
+        val innvilgetPeriode = Periode(LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 7))
+
+        assertFailsWith<IllegalArgumentException> {
+            lagVedtak().copy(
+                utfall = Utfall.DelvisInnvilget(listOf(innvilgetPeriode)),
+                innvilgedePerioder = listOf(innvilgetPeriode),
+                begrunnelse = null,
+            )
+        }
+    }
+
+    @Test
+    fun `delvis innvilget vedtak med blank begrunnelse kaster`() {
+        val innvilgetPeriode = Periode(LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 7))
+
+        assertFailsWith<IllegalArgumentException> {
+            lagVedtak().copy(
+                utfall = Utfall.DelvisInnvilget(listOf(innvilgetPeriode)),
+                innvilgedePerioder = listOf(innvilgetPeriode),
+                begrunnelse = " ",
+            )
+        }
+    }
+
+    @Test
+    fun `innvilget vedtak med begrunnelse kaster`() {
+        assertFailsWith<IllegalArgumentException> {
+            lagVedtak().copy(begrunnelse = "Skal ikke være satt")
         }
     }
 
