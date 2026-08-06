@@ -20,7 +20,7 @@ class PublishSoknadstatusService(
 
     private fun publishMottattSoknad(soknad: Soknad) {
         soknadstatusProducer.publish(SoknadstatusRecord.fromSoknad(soknad)).getOrThrow()
-        soknadRepository.setSoknadPublished(soknadId = soknad.id, publisertTidspunkt = OffsetDateTime.now())
+        soknadRepository.setSoknadPublished(soknadId = soknad.id, publishedAt = OffsetDateTime.now())
         log.info("Søknad ${soknad.id} publisert som MOTTATT")
     }
 
@@ -41,7 +41,7 @@ class PublishSoknadstatusService(
 
         soknadstatusProducer.publish(SoknadstatusRecord.fromSoknadMedVedtak(soknad)).getOrThrow()
 
-        soknadRepository.setVedtakPublished(vedtakId = vedtak.vedtakId, publisertTidspunkt = OffsetDateTime.now())
+        soknadRepository.setVedtakPublished(vedtakId = vedtak.vedtakId, publishedAt = OffsetDateTime.now())
         log.info("Vedtak ${vedtak.vedtakId} for søknad ${soknad.id} publisert som BEHANDLET")
     }
 

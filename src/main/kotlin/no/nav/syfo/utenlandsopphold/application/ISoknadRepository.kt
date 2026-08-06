@@ -65,14 +65,14 @@ interface ISoknadRepository {
 
     fun setSoknadPublished(
         soknadId: UUID,
-        publisertTidspunkt: OffsetDateTime,
+        publishedAt: OffsetDateTime,
     )
 
     fun getSoknaderMedUnpublishedVedtak(): List<Soknad>
 
     fun setVedtakPublished(
         vedtakId: UUID,
-        publisertTidspunkt: OffsetDateTime,
+        publishedAt: OffsetDateTime,
     )
 
     fun lagreMottattSoknad(soknad: Soknad): LagreMottattSoknadResultat

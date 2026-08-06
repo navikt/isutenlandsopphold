@@ -129,11 +129,11 @@ class SoknadRepository(
 
     override fun setSoknadPublished(
         soknadId: UUID,
-        publisertTidspunkt: OffsetDateTime,
+        publishedAt: OffsetDateTime,
     ) {
         withConnection { connection ->
             connection.prepareStatement(SET_SOKNAD_PUBLISHED_AT).use {
-                it.setObject(1, publisertTidspunkt)
+                it.setObject(1, publishedAt)
                 it.setObject(2, soknadId)
                 it.executeUpdate()
             }
@@ -148,11 +148,11 @@ class SoknadRepository(
 
     override fun setVedtakPublished(
         vedtakId: UUID,
-        publisertTidspunkt: OffsetDateTime,
+        publishedAt: OffsetDateTime,
     ) {
         withConnection { connection ->
             connection.prepareStatement(SET_VEDTAK_PUBLISHED_AT).use {
-                it.setObject(1, publisertTidspunkt)
+                it.setObject(1, publishedAt)
                 it.setObject(2, vedtakId)
                 it.executeUpdate()
             }
