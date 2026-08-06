@@ -17,7 +17,7 @@ fun kafkaSoknadstatusProducer(kafkaEnvironment: KafkaEnvironment): Producer<Stri
 class SoknadstatusProducer(
     private val kafkaProducer: Producer<String, SoknadstatusRecord>,
 ) : ISoknadstatusProducer {
-    override fun publiser(record: SoknadstatusRecord): Result<Unit> =
+    override fun publish(record: SoknadstatusRecord): Result<Unit> =
         runCatching {
             kafkaProducer
                 .send(ProducerRecord(UTENLANDSOPPHOLD_SOKNAD_STATUS_TOPIC, record.uuid.toString(), record))

@@ -362,58 +362,58 @@ class SoknadRepositoryTest {
     }
 
     @Test
-    fun `getUpubliserteSoknader returnerer kun soknader uten soknad_publisert_at`() {
-        opprettSoknadMedVedtak(journalpostId = null, soknadPublisertAt = null)
-        opprettSoknadMedVedtak(journalpostId = null, soknadPublisertAt = OffsetDateTime.now())
+    fun `getUnpublishedSoknader returnerer kun soknader uten soknad_publisert_at`() {
+        opprettSoknadMedVedtak(journalpostId = null, soknadPublishedAt = null)
+        opprettSoknadMedVedtak(journalpostId = null, soknadPublishedAt = OffsetDateTime.now())
 
-        val upubliserte = repository.getUpubliserteSoknader()
+        val upubliserte = repository.getUnpublishedSoknader()
 
         assertEquals(1, upubliserte.size)
     }
 
     @Test
-    fun `setSoknadPublisert oppdaterer soknad_publisert_at`() {
+    fun `setSoknadPublished oppdaterer soknad_publisert_at`() {
         val soknad = soknad()
         repository.lagreMottattSoknad(soknad)
-        assertEquals(1, repository.getUpubliserteSoknader().size)
+        assertEquals(1, repository.getUnpublishedSoknader().size)
 
-        repository.setSoknadPublisert(soknad.id, OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS))
+        repository.setSoknadPublished(soknad.id, OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS))
 
-        assertTrue(repository.getUpubliserteSoknader().isEmpty())
+        assertTrue(repository.getUnpublishedSoknader().isEmpty())
     }
 
     @Test
-    fun `getSoknaderMedUpublisertVedtak returnerer kun soknader med publisert soknad og upublisert vedtak`() {
-        opprettSoknadMedVedtak(journalpostId = null, soknadPublisertAt = null, vedtakPublisertAt = null)
-        opprettSoknadMedVedtak(journalpostId = null, soknadPublisertAt = OffsetDateTime.now(), vedtakPublisertAt = null)
+    fun `getSoknaderMedUnpublishedVedtak returnerer kun soknader med publisert soknad og upublisert vedtak`() {
+        opprettSoknadMedVedtak(journalpostId = null, soknadPublishedAt = null, vedtakPublishedAt = null)
+        opprettSoknadMedVedtak(journalpostId = null, soknadPublishedAt = OffsetDateTime.now(), vedtakPublishedAt = null)
         opprettSoknadMedVedtak(
             journalpostId = null,
-            soknadPublisertAt = OffsetDateTime.now(),
-            vedtakPublisertAt = OffsetDateTime.now(),
+            soknadPublishedAt = OffsetDateTime.now(),
+            vedtakPublishedAt = OffsetDateTime.now(),
         )
 
-        val soknaderMedUpublisertVedtak = repository.getSoknaderMedUpublisertVedtak()
+        val soknaderMedUnpublishedVedtak = repository.getSoknaderMedUnpublishedVedtak()
 
-        assertEquals(1, soknaderMedUpublisertVedtak.size)
+        assertEquals(1, soknaderMedUnpublishedVedtak.size)
     }
 
     @Test
-    fun `setVedtakPublisert oppdaterer vedtak_publisert_at`() {
+    fun `setVedtakPublished oppdaterer vedtak_published_at`() {
         val vedtakId =
-            opprettSoknadMedVedtak(journalpostId = null, soknadPublisertAt = OffsetDateTime.now(), vedtakPublisertAt = null)
-        assertEquals(1, repository.getSoknaderMedUpublisertVedtak().size)
+            opprettSoknadMedVedtak(journalpostId = null, soknadPublishedAt = OffsetDateTime.now(), vedtakPublishedAt = null)
+        assertEquals(1, repository.getSoknaderMedUnpublishedVedtak().size)
 
-        repository.setVedtakPublisert(vedtakId, OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS))
+        repository.setVedtakPublished(vedtakId, OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS))
 
-        assertTrue(repository.getSoknaderMedUpublisertVedtak().isEmpty())
+        assertTrue(repository.getSoknaderMedUnpublishedVedtak().isEmpty())
     }
 
     private fun opprettSoknadMedVedtak(
         journalpostId: String?,
         distribuertTidspunkt: OffsetDateTime? = null,
         fattetTidspunkt: OffsetDateTime = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
-        soknadPublisertAt: OffsetDateTime? = null,
-        vedtakPublisertAt: OffsetDateTime? = null,
+        soknadPublishedAt: OffsetDateTime? = null,
+        vedtakPublishedAt: OffsetDateTime? = null,
     ): UUID {
         val soknadUuid = UUID.randomUUID()
         val vedtakUuid = UUID.randomUUID()
@@ -422,7 +422,7 @@ class SoknadRepositoryTest {
             connection
                 .prepareStatement(
                     """
-                    INSERT INTO SOKNAD (uuid, ekstern_id, personident, innsendt_tidspunkt, soknad_publisert_at)
+                    INSERT INTO SOKNAD (uuid, ekstern_id, personident, innsendt_tidspunkt, soknad_published_at)
                     VALUES (?, ?, ?, ?, ?)
                     """,
                 ).use { statement ->
@@ -430,7 +430,7 @@ class SoknadRepositoryTest {
                     statement.setObject(2, UUID.randomUUID())
                     statement.setString(3, personident.value)
                     statement.setObject(4, OffsetDateTime.parse("2026-01-02T08:00:00Z"))
-                    statement.setObject(5, soknadPublisertAt)
+                    statement.setObject(5, soknadPublishedAt)
                     statement.executeUpdate()
                 }
 
@@ -467,7 +467,7 @@ class SoknadRepositoryTest {
                             journalpost_id,
                             journalfort_tidspunkt,
                             distribuert_tidspunkt,
-                            vedtak_publisert_at
+                            vedtak_published_at
                         )
                         VALUES (?, ?, 'INNVILGET', 'Z990000', ?, ?::jsonb, ?, ?, ?, ?)
                         RETURNING id
@@ -480,7 +480,7 @@ class SoknadRepositoryTest {
                         statement.setString(5, journalpostId)
                         statement.setObject(6, journalpostId?.let { OffsetDateTime.now() })
                         statement.setObject(7, distribuertTidspunkt)
-                        statement.setObject(8, vedtakPublisertAt)
+                        statement.setObject(8, vedtakPublishedAt)
                         statement.executeQuery().use { rs ->
                             rs.next()
                             rs.getInt("id")

@@ -1,6 +1,6 @@
 package no.nav.syfo.utenlandsopphold.infrastructure.cronjob.soknadstatus
 
-import no.nav.syfo.utenlandsopphold.application.PubliserSoknadstatusService
+import no.nav.syfo.utenlandsopphold.application.PublishSoknadstatusService
 import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.Cronjob
 
 /**
@@ -8,10 +8,10 @@ import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.Cronjob
  * til soknadstatus-topicet.
  */
 class PubliserSoknadstatusCronjob(
-    private val publiserSoknadstatusService: PubliserSoknadstatusService,
+    private val publishSoknadstatusService: PublishSoknadstatusService,
     override val initialDelayMinutes: Long,
     override val intervalDelayMinutes: Long,
 ) : Cronjob {
     override suspend fun run(): List<Result<Any>> =
-        publiserSoknadstatusService.publiserMottatteSoknader() + publiserSoknadstatusService.publiserBehandledeSoknader()
+        publishSoknadstatusService.publishMottatteSoknader() + publishSoknadstatusService.publishBehandledeSoknader()
 }

@@ -121,18 +121,18 @@ class SoknadRepository(
         }
     }
 
-    override fun getUpubliserteSoknader(): List<Soknad> =
+    override fun getUnpublishedSoknader(): List<Soknad> =
         withConnection(Connection.TRANSACTION_REPEATABLE_READ) { connection ->
-            val pSoknader = connection.getUpubliserteSoknader()
+            val pSoknader = connection.getUnpublishedSoknader()
             connection.toSoknader(pSoknader)
         }
 
-    override fun setSoknadPublisert(
+    override fun setSoknadPublished(
         soknadId: UUID,
         publisertTidspunkt: OffsetDateTime,
     ) {
         withConnection { connection ->
-            connection.prepareStatement(SET_SOKNAD_PUBLISERT).use {
+            connection.prepareStatement(SET_SOKNAD_PUBLISHED_AT).use {
                 it.setObject(1, publisertTidspunkt)
                 it.setObject(2, soknadId)
                 it.executeUpdate()
@@ -140,18 +140,18 @@ class SoknadRepository(
         }
     }
 
-    override fun getSoknaderMedUpublisertVedtak(): List<Soknad> =
+    override fun getSoknaderMedUnpublishedVedtak(): List<Soknad> =
         withConnection(Connection.TRANSACTION_REPEATABLE_READ) { connection ->
-            val pSoknader = connection.getSoknaderMedUpublisertVedtak()
+            val pSoknader = connection.getSoknaderMedUnpublishedVedtak()
             connection.toSoknader(pSoknader)
         }
 
-    override fun setVedtakPublisert(
+    override fun setVedtakPublished(
         vedtakId: UUID,
         publisertTidspunkt: OffsetDateTime,
     ) {
         withConnection { connection ->
-            connection.prepareStatement(SET_VEDTAK_PUBLISERT).use {
+            connection.prepareStatement(SET_VEDTAK_PUBLISHED_AT).use {
                 it.setObject(1, publisertTidspunkt)
                 it.setObject(2, vedtakId)
                 it.executeUpdate()
@@ -233,13 +233,13 @@ class SoknadRepository(
             it.executeQuery().toList { toPSoknad() }
         }
 
-    private fun Connection.getUpubliserteSoknader(): List<PSoknad> =
-        prepareStatement(GET_UPUBLISERTE_SOKNADER).use {
+    private fun Connection.getUnpublishedSoknader(): List<PSoknad> =
+        prepareStatement(GET_UNPUBLISHED_SOKNADER).use {
             it.executeQuery().toList { toPSoknad() }
         }
 
-    private fun Connection.getSoknaderMedUpublisertVedtak(): List<PSoknad> =
-        prepareStatement(GET_SOKNADER_MED_UPUBLISERT_VEDTAK).use {
+    private fun Connection.getSoknaderMedUnpublishedVedtak(): List<PSoknad> =
+        prepareStatement(GET_SOKNADER_MED_UNPUBLISHED_VEDTAK).use {
             it.executeQuery().toList { toPSoknad() }
         }
 
@@ -357,16 +357,16 @@ class SoknadRepository(
                     AND v.fattet_tidspunkt < ?
             """
 
-        private const val GET_UPUBLISERTE_SOKNADER =
+        private const val GET_UNPUBLISHED_SOKNADER =
             """
-                SELECT * FROM soknad WHERE soknad_publisert_at IS NULL
+                SELECT * FROM soknad WHERE soknad_published_at IS NULL
             """
 
-        private const val GET_SOKNADER_MED_UPUBLISERT_VEDTAK =
+        private const val GET_SOKNADER_MED_UNPUBLISHED_VEDTAK =
             """
                 SELECT DISTINCT s.* FROM soknad s
                     INNER JOIN vedtak v ON v.soknad_id = s.id
-                WHERE v.vedtak_publisert_at IS NULL AND s.soknad_publisert_at IS NOT NULL
+                WHERE v.vedtak_published_at IS NULL AND s.soknad_published_at IS NOT NULL
             """
 
         private const val SET_VEDTAK_JOURNALFORT =
@@ -383,17 +383,17 @@ class SoknadRepository(
                 WHERE uuid = ?
             """
 
-        private const val SET_SOKNAD_PUBLISERT =
+        private const val SET_SOKNAD_PUBLISHED_AT =
             """
                 UPDATE soknad
-                SET soknad_publisert_at = ?
+                SET soknad_published_at = ?
                 WHERE uuid = ?
             """
 
-        private const val SET_VEDTAK_PUBLISERT =
+        private const val SET_VEDTAK_PUBLISHED_AT =
             """
                 UPDATE vedtak
-                SET vedtak_publisert_at = ?
+                SET vedtak_published_at = ?
                 WHERE uuid = ?
             """
 

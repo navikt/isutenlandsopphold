@@ -8,9 +8,9 @@ import no.nav.syfo.common.types.ident.Navident
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponentType
-import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.lagSoknad
 import no.nav.syfo.utenlandsopphold.infrastructure.database.JdbcTransactionManager
 import no.nav.syfo.utenlandsopphold.infrastructure.database.TestDatabase
 import no.nav.syfo.utenlandsopphold.infrastructure.database.dropData
@@ -20,22 +20,20 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.TestInstance
-import java.time.LocalDate
 import java.time.OffsetDateTime
-import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class PubliserSoknadstatusServiceTest {
+class PublishSoknadstatusServiceTest {
     private val database = TestDatabase()
     private val repository = SoknadRepository(database = database)
     private val transactionManager = JdbcTransactionManager(database = database)
     private val soknadstatusProducerMock = mockk<ISoknadstatusProducer>()
 
     private val service =
-        PubliserSoknadstatusService(
+        PublishSoknadstatusService(
             soknadRepository = repository,
             soknadstatusProducer = soknadstatusProducerMock,
         )
@@ -55,14 +53,7 @@ class PubliserSoknadstatusServiceTest {
         database.stop()
     }
 
-    private fun soknad(personident: Personident = Personident("11111111111")): Soknad =
-        Soknad(
-            id = UUID.randomUUID(),
-            eksternId = UUID.randomUUID(),
-            personident = personident,
-            soktePerioder = listOf(Periode(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 10))),
-            innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
-        )
+    private fun soknad(personident: Personident = Personident("11111111111")) = lagSoknad().copy(personident = personident)
 
     private fun lagreSoknadMedVedtak(soknad: Soknad): Soknad {
         repository.lagreMottattSoknad(soknad)
@@ -79,7 +70,7 @@ class PubliserSoknadstatusServiceTest {
                             texts = listOf("Søknaden din er innvilget"),
                         ),
                     ),
-                begrunnelse = null,
+                begrunnelse = "Begrunnelse for vedtaket",
             )
         return transactionManager.inTransaction { transaction ->
             val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
@@ -88,72 +79,72 @@ class PubliserSoknadstatusServiceTest {
     }
 
     @Test
-    fun `publiserMottatteSoknader publiserer og markerer soknad som publisert i databasen`() {
+    fun `publishMottatteSoknader publiserer og markerer soknad som publisert i databasen`() {
         val soknad = soknad()
         repository.lagreMottattSoknad(soknad)
 
-        every { soknadstatusProducerMock.publiser(any()) } returns Result.success(Unit)
+        every { soknadstatusProducerMock.publish(any()) } returns Result.success(Unit)
 
-        val resultater = service.publiserMottatteSoknader()
+        val resultater = service.publishMottatteSoknader()
 
         assertEquals(1, resultater.size)
         assertTrue(resultater.single().isSuccess)
-        assertTrue(repository.getUpubliserteSoknader().isEmpty())
+        assertTrue(repository.getUnpublishedSoknader().isEmpty())
         verify(exactly = 1) {
-            soknadstatusProducerMock.publiser(match { it.uuid == soknad.eksternId && it.status == Soknadstatus.MOTTATT })
+            soknadstatusProducerMock.publish(match { it.uuid == soknad.eksternId && it.status == Soknadstatus.MOTTATT })
         }
     }
 
     @Test
-    fun `publiserMottatteSoknader publiserer ikke soknad på nytt etter den er markert som publisert`() {
+    fun `publishMottatteSoknader publiserer ikke soknad på nytt etter den er markert som publisert`() {
         val soknad = soknad()
         repository.lagreMottattSoknad(soknad)
-        every { soknadstatusProducerMock.publiser(any()) } returns Result.success(Unit)
-        service.publiserMottatteSoknader()
+        every { soknadstatusProducerMock.publish(any()) } returns Result.success(Unit)
+        service.publishMottatteSoknader()
 
-        val andreKjoring = service.publiserMottatteSoknader()
+        val andreKjoring = service.publishMottatteSoknader()
 
         assertTrue(andreKjoring.isEmpty())
-        verify(exactly = 1) { soknadstatusProducerMock.publiser(any()) }
+        verify(exactly = 1) { soknadstatusProducerMock.publish(any()) }
     }
 
     @Test
-    fun `publiserMottatteSoknader markerer ikke soknad som publisert når produsenten feiler`() {
+    fun `publishMottatteSoknader markerer ikke soknad som publisert når produsenten feiler`() {
         val soknad = soknad()
         repository.lagreMottattSoknad(soknad)
-        every { soknadstatusProducerMock.publiser(any()) } returns Result.failure(RuntimeException("kafka er nede"))
+        every { soknadstatusProducerMock.publish(any()) } returns Result.failure(RuntimeException("kafka er nede"))
 
-        val resultater = service.publiserMottatteSoknader()
+        val resultater = service.publishMottatteSoknader()
 
         assertTrue(resultater.single().isFailure)
-        assertEquals(1, repository.getUpubliserteSoknader().size)
+        assertEquals(1, repository.getUnpublishedSoknader().size)
     }
 
     @Test
-    fun `publiserBehandledeSoknader publiserer og markerer vedtak som publisert i databasen`() {
+    fun `publishBehandledeSoknader publiserer og markerer vedtak som publisert i databasen`() {
         val soknadMedVedtak = lagreSoknadMedVedtak(soknad())
-        repository.setSoknadPublisert(soknadMedVedtak.id, OffsetDateTime.now())
-        every { soknadstatusProducerMock.publiser(any()) } returns Result.success(Unit)
+        repository.setSoknadPublished(soknadMedVedtak.id, OffsetDateTime.now())
+        every { soknadstatusProducerMock.publish(any()) } returns Result.success(Unit)
 
-        val resultater = service.publiserBehandledeSoknader()
+        val resultater = service.publishBehandledeSoknader()
 
         assertEquals(1, resultater.size)
         assertTrue(resultater.single().isSuccess)
-        assertTrue(repository.getSoknaderMedUpublisertVedtak().isEmpty())
+        assertTrue(repository.getSoknaderMedUnpublishedVedtak().isEmpty())
         verify(exactly = 1) {
-            soknadstatusProducerMock.publiser(match { it.status == Soknadstatus.BEHANDLET && it.vedtak != null })
+            soknadstatusProducerMock.publish(match { it.status == Soknadstatus.BEHANDLET && it.vedtak != null })
         }
     }
 
     @Test
-    fun `publiserBehandledeSoknader publiserer ikke vedtak for soknad som ikke er MOTTATT-publisert`() {
+    fun `publishBehandledeSoknader publiserer ikke vedtak for soknad som ikke er MOTTATT-publisert`() {
         lagreSoknadMedVedtak(soknad())
-        every { soknadstatusProducerMock.publiser(any()) } returns Result.success(Unit)
+        every { soknadstatusProducerMock.publish(any()) } returns Result.success(Unit)
 
-        val resultater = service.publiserBehandledeSoknader()
+        val resultater = service.publishBehandledeSoknader()
 
         assertTrue(resultater.isEmpty())
-        verify(exactly = 0) { soknadstatusProducerMock.publiser(any()) }
+        verify(exactly = 0) { soknadstatusProducerMock.publish(any()) }
     }
 
     @Test
@@ -163,16 +154,16 @@ class PubliserSoknadstatusServiceTest {
         repository.lagreMottattSoknad(soknadSomFeiler)
         repository.lagreMottattSoknad(soknadSomLykkes)
 
-        every { soknadstatusProducerMock.publiser(match { it.uuid == soknadSomFeiler.eksternId }) } returns
+        every { soknadstatusProducerMock.publish(match { it.uuid == soknadSomFeiler.eksternId }) } returns
             Result.failure(RuntimeException("kafka er nede"))
-        every { soknadstatusProducerMock.publiser(match { it.uuid == soknadSomLykkes.eksternId }) } returns
+        every { soknadstatusProducerMock.publish(match { it.uuid == soknadSomLykkes.eksternId }) } returns
             Result.success(Unit)
 
-        val resultater = service.publiserMottatteSoknader()
+        val resultater = service.publishMottatteSoknader()
 
         assertEquals(1, resultater.count { it.isFailure })
         assertEquals(1, resultater.count { it.isSuccess })
-        val upubliserte = repository.getUpubliserteSoknader()
+        val upubliserte = repository.getUnpublishedSoknader()
         assertEquals(1, upubliserte.size)
         assertEquals(soknadSomFeiler.id, upubliserte.single().id)
     }
@@ -181,19 +172,19 @@ class PubliserSoknadstatusServiceTest {
     fun `feil for en soknad stopper ikke publisering av BEHANDLET for de andre`() {
         val soknadSomFeiler = lagreSoknadMedVedtak(soknad())
         val soknadSomLykkes = lagreSoknadMedVedtak(soknad(Personident("22222222222")))
-        repository.setSoknadPublisert(soknadSomFeiler.id, OffsetDateTime.now())
-        repository.setSoknadPublisert(soknadSomLykkes.id, OffsetDateTime.now())
+        repository.setSoknadPublished(soknadSomFeiler.id, OffsetDateTime.now())
+        repository.setSoknadPublished(soknadSomLykkes.id, OffsetDateTime.now())
 
-        every { soknadstatusProducerMock.publiser(match { it.uuid == soknadSomFeiler.eksternId }) } returns
+        every { soknadstatusProducerMock.publish(match { it.uuid == soknadSomFeiler.eksternId }) } returns
             Result.failure(RuntimeException("kafka er nede"))
-        every { soknadstatusProducerMock.publiser(match { it.uuid == soknadSomLykkes.eksternId }) } returns
+        every { soknadstatusProducerMock.publish(match { it.uuid == soknadSomLykkes.eksternId }) } returns
             Result.success(Unit)
 
-        val resultater = service.publiserBehandledeSoknader()
+        val resultater = service.publishBehandledeSoknader()
 
         assertEquals(1, resultater.count { it.isFailure })
         assertEquals(1, resultater.count { it.isSuccess })
-        val upubliserte = repository.getSoknaderMedUpublisertVedtak()
+        val upubliserte = repository.getSoknaderMedUnpublishedVedtak()
         assertEquals(1, upubliserte.size)
         assertEquals(soknadSomFeiler.id, upubliserte.single().id)
     }

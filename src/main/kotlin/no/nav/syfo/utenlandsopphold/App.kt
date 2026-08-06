@@ -9,7 +9,7 @@ import no.nav.syfo.common.token.texas.EntraIdClient
 import no.nav.syfo.utenlandsopphold.api.apiModule
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
 import no.nav.syfo.utenlandsopphold.application.JournalforVedtakService
-import no.nav.syfo.utenlandsopphold.application.PubliserSoknadstatusService
+import no.nav.syfo.utenlandsopphold.application.PublishSoknadstatusService
 import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.infrastructure.clients.ClientsModule
 import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.journalforing.JournalforVedtakCronjob
@@ -82,8 +82,8 @@ fun main(args: Array<String>) {
         SoknadstatusProducer(
             kafkaProducer = kafkaSoknadstatusProducer(kafkaEnvironment = environment.kafka),
         )
-    val publiserSoknadstatusService =
-        PubliserSoknadstatusService(
+    val publishSoknadstatusService =
+        PublishSoknadstatusService(
             soknadRepository = soknadRepository,
             soknadstatusProducer = soknadstatusProducer,
         )
@@ -130,7 +130,7 @@ fun main(args: Array<String>) {
                                     intervalDelayMinutes = journalforingCronjobConfig.interval.inWholeMinutes,
                                 ),
                                 PubliserSoknadstatusCronjob(
-                                    publiserSoknadstatusService = publiserSoknadstatusService,
+                                    publishSoknadstatusService = publishSoknadstatusService,
                                     initialDelayMinutes = publiserSoknadstatusCronjobConfig.initialDelayMinutes,
                                     intervalDelayMinutes = publiserSoknadstatusCronjobConfig.intervalDelayMinutes,
                                 ),
