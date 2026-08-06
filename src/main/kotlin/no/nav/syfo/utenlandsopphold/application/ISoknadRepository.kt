@@ -61,6 +61,20 @@ interface ISoknadRepository {
         distribuertTidspunkt: OffsetDateTime,
     )
 
+    fun getUnpublishedSoknader(): List<Soknad>
+
+    fun setSoknadPublished(
+        soknadId: UUID,
+        publishedAt: OffsetDateTime,
+    )
+
+    fun getSoknaderMedUnpublishedVedtak(): List<Soknad>
+
+    fun setVedtakPublished(
+        vedtakId: UUID,
+        publishedAt: OffsetDateTime,
+    )
+
     fun lagreMottattSoknad(soknad: Soknad): LagreMottattSoknadResultat
 }
 

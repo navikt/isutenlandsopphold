@@ -361,10 +361,59 @@ class SoknadRepositoryTest {
         assertTrue(repository.getSoknaderMedIkkeDistribuerteVedtak(fattetBefore = etterAlleTestVedtak).isEmpty())
     }
 
+    @Test
+    fun `getUnpublishedSoknader returnerer kun soknader uten soknad_publisert_at`() {
+        opprettSoknadMedVedtak(journalpostId = null, soknadPublishedAt = null)
+        opprettSoknadMedVedtak(journalpostId = null, soknadPublishedAt = OffsetDateTime.now())
+
+        val upubliserte = repository.getUnpublishedSoknader()
+
+        assertEquals(1, upubliserte.size)
+    }
+
+    @Test
+    fun `setSoknadPublished oppdaterer soknad_publisert_at`() {
+        val soknad = soknad()
+        repository.lagreMottattSoknad(soknad)
+        assertEquals(1, repository.getUnpublishedSoknader().size)
+
+        repository.setSoknadPublished(soknad.id, OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS))
+
+        assertTrue(repository.getUnpublishedSoknader().isEmpty())
+    }
+
+    @Test
+    fun `getSoknaderMedUnpublishedVedtak returnerer kun soknader med publisert soknad og upublisert vedtak`() {
+        opprettSoknadMedVedtak(journalpostId = null, soknadPublishedAt = null, vedtakPublishedAt = null)
+        opprettSoknadMedVedtak(journalpostId = null, soknadPublishedAt = OffsetDateTime.now(), vedtakPublishedAt = null)
+        opprettSoknadMedVedtak(
+            journalpostId = null,
+            soknadPublishedAt = OffsetDateTime.now(),
+            vedtakPublishedAt = OffsetDateTime.now(),
+        )
+
+        val soknaderMedUnpublishedVedtak = repository.getSoknaderMedUnpublishedVedtak()
+
+        assertEquals(1, soknaderMedUnpublishedVedtak.size)
+    }
+
+    @Test
+    fun `setVedtakPublished oppdaterer vedtak_published_at`() {
+        val vedtakId =
+            opprettSoknadMedVedtak(journalpostId = null, soknadPublishedAt = OffsetDateTime.now(), vedtakPublishedAt = null)
+        assertEquals(1, repository.getSoknaderMedUnpublishedVedtak().size)
+
+        repository.setVedtakPublished(vedtakId, OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS))
+
+        assertTrue(repository.getSoknaderMedUnpublishedVedtak().isEmpty())
+    }
+
     private fun opprettSoknadMedVedtak(
         journalpostId: String?,
         distribuertTidspunkt: OffsetDateTime? = null,
         fattetTidspunkt: OffsetDateTime = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
+        soknadPublishedAt: OffsetDateTime? = null,
+        vedtakPublishedAt: OffsetDateTime? = null,
     ): UUID {
         val soknadUuid = UUID.randomUUID()
         val vedtakUuid = UUID.randomUUID()
@@ -373,14 +422,15 @@ class SoknadRepositoryTest {
             connection
                 .prepareStatement(
                     """
-                    INSERT INTO SOKNAD (uuid, ekstern_id, personident, innsendt_tidspunkt)
-                    VALUES (?, ?, ?, ?)
+                    INSERT INTO SOKNAD (uuid, ekstern_id, personident, innsendt_tidspunkt, soknad_published_at)
+                    VALUES (?, ?, ?, ?, ?)
                     """,
                 ).use { statement ->
                     statement.setObject(1, soknadUuid)
                     statement.setObject(2, UUID.randomUUID())
                     statement.setString(3, personident.value)
                     statement.setObject(4, OffsetDateTime.parse("2026-01-02T08:00:00Z"))
+                    statement.setObject(5, soknadPublishedAt)
                     statement.executeUpdate()
                 }
 
@@ -416,9 +466,10 @@ class SoknadRepositoryTest {
                             document,
                             journalpost_id,
                             journalfort_tidspunkt,
-                            distribuert_tidspunkt
+                            distribuert_tidspunkt,
+                            vedtak_published_at
                         )
-                        VALUES (?, ?, 'INNVILGET', 'Z990000', ?, ?::jsonb, ?, ?, ?)
+                        VALUES (?, ?, 'INNVILGET', 'Z990000', ?, ?::jsonb, ?, ?, ?, ?)
                         RETURNING id
                         """,
                     ).use { statement ->
@@ -429,6 +480,7 @@ class SoknadRepositoryTest {
                         statement.setString(5, journalpostId)
                         statement.setObject(6, journalpostId?.let { OffsetDateTime.now() })
                         statement.setObject(7, distribuertTidspunkt)
+                        statement.setObject(8, vedtakPublishedAt)
                         statement.executeQuery().use { rs ->
                             rs.next()
                             rs.getInt("id")

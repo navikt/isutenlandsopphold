@@ -9,17 +9,22 @@ import no.nav.syfo.common.token.texas.EntraIdClient
 import no.nav.syfo.utenlandsopphold.api.apiModule
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
 import no.nav.syfo.utenlandsopphold.application.JournalforVedtakService
+import no.nav.syfo.utenlandsopphold.application.PublishSoknadstatusService
 import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.infrastructure.clients.ClientsModule
 import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.journalforing.JournalforVedtakCronjob
 import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.journalforing.JournalforingCronjobConfig
 import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.launchCronjobs
+import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.soknadstatus.PublishSoknadstatusCronjob
+import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.soknadstatus.PublishSoknadstatusCronjobConfig
 import no.nav.syfo.utenlandsopphold.infrastructure.database.Database
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseConfig
 import no.nav.syfo.utenlandsopphold.infrastructure.database.JdbcTransactionManager
 import no.nav.syfo.utenlandsopphold.infrastructure.database.databaseConfig
 import no.nav.syfo.utenlandsopphold.infrastructure.database.repository.SoknadRepository
 import no.nav.syfo.utenlandsopphold.infrastructure.kafka.launchKafkaModule
+import no.nav.syfo.utenlandsopphold.infrastructure.kafka.soknadstatus.SoknadstatusProducer
+import no.nav.syfo.utenlandsopphold.infrastructure.kafka.soknadstatus.kafkaSoknadstatusProducer
 import no.nav.syfo.utenlandsopphold.infrastructure.tilgangskontroll.TilgangskontrollClientConfig
 import org.slf4j.LoggerFactory
 
@@ -73,6 +78,17 @@ fun main(args: Array<String>) {
             journalforVedtakService = journalforVedtakService,
         )
 
+    val soknadstatusProducer =
+        SoknadstatusProducer(
+            kafkaProducer = kafkaSoknadstatusProducer(kafkaEnvironment = environment.kafka),
+        )
+    val publishSoknadstatusService =
+        PublishSoknadstatusService(
+            soknadRepository = soknadRepository,
+            soknadstatusProducer = soknadstatusProducer,
+        )
+    val publishSoknadstatusCronjobConfig = PublishSoknadstatusCronjobConfig.fromEnv()
+
     val server =
         embeddedServer(
             Netty,
@@ -112,6 +128,11 @@ fun main(args: Array<String>) {
                                     journalforVedtakService = journalforVedtakService,
                                     initialDelayMinutes = journalforingCronjobConfig.initialDelayMinutes,
                                     intervalDelayMinutes = journalforingCronjobConfig.interval.inWholeMinutes,
+                                ),
+                                PublishSoknadstatusCronjob(
+                                    publishSoknadstatusService = publishSoknadstatusService,
+                                    initialDelayMinutes = publishSoknadstatusCronjobConfig.initialDelayMinutes,
+                                    intervalDelayMinutes = publishSoknadstatusCronjobConfig.intervalDelayMinutes,
                                 ),
                             ),
                     )
