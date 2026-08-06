@@ -70,7 +70,7 @@ class PublishSoknadstatusServiceTest {
                             texts = listOf("Søknaden din er innvilget"),
                         ),
                     ),
-                begrunnelse = "Begrunnelse for vedtaket",
+                begrunnelse = null,
             )
         return transactionManager.inTransaction { transaction ->
             val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
