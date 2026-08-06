@@ -15,8 +15,8 @@ import no.nav.syfo.utenlandsopphold.infrastructure.clients.ClientsModule
 import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.journalforing.JournalforVedtakCronjob
 import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.journalforing.JournalforingCronjobConfig
 import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.launchCronjobs
-import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.soknadstatus.PubliserSoknadstatusCronjob
-import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.soknadstatus.PubliserSoknadstatusCronjobConfig
+import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.soknadstatus.PublishSoknadstatusCronjob
+import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.soknadstatus.PublishSoknadstatusCronjobConfig
 import no.nav.syfo.utenlandsopphold.infrastructure.database.Database
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseConfig
 import no.nav.syfo.utenlandsopphold.infrastructure.database.JdbcTransactionManager
@@ -87,7 +87,7 @@ fun main(args: Array<String>) {
             soknadRepository = soknadRepository,
             soknadstatusProducer = soknadstatusProducer,
         )
-    val publiserSoknadstatusCronjobConfig = PubliserSoknadstatusCronjobConfig.fromEnv()
+    val publishSoknadstatusCronjobConfig = PublishSoknadstatusCronjobConfig.fromEnv()
 
     val server =
         embeddedServer(
@@ -129,10 +129,10 @@ fun main(args: Array<String>) {
                                     initialDelayMinutes = journalforingCronjobConfig.initialDelayMinutes,
                                     intervalDelayMinutes = journalforingCronjobConfig.interval.inWholeMinutes,
                                 ),
-                                PubliserSoknadstatusCronjob(
+                                PublishSoknadstatusCronjob(
                                     publishSoknadstatusService = publishSoknadstatusService,
-                                    initialDelayMinutes = publiserSoknadstatusCronjobConfig.initialDelayMinutes,
-                                    intervalDelayMinutes = publiserSoknadstatusCronjobConfig.intervalDelayMinutes,
+                                    initialDelayMinutes = publishSoknadstatusCronjobConfig.initialDelayMinutes,
+                                    intervalDelayMinutes = publishSoknadstatusCronjobConfig.intervalDelayMinutes,
                                 ),
                             ),
                     )

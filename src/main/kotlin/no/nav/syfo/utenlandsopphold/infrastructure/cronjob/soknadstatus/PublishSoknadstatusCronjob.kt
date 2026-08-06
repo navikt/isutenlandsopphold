@@ -7,7 +7,7 @@ import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.Cronjob
  * Cronjob som periodisk publiserer status for søknader (MOTTATT) og fattede vedtak (BEHANDLET)
  * til soknadstatus-topicet.
  */
-class PubliserSoknadstatusCronjob(
+class PublishSoknadstatusCronjob(
     private val publishSoknadstatusService: PublishSoknadstatusService,
     override val initialDelayMinutes: Long,
     override val intervalDelayMinutes: Long,
