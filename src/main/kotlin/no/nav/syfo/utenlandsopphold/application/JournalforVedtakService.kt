@@ -63,6 +63,7 @@ class JournalforVedtakService(
             pdfClient.createVedtakPdf(
                 mottakerFodselsnummer = soknad.personident,
                 mottakerNavn = mottakerNavn,
+                utfall = vedtak.utfall,
                 documentComponents = vedtak.document,
             )
 
