@@ -11,12 +11,14 @@ import io.mockk.verify
 import kotlinx.coroutines.test.runTest
 import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.common.types.ident.Personident
+import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.Utfall
 import no.nav.syfo.utenlandsopphold.domain.lagSoknad
 import no.nav.syfo.utenlandsopphold.domain.vedtakDocument
 import no.nav.syfo.utenlandsopphold.domain.veileder
 import org.junit.jupiter.api.BeforeEach
+import java.time.LocalDate
 import java.time.OffsetDateTime
 import kotlin.test.Test
 
@@ -53,19 +55,63 @@ class JournalforVedtakServiceTest {
         )
 
     @Test
-    fun `journalfører og oppdaterer u-journalført vedtak`() =
+    fun `journalfører og oppdaterer ikke-journalførte vedtak ved innvilgelse`() =
         runTest {
-            val soknad = soknadMedVedtak()
+            val soknad = soknadMedVedtak(utfall = Utfall.Innvilget)
 
             every { repositoryMock.getIkkeJournalforteSoknader(any()) } returns listOf(soknad)
             every { repositoryMock.setVedtakJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
-            coEvery { pdfClientMock.createVedtakPdf(testPersonident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
+            coEvery { pdfClientMock.createVedtakPdf(testPersonident, any(), Utfall.Innvilget, any()) } returns byteArrayOf(1, 2, 3)
             coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any()) } returns Result.success(JournalpostId("999"))
 
             service.journalforVedtak()
 
-            coVerify(exactly = 1) { pdfClientMock.createVedtakPdf(testPersonident, any(), any(), any()) }
+            coVerify(exactly = 1) { pdfClientMock.createVedtakPdf(testPersonident, any(), Utfall.Innvilget, any()) }
+            coVerify(exactly = 1) { journalforingServiceMock.journalfor(testPersonident, any(), any()) }
+            verify(exactly = 1) {
+                repositoryMock.setVedtakJournalfort(soknad.vedtak!!.vedtakId, JournalpostId("999"), any())
+            }
+        }
+
+    @Test
+    fun `journalfører og oppdaterer ikke-journalførte vedtak ved delvis innvilgelse`() =
+        runTest {
+            val delvisInnvilget =
+                Utfall.DelvisInnvilget(
+                    innvilgedePerioder = listOf(Periode(fom = LocalDate.of(2026, 1, 5), tom = LocalDate.of(2026, 1, 7))),
+                )
+            val soknad = soknadMedVedtak(utfall = delvisInnvilget)
+
+            every { repositoryMock.getIkkeJournalforteSoknader(any()) } returns listOf(soknad)
+            every { repositoryMock.setVedtakJournalfort(any(), any(), any()) } just Runs
+            coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
+            coEvery { pdfClientMock.createVedtakPdf(testPersonident, any(), delvisInnvilget, any()) } returns byteArrayOf(1, 2, 3)
+            coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any()) } returns Result.success(JournalpostId("999"))
+
+            service.journalforVedtak()
+
+            coVerify(exactly = 1) { pdfClientMock.createVedtakPdf(testPersonident, any(), delvisInnvilget, any()) }
+            coVerify(exactly = 1) { journalforingServiceMock.journalfor(testPersonident, any(), any()) }
+            verify(exactly = 1) {
+                repositoryMock.setVedtakJournalfort(soknad.vedtak!!.vedtakId, JournalpostId("999"), any())
+            }
+        }
+
+    @Test
+    fun `journalfører og oppdaterer ikke-journalførte vedtak ved avslag`() =
+        runTest {
+            val soknad = soknadMedVedtak(utfall = Utfall.Avslag)
+
+            every { repositoryMock.getIkkeJournalforteSoknader(any()) } returns listOf(soknad)
+            every { repositoryMock.setVedtakJournalfort(any(), any(), any()) } just Runs
+            coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
+            coEvery { pdfClientMock.createVedtakPdf(testPersonident, any(), Utfall.Avslag, any()) } returns byteArrayOf(1, 2, 3)
+            coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any()) } returns Result.success(JournalpostId("999"))
+
+            service.journalforVedtak()
+
+            coVerify(exactly = 1) { pdfClientMock.createVedtakPdf(testPersonident, any(), Utfall.Avslag, any()) }
             coVerify(exactly = 1) { journalforingServiceMock.journalfor(testPersonident, any(), any()) }
             verify(exactly = 1) {
                 repositoryMock.setVedtakJournalfort(soknad.vedtak!!.vedtakId, JournalpostId("999"), any())

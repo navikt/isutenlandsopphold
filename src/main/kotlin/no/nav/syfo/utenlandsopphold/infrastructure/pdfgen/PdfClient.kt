@@ -11,6 +11,7 @@ import no.nav.syfo.common.http.defaultHttpClient
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.application.IPdfClient
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
+import no.nav.syfo.utenlandsopphold.domain.Utfall
 import no.nav.syfo.utenlandsopphold.domain.sanitizeForPdfGen
 import java.time.LocalDate
 
@@ -27,11 +28,10 @@ class PdfClient(
     private val config: PdfClientConfig,
     private val httpClient: HttpClient = defaultHttpClient(),
 ) : IPdfClient {
-    private val vedtakPdfUrl = "${config.baseUrl}$VEDTAK_PDF_PATH"
-
     override suspend fun createVedtakPdf(
         mottakerFodselsnummer: Personident,
         mottakerNavn: String,
+        utfall: Utfall,
         documentComponents: List<DocumentComponent>,
         datoSendt: LocalDate,
     ): ByteArray {
@@ -42,9 +42,10 @@ class PdfClient(
                 documentComponents = documentComponents.sanitizeForPdfGen(),
                 datoSendt = datoSendt,
             )
+        val url = getVedtakPdfUrl(utfall)
 
         val response =
-            httpClient.post(vedtakPdfUrl) {
+            httpClient.post(url) {
                 accept(ContentType.Application.Pdf)
                 contentType(ContentType.Application.Json)
                 setBody(request)
@@ -53,8 +54,17 @@ class PdfClient(
         return response.body()
     }
 
+    private fun getVedtakPdfUrl(utfall: Utfall): String =
+        when (utfall) {
+            Utfall.Innvilget -> "${config.baseUrl}$VEDTAK_INNVILGET_PDF_PATH"
+            is Utfall.DelvisInnvilget -> "${config.baseUrl}$VEDTAK_DELVIS_INNVILGET_PDF_PATH"
+            Utfall.Avslag -> "${config.baseUrl}$VEDTAK_AVSLAG_PDF_PATH"
+        }
+
     companion object {
         // Malen (template) må være registrert for isutenlandsopphold i ispdfgen.
-        const val VEDTAK_PDF_PATH: String = "/api/v1/genpdf/isutenlandsopphold/vedtak"
+        const val VEDTAK_INNVILGET_PDF_PATH: String = "/api/v1/genpdf/isutenlandsopphold/vedtak-innvilget"
+        const val VEDTAK_DELVIS_INNVILGET_PDF_PATH: String = "/api/v1/genpdf/isutenlandsopphold/vedtak-delvis-innvilget"
+        const val VEDTAK_AVSLAG_PDF_PATH: String = "/api/v1/genpdf/isutenlandsopphold/vedtak-avslag"
     }
 }
