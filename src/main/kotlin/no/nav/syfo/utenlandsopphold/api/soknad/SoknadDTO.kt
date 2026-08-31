@@ -1,11 +1,14 @@
 package no.nav.syfo.utenlandsopphold.api.soknad
 
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
+import no.nav.syfo.utenlandsopphold.domain.InfoTilBehandlingAvSoknad
+import no.nav.syfo.utenlandsopphold.domain.Opptelling
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.SoknadStatus
 import no.nav.syfo.utenlandsopphold.domain.Utfall
 import no.nav.syfo.utenlandsopphold.domain.Vedtak
+import no.nav.syfo.utenlandsopphold.domain.infoTilBehandlingAv
 import no.nav.syfo.utenlandsopphold.util.toLocalDateTimeOslo
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -37,6 +40,20 @@ data class SoknadDTO(
     val innsendtTidspunkt: LocalDateTime,
     val soktePerioder: List<PeriodeDTO>,
     val vedtak: VedtakDTO?,
+    val infoTilBehandlingAvSoknad: InfoTilBehandlingAvSoknadDTO?,
+)
+
+data class InfoTilBehandlingAvSoknadDTO(
+    val opptellinger: List<OpptellingDTO>,
+)
+
+data class OpptellingDTO(
+    val fom: LocalDate,
+    val tom: LocalDate,
+    val antallDagerHvisInnvilget: Int,
+    val antallDagerIgjenHvisInnvilget: Int,
+    val antallDagerHvisInnvilgetInklUbehandlede: Int,
+    val antallDagerIgjenHvisInnvilgetInklUbehandlede: Int,
 )
 
 data class PeriodeDTO(
@@ -62,11 +79,24 @@ fun SoknadStatus.toDTO(): SoknadStatusDTO =
         SoknadStatus.AVSLAG -> SoknadStatusDTO.AVSLAG
     }
 
-fun List<Soknad>.toResponseDTO(): SoknaderResponseDTO = SoknaderResponseDTO(soknader = map { it.toDTO() })
+fun List<Soknad>.toResponseDTO(): SoknaderResponseDTO =
+    SoknaderResponseDTO(
+        soknader =
+            map { soknad ->
+                soknad.toDTO(
+                    infoTilBehandlingAvSoknad =
+                        if (soknad.status == SoknadStatus.MOTTATT) {
+                            infoTilBehandlingAv(soknad).toDTO()
+                        } else {
+                            null
+                        },
+                )
+            },
+    )
 
 fun Soknad.toResponseDTO(): SoknadVedtakResponseDTO = SoknadVedtakResponseDTO(soknad = toDTO())
 
-fun Soknad.toDTO(): SoknadDTO =
+fun Soknad.toDTO(infoTilBehandlingAvSoknad: InfoTilBehandlingAvSoknadDTO? = null): SoknadDTO =
     SoknadDTO(
         soknadId = id.toString(),
         eksternId = eksternId,
@@ -74,6 +104,20 @@ fun Soknad.toDTO(): SoknadDTO =
         innsendtTidspunkt = innsendtTidspunkt.toLocalDateTimeOslo(),
         soktePerioder = soktePerioder.map { it.toDTO() },
         vedtak = vedtak?.toDTO(),
+        infoTilBehandlingAvSoknad = infoTilBehandlingAvSoknad,
+    )
+
+private fun InfoTilBehandlingAvSoknad.toDTO(): InfoTilBehandlingAvSoknadDTO =
+    InfoTilBehandlingAvSoknadDTO(opptellinger = opptellinger.map { it.toDTO() })
+
+private fun Opptelling.toDTO(): OpptellingDTO =
+    OpptellingDTO(
+        fom = fom,
+        tom = tom,
+        antallDagerHvisInnvilget = antallDagerHvisInnvilget,
+        antallDagerIgjenHvisInnvilget = antallDagerIgjenHvisInnvilget,
+        antallDagerHvisInnvilgetInklUbehandlede = antallDagerHvisInnvilgetInklUbehandlede,
+        antallDagerIgjenHvisInnvilgetInklUbehandlede = antallDagerIgjenHvisInnvilgetInklUbehandlede,
     )
 
 private fun Periode.toDTO(): PeriodeDTO = PeriodeDTO(fom = fom, tom = tom)

@@ -47,6 +47,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 const val SOKNADER_QUERY_PATH = "/api/v1/soknader/query"
@@ -144,6 +145,77 @@ class SoknadApiTest {
                 raatekst.contains("\"innsendtTidspunkt\":\"2026-03-01T10:00:00\""),
                 "OffsetDateTime skal konverteres til lokal Oslo-tid og serialiseres uten offset",
             )
+        }
+
+    @Test
+    fun `query beriker ubehandlet soknad med opptelling av dager, behandlet soknad far ingen`() =
+        testApplication {
+            val innvilgetSoknad =
+                Soknad(
+                    id = UUID.randomUUID(),
+                    eksternId = UUID.randomUUID(),
+                    personident = UserConstants.PERSON_VEILEDERE_HAR_TILGANG_TIL,
+                    soktePerioder =
+                        listOf(
+                            Periode(fom = LocalDate.of(2025, 12, 1), tom = LocalDate.of(2025, 12, 10)),
+                        ),
+                    innsendtTidspunkt = OffsetDateTime.parse("2025-11-01T09:00:00Z"),
+                ).fattVedtak(
+                    utfall = Utfall.Innvilget,
+                    fattetAv = Navident("Z990000"),
+                    now = OffsetDateTime.parse("2025-11-15T09:00:00Z"),
+                    document =
+                        listOf(
+                            DocumentComponent(
+                                type = DocumentComponentType.HEADER_H1,
+                                title = "Vedtak",
+                                texts = listOf("Søknaden din er innvilget"),
+                            ),
+                        ),
+                    begrunnelse = null,
+                )
+            val ubehandletSoknad =
+                Soknad(
+                    id = UUID.randomUUID(),
+                    eksternId = UUID.randomUUID(),
+                    personident = UserConstants.PERSON_VEILEDERE_HAR_TILGANG_TIL,
+                    soktePerioder =
+                        listOf(
+                            Periode(fom = LocalDate.of(2026, 4, 1), tom = LocalDate.of(2026, 4, 10)),
+                        ),
+                    innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
+                )
+            stubHentSoknader(listOf(innvilgetSoknad, ubehandletSoknad))
+            val client = setupApiAndClient()
+
+            val response =
+                client.post(SOKNADER_QUERY_PATH) {
+                    bearerAuth(generateJWT())
+                    contentType(ContentType.Application.Json)
+                    setBody(SoknaderQueryDTO(personident = UserConstants.PERSON_VEILEDERE_HAR_TILGANG_TIL.value))
+                }
+
+            assertEquals(HttpStatusCode.OK, response.status)
+
+            val soknader = response.body<SoknaderResponseDTO>().soknader
+            assertNull(
+                soknader.single { it.soknadId == innvilgetSoknad.id.toString() }.infoTilBehandlingAvSoknad,
+                "Behandlet søknad skal ikke ha info til behandling",
+            )
+
+            val opptelling =
+                soknader
+                    .single { it.soknadId == ubehandletSoknad.id.toString() }
+                    .infoTilBehandlingAvSoknad!!
+                    .opptellinger
+                    .single()
+
+            assertEquals(LocalDate.of(2025, 4, 11), opptelling.fom)
+            assertEquals(LocalDate.of(2026, 4, 10), opptelling.tom)
+            assertEquals(20, opptelling.antallDagerHvisInnvilget)
+            assertEquals(8, opptelling.antallDagerIgjenHvisInnvilget)
+            assertEquals(20, opptelling.antallDagerHvisInnvilgetInklUbehandlede)
+            assertEquals(8, opptelling.antallDagerIgjenHvisInnvilgetInklUbehandlede)
         }
 
     @Test
