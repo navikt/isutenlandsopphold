@@ -50,10 +50,13 @@ data class InfoTilBehandlingAvSoknadDTO(
 data class OpptellingDTO(
     val fom: LocalDate,
     val tom: LocalDate,
-    val antallDagerHvisInnvilget: Int,
+    val antallDagerBruktHvisInnvilget: Int,
     val antallDagerIgjenHvisInnvilget: Int,
-    val antallDagerHvisInnvilgetInklUbehandlede: Int,
-    val antallDagerIgjenHvisInnvilgetInklUbehandlede: Int,
+    val antallDagerPotensieltBruktHvisInnvilget: Int,
+    val antallDagerPotensieltIgjenHvisInnvilget: Int,
+    val tidligereInnvilgedePerioder: List<PeriodeDTO>,
+    val tidligereUbehandledePerioder: List<PeriodeDTO>,
+    val soktePerioderIVinduet: List<PeriodeDTO>,
 )
 
 data class PeriodeDTO(
@@ -114,10 +117,13 @@ private fun Opptelling.toDTO(): OpptellingDTO =
     OpptellingDTO(
         fom = fom,
         tom = tom,
-        antallDagerHvisInnvilget = antallDagerHvisInnvilget,
+        antallDagerBruktHvisInnvilget = antallDagerBruktHvisInnvilget,
         antallDagerIgjenHvisInnvilget = antallDagerIgjenHvisInnvilget,
-        antallDagerHvisInnvilgetInklUbehandlede = antallDagerHvisInnvilgetInklUbehandlede,
-        antallDagerIgjenHvisInnvilgetInklUbehandlede = antallDagerIgjenHvisInnvilgetInklUbehandlede,
+        antallDagerPotensieltBruktHvisInnvilget = antallDagerPotensieltBruktHvisInnvilget,
+        antallDagerPotensieltIgjenHvisInnvilget = antallDagerPotensieltIgjenHvisInnvilget,
+        soktePerioderIVinduet = soktePerioderIVinduet.map { it.toDTO() },
+        tidligereInnvilgedePerioder = tidligereInnvilgedePerioder.map { it.toDTO() },
+        tidligereUbehandledePerioder = tidligereUbehandledePerioder.map { it.toDTO() },
     )
 
 private fun Periode.toDTO(): PeriodeDTO = PeriodeDTO(fom = fom, tom = tom)

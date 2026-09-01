@@ -54,10 +54,10 @@ class InfoTilBehandlingAvSoknadTest {
 
         val opptelling = listOf(soknad).infoTilBehandlingAv(soknad).opptellinger.single()
 
-        assertEquals(5, opptelling.antallDagerHvisInnvilget)
-        assertEquals(5, opptelling.antallDagerHvisInnvilgetInklUbehandlede)
+        assertEquals(5, opptelling.antallDagerBruktHvisInnvilget)
+        assertEquals(5, opptelling.antallDagerPotensieltBruktHvisInnvilget)
         assertEquals(23, opptelling.antallDagerIgjenHvisInnvilget)
-        assertEquals(23, opptelling.antallDagerIgjenHvisInnvilgetInklUbehandlede)
+        assertEquals(23, opptelling.antallDagerPotensieltIgjenHvisInnvilget)
     }
 
     @Test
@@ -73,8 +73,8 @@ class InfoTilBehandlingAvSoknadTest {
 
         val opptellinger = listOf(soknad).infoTilBehandlingAv(soknad).opptellinger
 
-        assertEquals(3, opptellinger[0].antallDagerHvisInnvilget)
-        assertEquals(8, opptellinger[1].antallDagerHvisInnvilget)
+        assertEquals(3, opptellinger[0].antallDagerBruktHvisInnvilget)
+        assertEquals(8, opptellinger[1].antallDagerBruktHvisInnvilget)
     }
 
     @Test
@@ -84,8 +84,8 @@ class InfoTilBehandlingAvSoknadTest {
 
         val opptelling = listOf(innvilget, soknad).infoTilBehandlingAv(soknad).opptellinger.single()
 
-        assertEquals(15, opptelling.antallDagerHvisInnvilget)
-        assertEquals(15, opptelling.antallDagerHvisInnvilgetInklUbehandlede)
+        assertEquals(15, opptelling.antallDagerBruktHvisInnvilget)
+        assertEquals(15, opptelling.antallDagerPotensieltBruktHvisInnvilget)
     }
 
     @Test
@@ -100,7 +100,7 @@ class InfoTilBehandlingAvSoknadTest {
         val opptelling =
             listOf(delvisInnvilget, soknad).infoTilBehandlingAv(soknad).opptellinger.single()
 
-        assertEquals(8, opptelling.antallDagerHvisInnvilget)
+        assertEquals(8, opptelling.antallDagerBruktHvisInnvilget)
     }
 
     @Test
@@ -119,8 +119,8 @@ class InfoTilBehandlingAvSoknadTest {
 
         val opptelling = listOf(avslatt, soknad).infoTilBehandlingAv(soknad).opptellinger.single()
 
-        assertEquals(5, opptelling.antallDagerHvisInnvilget)
-        assertEquals(5, opptelling.antallDagerHvisInnvilgetInklUbehandlede)
+        assertEquals(5, opptelling.antallDagerBruktHvisInnvilget)
+        assertEquals(5, opptelling.antallDagerPotensieltBruktHvisInnvilget)
     }
 
     @Test
@@ -131,8 +131,8 @@ class InfoTilBehandlingAvSoknadTest {
         val opptelling =
             listOf(annenUbehandlet, soknad).infoTilBehandlingAv(soknad).opptellinger.single()
 
-        assertEquals(5, opptelling.antallDagerHvisInnvilget)
-        assertEquals(9, opptelling.antallDagerHvisInnvilgetInklUbehandlede)
+        assertEquals(5, opptelling.antallDagerBruktHvisInnvilget)
+        assertEquals(9, opptelling.antallDagerPotensieltBruktHvisInnvilget)
     }
 
     @Test
@@ -147,8 +147,8 @@ class InfoTilBehandlingAvSoknadTest {
                 .opptellinger
                 .single()
 
-        assertEquals(8, opptelling.antallDagerHvisInnvilget)
-        assertEquals(8, opptelling.antallDagerHvisInnvilgetInklUbehandlede)
+        assertEquals(8, opptelling.antallDagerBruktHvisInnvilget)
+        assertEquals(8, opptelling.antallDagerPotensieltBruktHvisInnvilget)
     }
 
     @Test
@@ -163,7 +163,7 @@ class InfoTilBehandlingAvSoknadTest {
                 .opptellinger
                 .single()
 
-        assertEquals(6, opptelling.antallDagerHvisInnvilget)
+        assertEquals(6, opptelling.antallDagerBruktHvisInnvilget)
     }
 
     @Test
@@ -174,7 +174,147 @@ class InfoTilBehandlingAvSoknadTest {
         val opptelling =
             listOf(annenUbehandlet, soknad).infoTilBehandlingAv(soknad).opptellinger.single()
 
-        assertEquals(5, opptelling.antallDagerHvisInnvilgetInklUbehandlede)
+        assertEquals(5, opptelling.antallDagerPotensieltBruktHvisInnvilget)
+    }
+
+    @Test
+    fun `perioder deles i innvilgede og ubehandlede, og soeknadens egne dager er ikke med`() {
+        val innvilget = innvilgetSoknad(soktePerioder = listOf(periode("2025-12-01", "2025-12-03")))
+        val annenUbehandlet = lagSoknad(soktePerioder = listOf(periode("2026-02-01", "2026-02-04")))
+        val soknad = lagSoknad(soktePerioder = listOf(periode("2026-03-01", "2026-03-05")))
+
+        val opptelling =
+            listOf(innvilget, annenUbehandlet, soknad)
+                .infoTilBehandlingAv(soknad)
+                .opptellinger
+                .single()
+
+        assertEquals(listOf(periode("2025-12-01", "2025-12-03")), opptelling.tidligereInnvilgedePerioder)
+        assertEquals(listOf(periode("2026-02-01", "2026-02-04")), opptelling.tidligereUbehandledePerioder)
+    }
+
+    @Test
+    fun `en dag som er baade innvilget og ubehandlet telles kun som innvilget`() {
+        val innvilget = innvilgetSoknad(soktePerioder = listOf(periode("2026-02-01", "2026-02-04")))
+        val annenUbehandlet = lagSoknad(soktePerioder = listOf(periode("2026-02-03", "2026-02-06")))
+        val soknad = lagSoknad(soktePerioder = listOf(periode("2026-03-01", "2026-03-05")))
+
+        val opptelling =
+            listOf(innvilget, annenUbehandlet, soknad)
+                .infoTilBehandlingAv(soknad)
+                .opptellinger
+                .single()
+
+        assertEquals(listOf(periode("2026-02-01", "2026-02-04")), opptelling.tidligereInnvilgedePerioder)
+        assertEquals(listOf(periode("2026-02-05", "2026-02-06")), opptelling.tidligereUbehandledePerioder)
+    }
+
+    @Test
+    fun `avslaatte dager regnes som ubehandlede kun hvis de ogsaa er soekt om i en ubehandlet soeknad`() {
+        val avslatt =
+            lagSoknad(
+                soktePerioder = listOf(periode("2026-02-01", "2026-02-04")),
+                vedtak =
+                    lagVedtak(
+                        utfall = Utfall.Avslag,
+                        innvilgedePerioder = emptyList(),
+                        begrunnelse = "Ikke innvilget",
+                    ),
+            )
+        val soknad = lagSoknad(soktePerioder = listOf(periode("2026-03-01", "2026-03-05")))
+
+        val opptelling = listOf(avslatt, soknad).infoTilBehandlingAv(soknad).opptellinger.single()
+
+        assertEquals(emptyList(), opptelling.tidligereInnvilgedePerioder)
+        assertEquals(emptyList(), opptelling.tidligereUbehandledePerioder)
+    }
+
+    @Test
+    fun `perioder klippes til vinduet og hull gir separate perioder`() {
+        val utenforVinduet = innvilgetSoknad(soktePerioder = listOf(periode("2025-03-03", "2025-03-08")))
+        val medHull = innvilgetSoknad(soktePerioder = listOf(periode("2025-06-01", "2025-06-02")))
+        val soknad = lagSoknad(soktePerioder = listOf(periode("2026-03-01", "2026-03-05")))
+
+        val opptelling =
+            listOf(utenforVinduet, medHull, soknad)
+                .infoTilBehandlingAv(soknad)
+                .opptellinger
+                .single()
+
+        assertEquals(
+            listOf(periode("2025-03-06", "2025-03-08"), periode("2025-06-01", "2025-06-02")),
+            opptelling.tidligereInnvilgedePerioder,
+        )
+    }
+
+    @Test
+    fun `de tre listene er disjunkte og summerer seg til totalen`() {
+        val innvilget = innvilgetSoknad(soktePerioder = listOf(periode("2026-02-01", "2026-02-04")))
+        val annenUbehandlet = lagSoknad(soktePerioder = listOf(periode("2026-02-03", "2026-02-10")))
+        val soknad = lagSoknad(soktePerioder = listOf(periode("2026-03-01", "2026-03-05")))
+        val soknader = listOf(innvilget, annenUbehandlet, soknad)
+
+        val opptelling = soknader.infoTilBehandlingAv(soknad).opptellinger.single()
+
+        val innvilgedeDager = opptelling.tidligereInnvilgedePerioder.dager()
+        val ubehandledeDager = opptelling.tidligereUbehandledePerioder.dager()
+        val soktedager = opptelling.soktePerioderIVinduet.dager()
+
+        assertEquals(innvilgedeDager.size, opptelling.tidligereInnvilgedePerioder.dager().size)
+        assertEquals(emptySet(), innvilgedeDager intersect ubehandledeDager)
+        assertEquals(emptySet(), innvilgedeDager intersect soktedager)
+        assertEquals(emptySet(), ubehandledeDager intersect soktedager)
+        assertEquals(
+            opptelling.antallDagerPotensieltBruktHvisInnvilget,
+            innvilgedeDager.size + ubehandledeDager.size + soktedager.size,
+        )
+        assertEquals(
+            opptelling.antallDagerBruktHvisInnvilget,
+            innvilgedeDager.size + soktedager.size,
+        )
+    }
+
+    @Test
+    fun `dager som overlapper med soeknadens egne soekte dager tas ut av de andre listene`() {
+        val innvilget = innvilgetSoknad(soktePerioder = listOf(periode("2026-02-25", "2026-03-02")))
+        val annenUbehandlet = lagSoknad(soktePerioder = listOf(periode("2026-03-04", "2026-03-10")))
+        val soknad = lagSoknad(soktePerioder = listOf(periode("2026-03-01", "2026-03-05")))
+
+        val opptelling =
+            listOf(innvilget, annenUbehandlet, soknad)
+                .infoTilBehandlingAv(soknad)
+                .opptellinger
+                .single()
+
+        assertEquals(listOf(periode("2026-03-01", "2026-03-05")), opptelling.soktePerioderIVinduet)
+        assertEquals(listOf(periode("2026-02-25", "2026-02-28")), opptelling.tidligereInnvilgedePerioder)
+        assertEquals(emptyList(), opptelling.tidligereUbehandledePerioder)
+        assertEquals(9, opptelling.antallDagerPotensieltBruktHvisInnvilget)
+    }
+
+    @Test
+    fun `dager mellom soeknadens perioder telles med i opptellingen for den senere perioden`() {
+        val innvilget = innvilgetSoknad(soktePerioder = listOf(periode("2026-02-01", "2026-02-03")))
+        val soknad =
+            lagSoknad(
+                soktePerioder =
+                    listOf(
+                        periode("2026-01-10", "2026-01-12"),
+                        periode("2026-03-01", "2026-03-05"),
+                    ),
+            )
+
+        val opptellinger = listOf(innvilget, soknad).infoTilBehandlingAv(soknad).opptellinger
+
+        assertEquals(emptyList(), opptellinger[0].tidligereInnvilgedePerioder)
+        assertEquals(listOf(periode("2026-01-10", "2026-01-12")), opptellinger[0].soktePerioderIVinduet)
+
+        assertEquals(listOf(periode("2026-02-01", "2026-02-03")), opptellinger[1].tidligereInnvilgedePerioder)
+        assertEquals(
+            listOf(periode("2026-01-10", "2026-01-12"), periode("2026-03-01", "2026-03-05")),
+            opptellinger[1].soktePerioderIVinduet,
+        )
+        assertEquals(11, opptellinger[1].antallDagerBruktHvisInnvilget)
     }
 
     @Test
@@ -184,7 +324,7 @@ class InfoTilBehandlingAvSoknadTest {
 
         val opptelling = listOf(innvilget, soknad).infoTilBehandlingAv(soknad).opptellinger.single()
 
-        assertEquals(35, opptelling.antallDagerHvisInnvilget)
+        assertEquals(35, opptelling.antallDagerBruktHvisInnvilget)
         assertEquals(-7, opptelling.antallDagerIgjenHvisInnvilget)
     }
 }

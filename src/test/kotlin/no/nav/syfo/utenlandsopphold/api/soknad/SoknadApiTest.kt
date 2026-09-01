@@ -212,10 +212,19 @@ class SoknadApiTest {
 
             assertEquals(LocalDate.of(2025, 4, 11), opptelling.fom)
             assertEquals(LocalDate.of(2026, 4, 10), opptelling.tom)
-            assertEquals(20, opptelling.antallDagerHvisInnvilget)
+            assertEquals(20, opptelling.antallDagerBruktHvisInnvilget)
             assertEquals(8, opptelling.antallDagerIgjenHvisInnvilget)
-            assertEquals(20, opptelling.antallDagerHvisInnvilgetInklUbehandlede)
-            assertEquals(8, opptelling.antallDagerIgjenHvisInnvilgetInklUbehandlede)
+            assertEquals(20, opptelling.antallDagerPotensieltBruktHvisInnvilget)
+            assertEquals(8, opptelling.antallDagerPotensieltIgjenHvisInnvilget)
+            assertEquals(
+                listOf(PeriodeDTO(fom = LocalDate.of(2025, 12, 1), tom = LocalDate.of(2025, 12, 10))),
+                opptelling.tidligereInnvilgedePerioder,
+            )
+            assertEquals(emptyList(), opptelling.tidligereUbehandledePerioder)
+            assertEquals(
+                listOf(PeriodeDTO(fom = LocalDate.of(2026, 4, 1), tom = LocalDate.of(2026, 4, 10))),
+                opptelling.soktePerioderIVinduet,
+            )
         }
 
     @Test
