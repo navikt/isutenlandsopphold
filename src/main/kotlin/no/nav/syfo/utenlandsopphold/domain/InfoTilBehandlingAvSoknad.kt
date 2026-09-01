@@ -11,13 +11,25 @@ const val MAKS_ANTALL_DAGER_UTENFOR_EOS = 28
 /**
  * Opptelling av dager utenfor EØS i et vindu på ett år som slutter på [tom].
  *
- * Begge tallene svarer på "hva blir resultatet hvis periodene i denne søknaden innvilges", og
- * inkluderer derfor søknadens egne søkte dager i vinduet:
+ * [antallDagerBruktHvisInnvilget] og [antallDagerPotensieltBruktHvisInnvilget] svarer på "hva blir
+ * resultatet hvis periodene i denne søknaden innvilges", og inkluderer derfor søknadens egne søkte
+ * dager i vinduet:
  *
- * - [antallDagerHvisInnvilget] tar med tidligere innvilgede dager.
- * - [antallDagerHvisInnvilgetInklUbehandlede] tar i tillegg med søkte dager fra andre ubehandlede
- *   søknader, altså worst case dersom også disse innvilges. Dette tallet er relevant fordi
- *   søknader behandlet i tidligere saksbehandlingsløsninger ikke har vedtak i vår database.
+ * - [antallDagerBruktHvisInnvilget] tar med tidligere innvilgede dager.
+ * - [antallDagerPotensieltBruktHvisInnvilget] tar i tillegg med søkte dager fra andre ubehandlede
+ *   søknader, altså worst case dersom også disse er innvilget eller innvilges. Dette tallet er relevant fordi søknader
+ *   behandlet i Infotrygd ikke har vedtak i vår database.
+ *
+ * [soktePerioderIVinduet], [tidligereInnvilgedePerioder] og [tidligereUbehandledePerioder] fordeler dagene i vinduet
+ * på tre innbyrdes disjunkte lister, alle klippet til vinduet. Ingen dag telles to ganger:
+ *
+ * - En dag som er søkt om i denne søknaden hører til [soktePerioderIVinduet].
+ * - Ellers, en dag som er innvilget i en annen søknad hører til [tidligereInnvilgedePerioder].
+ * - Ellers, en dag som er søkt om i en annen ubehandlet søknad hører til [tidligereUbehandledePerioder].
+ *
+ * Summen av dagene i de tre listene er derfor lik [antallDagerPotensieltBruktHvisInnvilget], mens
+ * dagene i [tidligereInnvilgedePerioder] og [soktePerioderIVinduet] til sammen utgjør
+ * [antallDagerBruktHvisInnvilget].
  *
  * Dagene telles som distinkte kalenderdager, slik at overlappende perioder kun teller én gang.
  * "Dager igjen" kan bli negativt, som betyr at grensen overskrides med tilsvarende antall dager.
@@ -25,14 +37,17 @@ const val MAKS_ANTALL_DAGER_UTENFOR_EOS = 28
 data class Opptelling(
     val fom: LocalDate,
     val tom: LocalDate,
-    val antallDagerHvisInnvilget: Int,
-    val antallDagerHvisInnvilgetInklUbehandlede: Int,
+    val antallDagerBruktHvisInnvilget: Int,
+    val antallDagerPotensieltBruktHvisInnvilget: Int,
+    val soktePerioderIVinduet: List<Periode>,
+    val tidligereInnvilgedePerioder: List<Periode>,
+    val tidligereUbehandledePerioder: List<Periode>,
 ) {
     val antallDagerIgjenHvisInnvilget: Int
-        get() = MAKS_ANTALL_DAGER_UTENFOR_EOS - antallDagerHvisInnvilget
+        get() = MAKS_ANTALL_DAGER_UTENFOR_EOS - antallDagerBruktHvisInnvilget
 
-    val antallDagerIgjenHvisInnvilgetInklUbehandlede: Int
-        get() = MAKS_ANTALL_DAGER_UTENFOR_EOS - antallDagerHvisInnvilgetInklUbehandlede
+    val antallDagerPotensieltIgjenHvisInnvilget: Int
+        get() = MAKS_ANTALL_DAGER_UTENFOR_EOS - antallDagerPotensieltBruktHvisInnvilget
 }
 
 data class InfoTilBehandlingAvSoknad(
@@ -48,25 +63,26 @@ data class InfoTilBehandlingAvSoknad(
  * utenfor fordi vinduet slutter på periodens siste dag.
  */
 fun List<Soknad>.infoTilBehandlingAv(soknad: Soknad): InfoTilBehandlingAvSoknad {
-    val innvilgedeDager =
+    val alleInnvilgedeDager =
         filter { it.status == SoknadStatus.INNVILGET || it.status == SoknadStatus.DELVIS_INNVILGET }
             .flatMap { it.vedtak?.innvilgedePerioder.orEmpty() }
             .dager()
 
-    val soktedagerAndreUbehandlede =
+    val alleSokteDagerIAndreUbehandlede =
         filter { it.status == SoknadStatus.MOTTATT && it.id != soknad.id }
             .flatMap { it.soktePerioder }
             .dager()
 
     val soktedagerDenneSoknaden = soknad.soktePerioder.dager()
 
-    val dagerHvisInnvilget = innvilgedeDager + soktedagerDenneSoknaden
-    val dagerHvisInnvilgetInklUbehandlede = dagerHvisInnvilget + soktedagerAndreUbehandlede
+    // Operator + mellom mengder (Set) gir unionen av mengdene. Altså kommer ikke samme dag med flere ganger.
+    val alleInnvilgedeDagerHvisInnvilget = alleInnvilgedeDager + soktedagerDenneSoknaden
+    val allePotensieltInnvilgedeDagerHvisInnvilget = alleInnvilgedeDagerHvisInnvilget + alleSokteDagerIAndreUbehandlede
 
+    // En opptelling for hver søkte periode, der opptellingen dekker et vindu på ett år som slutter på siste dag i perioden.
     val opptellinger =
         soknad.soktePerioder
             .map { it.tom }
-            .distinct()
             .sorted()
             .map { tom ->
                 val vindu = tom.minusYears(1).plusDays(1)..tom
@@ -74,9 +90,20 @@ fun List<Soknad>.infoTilBehandlingAv(soknad: Soknad): InfoTilBehandlingAvSoknad 
                 Opptelling(
                     fom = vindu.start,
                     tom = vindu.endInclusive,
-                    antallDagerHvisInnvilget = dagerHvisInnvilget.count { it in vindu },
-                    antallDagerHvisInnvilgetInklUbehandlede =
-                        dagerHvisInnvilgetInklUbehandlede.count { it in vindu },
+                    antallDagerBruktHvisInnvilget = alleInnvilgedeDagerHvisInnvilget.count { it in vindu },
+                    antallDagerPotensieltBruktHvisInnvilget =
+                        allePotensieltInnvilgedeDagerHvisInnvilget.count { it in vindu },
+                    soktePerioderIVinduet =
+                        soktedagerDenneSoknaden.filterTo(mutableSetOf()) { it in vindu }.tilPerioder(),
+                    tidligereInnvilgedePerioder =
+                        alleInnvilgedeDager
+                            .filterTo(mutableSetOf()) { it in vindu && it !in soktedagerDenneSoknaden }
+                            .tilPerioder(),
+                    tidligereUbehandledePerioder =
+                        alleSokteDagerIAndreUbehandlede
+                            .filterTo(mutableSetOf()) {
+                                it in vindu && it !in alleInnvilgedeDager && it !in soktedagerDenneSoknaden
+                            }.tilPerioder(),
                 )
             }
 
