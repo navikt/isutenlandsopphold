@@ -4,7 +4,7 @@ import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class InfoTilBehandlingAvSoknadTest {
+class OpptellingTest {
     private fun periode(
         fom: String,
         tom: String,
@@ -39,7 +39,7 @@ class InfoTilBehandlingAvSoknadTest {
                     ),
             )
 
-        val opptellinger = listOf(soknad).infoTilBehandlingAv(soknad).opptellinger
+        val opptellinger = listOf(soknad).opptellingerFor(soknad)
 
         assertEquals(2, opptellinger.size)
         assertEquals(LocalDate.parse("2026-01-12"), opptellinger[0].tom)
@@ -52,7 +52,7 @@ class InfoTilBehandlingAvSoknadTest {
     fun `soeknadens egne dager telles med i begge tallene`() {
         val soknad = lagSoknad(soktePerioder = listOf(periode("2026-03-01", "2026-03-05")))
 
-        val opptelling = listOf(soknad).infoTilBehandlingAv(soknad).opptellinger.single()
+        val opptelling = listOf(soknad).opptellingerFor(soknad).single()
 
         assertEquals(5, opptelling.antallDagerBruktHvisInnvilget)
         assertEquals(5, opptelling.antallDagerPotensieltBruktHvisInnvilget)
@@ -71,7 +71,7 @@ class InfoTilBehandlingAvSoknadTest {
                     ),
             )
 
-        val opptellinger = listOf(soknad).infoTilBehandlingAv(soknad).opptellinger
+        val opptellinger = listOf(soknad).opptellingerFor(soknad)
 
         assertEquals(3, opptellinger[0].antallDagerBruktHvisInnvilget)
         assertEquals(8, opptellinger[1].antallDagerBruktHvisInnvilget)
@@ -82,7 +82,7 @@ class InfoTilBehandlingAvSoknadTest {
         val innvilget = innvilgetSoknad(soktePerioder = listOf(periode("2025-12-01", "2025-12-10")))
         val soknad = lagSoknad(soktePerioder = listOf(periode("2026-03-01", "2026-03-05")))
 
-        val opptelling = listOf(innvilget, soknad).infoTilBehandlingAv(soknad).opptellinger.single()
+        val opptelling = listOf(innvilget, soknad).opptellingerFor(soknad).single()
 
         assertEquals(15, opptelling.antallDagerBruktHvisInnvilget)
         assertEquals(15, opptelling.antallDagerPotensieltBruktHvisInnvilget)
@@ -98,7 +98,7 @@ class InfoTilBehandlingAvSoknadTest {
         val soknad = lagSoknad(soktePerioder = listOf(periode("2026-03-01", "2026-03-05")))
 
         val opptelling =
-            listOf(delvisInnvilget, soknad).infoTilBehandlingAv(soknad).opptellinger.single()
+            listOf(delvisInnvilget, soknad).opptellingerFor(soknad).single()
 
         assertEquals(8, opptelling.antallDagerBruktHvisInnvilget)
     }
@@ -117,7 +117,7 @@ class InfoTilBehandlingAvSoknadTest {
             )
         val soknad = lagSoknad(soktePerioder = listOf(periode("2026-03-01", "2026-03-05")))
 
-        val opptelling = listOf(avslatt, soknad).infoTilBehandlingAv(soknad).opptellinger.single()
+        val opptelling = listOf(avslatt, soknad).opptellingerFor(soknad).single()
 
         assertEquals(5, opptelling.antallDagerBruktHvisInnvilget)
         assertEquals(5, opptelling.antallDagerPotensieltBruktHvisInnvilget)
@@ -129,7 +129,7 @@ class InfoTilBehandlingAvSoknadTest {
         val soknad = lagSoknad(soktePerioder = listOf(periode("2026-03-01", "2026-03-05")))
 
         val opptelling =
-            listOf(annenUbehandlet, soknad).infoTilBehandlingAv(soknad).opptellinger.single()
+            listOf(annenUbehandlet, soknad).opptellingerFor(soknad).single()
 
         assertEquals(5, opptelling.antallDagerBruktHvisInnvilget)
         assertEquals(9, opptelling.antallDagerPotensieltBruktHvisInnvilget)
@@ -143,8 +143,7 @@ class InfoTilBehandlingAvSoknadTest {
 
         val opptelling =
             listOf(innvilget, annenUbehandlet, soknad)
-                .infoTilBehandlingAv(soknad)
-                .opptellinger
+                .opptellingerFor(soknad)
                 .single()
 
         assertEquals(8, opptelling.antallDagerBruktHvisInnvilget)
@@ -159,8 +158,7 @@ class InfoTilBehandlingAvSoknadTest {
 
         val opptelling =
             listOf(forsteDagIVinduet, sisteDagUtenforVinduet, soknad)
-                .infoTilBehandlingAv(soknad)
-                .opptellinger
+                .opptellingerFor(soknad)
                 .single()
 
         assertEquals(6, opptelling.antallDagerBruktHvisInnvilget)
@@ -172,7 +170,7 @@ class InfoTilBehandlingAvSoknadTest {
         val annenUbehandlet = lagSoknad(soktePerioder = listOf(periode("2026-03-04", "2026-03-20")))
 
         val opptelling =
-            listOf(annenUbehandlet, soknad).infoTilBehandlingAv(soknad).opptellinger.single()
+            listOf(annenUbehandlet, soknad).opptellingerFor(soknad).single()
 
         assertEquals(5, opptelling.antallDagerPotensieltBruktHvisInnvilget)
     }
@@ -185,8 +183,7 @@ class InfoTilBehandlingAvSoknadTest {
 
         val opptelling =
             listOf(innvilget, annenUbehandlet, soknad)
-                .infoTilBehandlingAv(soknad)
-                .opptellinger
+                .opptellingerFor(soknad)
                 .single()
 
         assertEquals(listOf(periode("2025-12-01", "2025-12-03")), opptelling.tidligereInnvilgedePerioder)
@@ -201,8 +198,7 @@ class InfoTilBehandlingAvSoknadTest {
 
         val opptelling =
             listOf(innvilget, annenUbehandlet, soknad)
-                .infoTilBehandlingAv(soknad)
-                .opptellinger
+                .opptellingerFor(soknad)
                 .single()
 
         assertEquals(listOf(periode("2026-02-01", "2026-02-04")), opptelling.tidligereInnvilgedePerioder)
@@ -223,7 +219,7 @@ class InfoTilBehandlingAvSoknadTest {
             )
         val soknad = lagSoknad(soktePerioder = listOf(periode("2026-03-01", "2026-03-05")))
 
-        val opptelling = listOf(avslatt, soknad).infoTilBehandlingAv(soknad).opptellinger.single()
+        val opptelling = listOf(avslatt, soknad).opptellingerFor(soknad).single()
 
         assertEquals(emptyList(), opptelling.tidligereInnvilgedePerioder)
         assertEquals(emptyList(), opptelling.tidligereUbehandledePerioder)
@@ -237,8 +233,7 @@ class InfoTilBehandlingAvSoknadTest {
 
         val opptelling =
             listOf(utenforVinduet, medHull, soknad)
-                .infoTilBehandlingAv(soknad)
-                .opptellinger
+                .opptellingerFor(soknad)
                 .single()
 
         assertEquals(
@@ -254,7 +249,7 @@ class InfoTilBehandlingAvSoknadTest {
         val soknad = lagSoknad(soktePerioder = listOf(periode("2026-03-01", "2026-03-05")))
         val soknader = listOf(innvilget, annenUbehandlet, soknad)
 
-        val opptelling = soknader.infoTilBehandlingAv(soknad).opptellinger.single()
+        val opptelling = soknader.opptellingerFor(soknad).single()
 
         val innvilgedeDager = opptelling.tidligereInnvilgedePerioder.dager()
         val ubehandledeDager = opptelling.tidligereUbehandledePerioder.dager()
@@ -282,8 +277,7 @@ class InfoTilBehandlingAvSoknadTest {
 
         val opptelling =
             listOf(innvilget, annenUbehandlet, soknad)
-                .infoTilBehandlingAv(soknad)
-                .opptellinger
+                .opptellingerFor(soknad)
                 .single()
 
         assertEquals(listOf(periode("2026-03-01", "2026-03-05")), opptelling.soktePerioderIVinduet)
@@ -304,7 +298,7 @@ class InfoTilBehandlingAvSoknadTest {
                     ),
             )
 
-        val opptellinger = listOf(innvilget, soknad).infoTilBehandlingAv(soknad).opptellinger
+        val opptellinger = listOf(innvilget, soknad).opptellingerFor(soknad)
 
         assertEquals(emptyList(), opptellinger[0].tidligereInnvilgedePerioder)
         assertEquals(listOf(periode("2026-01-10", "2026-01-12")), opptellinger[0].soktePerioderIVinduet)
@@ -322,7 +316,7 @@ class InfoTilBehandlingAvSoknadTest {
         val innvilget = innvilgetSoknad(soktePerioder = listOf(periode("2026-01-01", "2026-01-30")))
         val soknad = lagSoknad(soktePerioder = listOf(periode("2026-03-01", "2026-03-05")))
 
-        val opptelling = listOf(innvilget, soknad).infoTilBehandlingAv(soknad).opptellinger.single()
+        val opptelling = listOf(innvilget, soknad).opptellingerFor(soknad).single()
 
         assertEquals(35, opptelling.antallDagerBruktHvisInnvilget)
         assertEquals(-7, opptelling.antallDagerIgjenHvisInnvilget)
