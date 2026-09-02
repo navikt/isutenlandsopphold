@@ -95,6 +95,7 @@ fun Utfall.dbValue(): String =
         Utfall.Innvilget -> "INNVILGET"
         is Utfall.DelvisInnvilget -> "DELVIS_INNVILGET"
         Utfall.Avslag -> "AVSLAG"
+        Utfall.Henlagt -> "HENLAGT"
     }
 
 private fun String.toUtfall(innvilgedePerioder: List<Periode>): Utfall =
@@ -102,5 +103,6 @@ private fun String.toUtfall(innvilgedePerioder: List<Periode>): Utfall =
         "INNVILGET" -> Utfall.Innvilget
         "DELVIS_INNVILGET" -> Utfall.DelvisInnvilget(innvilgedePerioder)
         "AVSLAG" -> Utfall.Avslag
+        "HENLAGT" -> Utfall.Henlagt
         else -> throw IllegalStateException("Ukjent utfall lagret i database: $this")
     }

@@ -59,6 +59,7 @@ class PdfClient(
             Utfall.Innvilget -> "${config.baseUrl}$VEDTAK_INNVILGET_PDF_PATH"
             is Utfall.DelvisInnvilget -> "${config.baseUrl}$VEDTAK_DELVIS_INNVILGET_PDF_PATH"
             Utfall.Avslag -> "${config.baseUrl}$VEDTAK_AVSLAG_PDF_PATH"
+            Utfall.Henlagt -> "${config.baseUrl}$VEDTAK_HENLAGT_PDF_PATH"
         }
 
     companion object {
@@ -66,5 +67,6 @@ class PdfClient(
         const val VEDTAK_INNVILGET_PDF_PATH: String = "/api/v1/genpdf/isutenlandsopphold/vedtak-innvilget"
         const val VEDTAK_DELVIS_INNVILGET_PDF_PATH: String = "/api/v1/genpdf/isutenlandsopphold/vedtak-delvis-innvilget"
         const val VEDTAK_AVSLAG_PDF_PATH: String = "/api/v1/genpdf/isutenlandsopphold/vedtak-avslag"
+        const val VEDTAK_HENLAGT_PDF_PATH: String = "/api/v1/genpdf/isutenlandsopphold/henleggelse"
     }
 }

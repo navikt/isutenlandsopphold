@@ -9,6 +9,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.test.runTest
+import no.nav.syfo.common.distribusjon.dto.Distribusjonstype
 import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.domain.Periode
@@ -185,12 +186,48 @@ class JournalforVedtakServiceTest {
 
             every { repositoryMock.getSoknaderMedIkkeDistribuerteVedtak(any()) } returns listOf(soknad)
             every { repositoryMock.setVedtakDistribuert(any(), any()) } just Runs
-            coEvery { distribusjonServiceMock.distribuer(any()) } returns Result.success("bestilling-1")
+            coEvery { distribusjonServiceMock.distribuer(any(), any()) } returns Result.success("bestilling-1")
 
             service.distribuerVedtak()
 
-            coVerify(exactly = 1) { distribusjonServiceMock.distribuer(any()) }
+            coVerify(exactly = 1) { distribusjonServiceMock.distribuer(any(), any()) }
             verify(exactly = 1) { repositoryMock.setVedtakDistribuert(soknad.vedtak!!.vedtakId, any()) }
+        }
+
+    @Test
+    fun `distribuerer vedtak om innvilgelse med distribusjonstype VEDTAK`() =
+        runTest {
+            val soknad =
+                soknadMedVedtak(utfall = Utfall.Innvilget)
+                    .journalforVedtak(JournalpostId("999"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
+
+            every { repositoryMock.getSoknaderMedIkkeDistribuerteVedtak(any()) } returns listOf(soknad)
+            every { repositoryMock.setVedtakDistribuert(any(), any()) } just Runs
+            coEvery { distribusjonServiceMock.distribuer(any(), any()) } returns Result.success("bestilling-1")
+
+            service.distribuerVedtak()
+
+            coVerify(exactly = 1) {
+                distribusjonServiceMock.distribuer(JournalpostId("999"), Distribusjonstype.VEDTAK)
+            }
+        }
+
+    @Test
+    fun `distribuerer henlagt vedtak med distribusjonstype VIKTIG`() =
+        runTest {
+            val soknad =
+                soknadMedVedtak(utfall = Utfall.Henlagt)
+                    .journalforVedtak(JournalpostId("999"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
+
+            every { repositoryMock.getSoknaderMedIkkeDistribuerteVedtak(any()) } returns listOf(soknad)
+            every { repositoryMock.setVedtakDistribuert(any(), any()) } just Runs
+            coEvery { distribusjonServiceMock.distribuer(any(), any()) } returns Result.success("bestilling-1")
+
+            service.distribuerVedtak()
+
+            coVerify(exactly = 1) {
+                distribusjonServiceMock.distribuer(JournalpostId("999"), Distribusjonstype.VIKTIG)
+            }
         }
 
     @Test
@@ -203,7 +240,7 @@ class JournalforVedtakServiceTest {
 
             every { repositoryMock.getSoknaderMedIkkeDistribuerteVedtak(any()) } returns listOf(soknadSomFeiler, soknadSomLykkes)
             every { repositoryMock.setVedtakDistribuert(any(), any()) } just Runs
-            coEvery { distribusjonServiceMock.distribuer(any()) } returnsMany
+            coEvery { distribusjonServiceMock.distribuer(any(), any()) } returnsMany
                 listOf(
                     Result.failure(RuntimeException("dokdistfordeling er nede")),
                     Result.success("bestilling-1"),

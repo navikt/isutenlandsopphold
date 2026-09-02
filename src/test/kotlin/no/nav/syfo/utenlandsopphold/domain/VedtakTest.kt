@@ -73,6 +73,39 @@ class VedtakTest {
     }
 
     @Test
+    fun `henlagt vedtak uten innvilgede perioder og med begrunnelse er gyldig`() {
+        val vedtak =
+            lagVedtak().copy(
+                utfall = Utfall.Henlagt,
+                innvilgedePerioder = emptyList(),
+                begrunnelse = "Søker har trukket søknaden",
+            )
+
+        assertEquals(Utfall.Henlagt, vedtak.utfall)
+    }
+
+    @Test
+    fun `henlagt vedtak med innvilgede perioder kaster`() {
+        assertFailsWith<IllegalArgumentException> {
+            lagVedtak().copy(utfall = Utfall.Henlagt, begrunnelse = "Henleggelse begrunnelse")
+        }
+    }
+
+    @Test
+    fun `henlagt vedtak uten begrunnelse kaster`() {
+        assertFailsWith<IllegalArgumentException> {
+            lagVedtak().copy(utfall = Utfall.Henlagt, innvilgedePerioder = emptyList(), begrunnelse = null)
+        }
+    }
+
+    @Test
+    fun `henlagt vedtak med blank begrunnelse kaster`() {
+        assertFailsWith<IllegalArgumentException> {
+            lagVedtak().copy(utfall = Utfall.Henlagt, innvilgedePerioder = emptyList(), begrunnelse = "   ")
+        }
+    }
+
+    @Test
     fun `delvis innvilget vedtak uten begrunnelse kaster`() {
         val innvilgetPeriode = Periode(LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 7))
 

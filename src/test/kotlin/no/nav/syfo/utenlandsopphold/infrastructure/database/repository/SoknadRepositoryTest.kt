@@ -231,6 +231,29 @@ class SoknadRepositoryTest {
     }
 
     @Test
+    fun `lagreVedtak persisterer og henter henleggelse uten innvilgede perioder`() {
+        val soknad = soknad()
+        repository.lagreMottattSoknad(soknad)
+        val vedtak =
+            generateVedtak(
+                utfall = Utfall.Henlagt,
+                innvilgedePerioder = emptyList(),
+                begrunnelse = "Søker har trukket søknaden",
+            )
+        transactionManager.inTransaction { transaction ->
+            val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
+            repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = vedtak))
+        }
+
+        val hentetPaNytt = repository.hentSoknader(personident).single()
+
+        assertEquals(SoknadStatus.HENLAGT, hentetPaNytt.status)
+        assertEquals(Utfall.Henlagt, hentetPaNytt.vedtak?.utfall)
+        assertEquals(emptyList(), hentetPaNytt.vedtak?.innvilgedePerioder)
+        assertEquals("Søker har trukket søknaden", hentetPaNytt.vedtak?.begrunnelse)
+    }
+
+    @Test
     fun `lagreVedtak persisterer null begrunnelse for innvilget vedtak`() {
         val soktePerioder = listOf(Periode(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 10)))
         val soknad = soknad(soktePerioder = soktePerioder)

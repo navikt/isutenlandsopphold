@@ -14,6 +14,8 @@ sealed interface Utfall {
 
     data object Avslag : Utfall
 
+    data object Henlagt : Utfall
+
     companion object {
         fun from(
             utfall: String,
@@ -25,6 +27,10 @@ sealed interface Utfall {
                 "AVSLAG" -> {
                     require(innvilgedePerioder.isEmpty()) { "innvilgedePerioder skal være tom ved avslag" }
                     Avslag
+                }
+                "HENLAGT" -> {
+                    require(innvilgedePerioder.isEmpty()) { "innvilgedePerioder skal være tom ved henleggelse" }
+                    Henlagt
                 }
                 else -> throw IllegalArgumentException("Invalid utfall: $utfall")
             }
@@ -59,6 +65,10 @@ data class Vedtak(
             Utfall.Avslag -> {
                 require(innvilgedePerioder.isEmpty()) { "Avslått vedtak skal ikke ha innvilgede perioder" }
                 require(!begrunnelse.isNullOrBlank()) { "Avslått vedtak må ha begrunnelse" }
+            }
+            Utfall.Henlagt -> {
+                require(innvilgedePerioder.isEmpty()) { "Henlagt vedtak skal ikke ha innvilgede perioder" }
+                require(!begrunnelse.isNullOrBlank()) { "Henlagt vedtak må ha begrunnelse" }
             }
         }
     }

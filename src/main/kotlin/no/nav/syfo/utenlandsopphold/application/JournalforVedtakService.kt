@@ -1,7 +1,9 @@
 package no.nav.syfo.utenlandsopphold.application
 
+import no.nav.syfo.common.distribusjon.dto.Distribusjonstype
 import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.utenlandsopphold.domain.Soknad
+import no.nav.syfo.utenlandsopphold.domain.Utfall
 import no.nav.syfo.utenlandsopphold.infrastructure.journalforing.JournalforingService.Companion.DEFAULT_FAILED_JP_ID
 import org.slf4j.LoggerFactory
 import java.time.OffsetDateTime
@@ -140,7 +142,8 @@ class JournalforVedtakService(
             return
         }
 
-        val bestillingsId = distribusjonService.distribuer(journalpostId).getOrThrow()
+        val bestillingsId =
+            distribusjonService.distribuer(journalpostId, vedtak.utfall.tilDistribusjonstype()).getOrThrow()
 
         log.info("Distribusjon av vedtak ${vedtak.vedtakId} for søknad ${soknad.id} bestilt, bestillingsId: $bestillingsId")
 
@@ -161,3 +164,13 @@ class JournalforVedtakService(
         private val log = LoggerFactory.getLogger(JournalforVedtakService::class.java)
     }
 }
+
+/**
+ * En henleggelse er ikke et vedtak i folketrygdrettslig forstand, og skal derfor distribueres
+ * med distribusjonstype VIKTIG i stedet for VEDTAK.
+ */
+private fun Utfall.tilDistribusjonstype(): Distribusjonstype =
+    when (this) {
+        Utfall.Henlagt -> Distribusjonstype.VIKTIG
+        Utfall.Innvilget, is Utfall.DelvisInnvilget, Utfall.Avslag -> Distribusjonstype.VEDTAK
+    }
