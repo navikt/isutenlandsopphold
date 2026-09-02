@@ -1,5 +1,6 @@
 package no.nav.syfo.utenlandsopphold.application
 
+import no.nav.syfo.common.distribusjon.dto.Distribusjonstype
 import no.nav.syfo.common.journalforing.JournalpostId
 
 /**
@@ -7,5 +8,8 @@ import no.nav.syfo.common.journalforing.JournalpostId
  * via dokdistfordeling.
  */
 interface IDistribusjonService {
-    suspend fun distribuer(journalpostId: JournalpostId): Result<String>
+    suspend fun distribuer(
+        journalpostId: JournalpostId,
+        distribusjonstype: Distribusjonstype,
+    ): Result<String>
 }

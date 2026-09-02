@@ -5,10 +5,13 @@ import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.common.types.ident.Navident
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.common.util.configuredJacksonMapper
+import no.nav.syfo.utenlandsopphold.domain.Behandlingsutfall
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
+import no.nav.syfo.utenlandsopphold.domain.Henleggelse
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.Utsending
 import no.nav.syfo.utenlandsopphold.domain.Vedtak
 import java.time.LocalDate
 import java.time.OffsetDateTime
@@ -24,7 +27,7 @@ data class PSoknad(
 ) {
     fun toSoknad(
         soktePerioder: List<PSoknadPeriode>,
-        vedtak: PVedtak?,
+        behandlingsutfall: PBehandlingsutfall?,
         vedtakPerioder: List<PVedtakPeriode>,
     ): Soknad =
         Soknad(
@@ -33,7 +36,8 @@ data class PSoknad(
             personident = personident,
             soktePerioder = soktePerioder.map { it.toPeriode() },
             innsendtTidspunkt = innsendtTidspunkt,
-            vedtak = vedtak?.toVedtak(innvilgedePerioder = vedtakPerioder.map { it.toPeriode() }),
+            behandlingsutfall =
+                behandlingsutfall?.toBehandlingsutfall(innvilgedePerioder = vedtakPerioder.map { it.toPeriode() }),
         )
 }
 
@@ -55,12 +59,17 @@ data class PVedtakPeriode(
     fun toPeriode(): Periode = Periode(fom = fom, tom = tom)
 }
 
-data class PVedtak(
+/**
+ * Persistert rad i BEHANDLINGSUTFALL. `type`-kolonnen er en diskriminator som enten er et
+ * [Utfall] for et [Vedtak] (INNVILGET/DELVIS_INNVILGET/AVSLAG), eller HENLEGGELSE for en
+ * [Henleggelse].
+ */
+data class PBehandlingsutfall(
     val id: Int,
     val uuid: UUID,
     val createdAt: OffsetDateTime,
     val soknadId: Int,
-    val utfall: String,
+    val type: String,
     val fattetAv: String,
     val fattetTidspunkt: OffsetDateTime,
     val document: String,
@@ -69,19 +78,42 @@ data class PVedtak(
     val journalfortTidspunkt: OffsetDateTime?,
     val distribuertTidspunkt: OffsetDateTime?,
 ) {
-    fun toVedtak(innvilgedePerioder: List<Periode>): Vedtak =
-        Vedtak(
-            vedtakId = uuid,
-            utfall = utfall.toUtfall(innvilgedePerioder),
-            fattetAv = Navident(fattetAv),
-            fattetTidspunkt = fattetTidspunkt,
-            innvilgedePerioder = innvilgedePerioder,
-            document = document.toDocumentComponents(),
-            begrunnelse = begrunnelse,
-            journalpostId = journalpostId?.let { JournalpostId(it) },
-            journalfortTidspunkt = journalfortTidspunkt,
-            distribuertTidspunkt = distribuertTidspunkt,
-        )
+    fun toBehandlingsutfall(innvilgedePerioder: List<Periode>): Behandlingsutfall {
+        val utsending =
+            Utsending(
+                document = document.toDocumentComponents(),
+                journalpostId = journalpostId?.let { JournalpostId(it) },
+                journalfortTidspunkt = journalfortTidspunkt,
+                distribuertTidspunkt = distribuertTidspunkt,
+            )
+
+        return if (type == HENLEGGELSE_TYPE) {
+            Henleggelse(
+                behandlingsutfallId = uuid,
+                fattetAv = Navident(fattetAv),
+                fattetTidspunkt = fattetTidspunkt,
+                begrunnelse =
+                    requireNotNull(begrunnelse) {
+                        "Henleggelse $uuid mangler begrunnelse i databasen"
+                    },
+                utsending = utsending,
+            )
+        } else {
+            Vedtak(
+                behandlingsutfallId = uuid,
+                utfall = type.toUtfall(innvilgedePerioder),
+                fattetAv = Navident(fattetAv),
+                fattetTidspunkt = fattetTidspunkt,
+                innvilgedePerioder = innvilgedePerioder,
+                begrunnelse = begrunnelse,
+                utsending = utsending,
+            )
+        }
+    }
+
+    companion object {
+        const val HENLEGGELSE_TYPE = "HENLEGGELSE"
+    }
 }
 
 private val documentMapper = configuredJacksonMapper()
@@ -95,6 +127,16 @@ fun Utfall.dbValue(): String =
         Utfall.Innvilget -> "INNVILGET"
         is Utfall.DelvisInnvilget -> "DELVIS_INNVILGET"
         Utfall.Avslag -> "AVSLAG"
+    }
+
+/**
+ * Verdien som lagres i BEHANDLINGSUTFALL.type: vedtakets utfall for et [Vedtak], eller
+ * HENLEGGELSE for en [Henleggelse].
+ */
+fun Behandlingsutfall.dbTypeValue(): String =
+    when (this) {
+        is Vedtak -> utfall.dbValue()
+        is Henleggelse -> PBehandlingsutfall.HENLEGGELSE_TYPE
     }
 
 private fun String.toUtfall(innvilgedePerioder: List<Periode>): Utfall =

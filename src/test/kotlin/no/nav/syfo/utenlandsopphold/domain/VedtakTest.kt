@@ -16,7 +16,7 @@ class VedtakTest {
             fattetAv = veileder,
             fattetTidspunkt = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
             innvilgedePerioder = listOf(Periode(LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 9))),
-            document = vedtakDocument,
+            utsending = Utsending(document = vedtakDocument),
         )
 
     @Test

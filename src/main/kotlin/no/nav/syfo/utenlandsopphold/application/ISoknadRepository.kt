@@ -16,48 +16,51 @@ interface ISoknadRepository {
 
     fun hentSoknader(personident: Personident): List<Soknad>
 
-    fun lagreVedtak(
+    fun lagreBehandlingsutfall(
         transaction: Transaction,
-        soknadMedVedtak: Soknad,
+        soknadMedBehandlingsutfall: Soknad,
     ): Soknad
 
     /**
-     * Henter søknader hvor det fattede vedtaket ennå ikke er journalført
-     * (`vedtak.journalpost_id IS NULL`). Brukes av journalføringsjobben.
+     * Henter søknader hvor det fattede behandlingsutfallet (vedtak eller henleggelse) ennå
+     * ikke er journalført (`behandlingsutfall.journalpost_id IS NULL`). Brukes av
+     * journalføringsjobben.
      *
-     * @param fattetBefore Kun vedtak fattet før dette tidspunktet inkluderes. Brukes til å gi
-     * API-laget (som forsøker journalføring umiddelbart etter at et vedtak er fattet) rom til
-     * å journalføre selv, uten at cronjobben forsøker det samme vedtaket samtidig.
+     * @param fattetBefore Kun behandlingsutfall fattet før dette tidspunktet inkluderes. Brukes
+     * til å gi API-laget (som forsøker journalføring umiddelbart etter at et behandlingsutfall
+     * er fattet) rom til å journalføre selv, uten at cronjobben forsøker det samme
+     * behandlingsutfallet samtidig.
      */
     fun getIkkeJournalforteSoknader(fattetBefore: OffsetDateTime): List<Soknad>
 
     /**
-     * Markerer at et vedtak er journalført ved å sette `journalpost_id` og
+     * Markerer at et behandlingsutfall er journalført ved å sette `journalpost_id` og
      * `journalfort_tidspunkt` på raden. Kalles etter vellykket arkivering i dokarkiv.
      */
-    fun setVedtakJournalfort(
-        vedtakId: UUID,
+    fun setBehandlingsutfallJournalfort(
+        behandlingsutfallId: UUID,
         journalpostId: JournalpostId,
         journalfortTidspunkt: OffsetDateTime,
     )
 
     /**
-     * Henter søknader hvor det fattede vedtaket er journalført, men ennå ikke distribuert
-     * (`vedtak.journalpost_id IS NOT NULL AND vedtak.distribuert_tidspunkt IS NULL`).
-     * Brukes av distribusjonsjobben.
+     * Henter søknader hvor det fattede behandlingsutfallet er journalført, men ennå ikke
+     * distribuert (`behandlingsutfall.journalpost_id IS NOT NULL AND
+     * behandlingsutfall.distribuert_tidspunkt IS NULL`). Brukes av distribusjonsjobben.
      *
-     * @param fattetBefore Kun vedtak fattet før dette tidspunktet inkluderes. Brukes til å gi
-     * API-laget (som forsøker distribusjon umiddelbart etter at et vedtak er journalført) rom til
-     * å distribuere selv, uten at cronjobben forsøker det samme vedtaket samtidig.
+     * @param fattetBefore Kun behandlingsutfall fattet før dette tidspunktet inkluderes. Brukes
+     * til å gi API-laget (som forsøker distribusjon umiddelbart etter at et behandlingsutfall er
+     * journalført) rom til å distribuere selv, uten at cronjobben forsøker det samme
+     * behandlingsutfallet samtidig.
      */
-    fun getSoknaderMedIkkeDistribuerteVedtak(fattetBefore: OffsetDateTime): List<Soknad>
+    fun getSoknaderMedIkkeDistribuerteBehandlingsutfall(fattetBefore: OffsetDateTime): List<Soknad>
 
     /**
-     * Markerer at et vedtak er distribuert ved å sette `distribuert_tidspunkt` på raden.
-     * Kalles etter vellykket bestilling i dokdistfordeling.
+     * Markerer at et behandlingsutfall er distribuert ved å sette `distribuert_tidspunkt` på
+     * raden. Kalles etter vellykket bestilling i dokdistfordeling.
      */
-    fun setVedtakDistribuert(
-        vedtakId: UUID,
+    fun setBehandlingsutfallDistribuert(
+        behandlingsutfallId: UUID,
         distribuertTidspunkt: OffsetDateTime,
     )
 
@@ -68,10 +71,10 @@ interface ISoknadRepository {
         publishedAt: OffsetDateTime,
     )
 
-    fun getSoknaderMedUnpublishedVedtak(): List<Soknad>
+    fun getSoknaderMedUnpublishedBehandlingsutfall(): List<Soknad>
 
-    fun setVedtakPublished(
-        vedtakId: UUID,
+    fun setBehandlingsutfallPublished(
+        behandlingsutfallId: UUID,
         publishedAt: OffsetDateTime,
     )
 

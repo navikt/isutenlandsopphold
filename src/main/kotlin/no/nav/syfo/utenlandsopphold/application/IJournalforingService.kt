@@ -1,5 +1,6 @@
 package no.nav.syfo.utenlandsopphold.application
 
+import no.nav.syfo.common.journalforing.Brevkode
 import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.common.types.ident.Personident
 
@@ -11,5 +12,7 @@ interface IJournalforingService {
         personident: Personident,
         pdf: ByteArray,
         eksternReferanseId: String,
+        brevkode: Brevkode,
+        tittel: String,
     ): Result<JournalpostId>
 }

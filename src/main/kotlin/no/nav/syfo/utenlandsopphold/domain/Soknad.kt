@@ -11,6 +11,7 @@ enum class SoknadStatus {
     INNVILGET,
     DELVIS_INNVILGET,
     AVSLAG,
+    HENLAGT,
 }
 
 data class Soknad(
@@ -19,14 +20,15 @@ data class Soknad(
     val personident: Personident,
     val soktePerioder: List<Periode>,
     val innsendtTidspunkt: OffsetDateTime,
-    val vedtak: Vedtak? = null,
+    val behandlingsutfall: Behandlingsutfall? = null,
 ) {
     val status: SoknadStatus
         get() =
-            when (vedtak) {
+            when (val gjeldendeBehandlingsutfall = behandlingsutfall) {
                 null -> SoknadStatus.MOTTATT
-                else ->
-                    when (vedtak.utfall) {
+                is Henleggelse -> SoknadStatus.HENLAGT
+                is Vedtak ->
+                    when (gjeldendeBehandlingsutfall.utfall) {
                         Utfall.Innvilget -> SoknadStatus.INNVILGET
                         is Utfall.DelvisInnvilget -> SoknadStatus.DELVIS_INNVILGET
                         Utfall.Avslag -> SoknadStatus.AVSLAG
@@ -71,46 +73,74 @@ data class Soknad(
             }
 
         return copy(
-            vedtak =
+            behandlingsutfall =
                 Vedtak(
                     utfall = utfall,
                     fattetAv = fattetAv,
                     fattetTidspunkt = now,
                     innvilgedePerioder = innvilgedePerioder,
-                    document = document,
                     begrunnelse = begrunnelse,
+                    utsending = Utsending(document = document),
+                ),
+        )
+    }
+
+    /**
+     * Henlegger søknaden. En henleggelse er teknisk sett ikke et vedtak (søknaden avgjøres
+     * ikke med et utfall), men krever på samme måte som et vedtak en begrunnelse og et
+     * dokument som journalføres og distribueres, se [Henleggelse] og [Utsending].
+     */
+    fun henlegg(
+        fattetAv: Navident,
+        now: OffsetDateTime,
+        document: List<DocumentComponent>,
+        begrunnelse: String,
+    ): Soknad {
+        check(status == SoknadStatus.MOTTATT) {
+            "Søknad kan kun henlegges når den er MOTTATT, men status er $status"
+        }
+
+        return copy(
+            behandlingsutfall =
+                Henleggelse(
+                    fattetAv = fattetAv,
+                    fattetTidspunkt = now,
+                    begrunnelse = begrunnelse,
+                    utsending = Utsending(document = document),
                 ),
         )
     }
 
     /**
      * Aggregatroten (Soknad) styrer invarianten om at journalføring kun kan skje
-     * på en søknad som faktisk har et vedtak. Selve idempotens-sjekken (kan ikke
-     * journalføres to ganger) håndheves av Vedtak.journalfor().
+     * på en søknad som faktisk har et behandlingsutfall (vedtak eller henleggelse). Selve
+     * idempotens-sjekken (kan ikke journalføres to ganger) håndheves av
+     * Behandlingsutfall.journalfor().
      */
-    fun journalforVedtak(
+    fun journalforBehandlingsutfall(
         journalpostId: JournalpostId,
         now: OffsetDateTime,
     ): Soknad {
-        val gjeldendeVedtak =
-            checkNotNull(vedtak) {
-                "Kan ikke journalføre en søknad som ikke har fått vedtak"
+        val gjeldendeBehandlingsutfall =
+            checkNotNull(behandlingsutfall) {
+                "Kan ikke journalføre en søknad som ikke har fått behandlingsutfall"
             }
 
-        return copy(vedtak = gjeldendeVedtak.journalfor(journalpostId, now))
+        return copy(behandlingsutfall = gjeldendeBehandlingsutfall.journalfor(journalpostId, now))
     }
 
     /**
      * Aggregatroten (Soknad) styrer invarianten om at distribusjon kun kan skje
-     * på en søknad som faktisk har et vedtak. Selve idempotens- og rekkefølge-sjekken
-     * (må være journalført, kan ikke distribueres to ganger) håndheves av Vedtak.distribuer().
+     * på en søknad som faktisk har et behandlingsutfall. Selve idempotens- og
+     * rekkefølge-sjekken (må være journalført, kan ikke distribueres to ganger) håndheves av
+     * Behandlingsutfall.distribuer().
      */
-    fun distribuerVedtak(now: OffsetDateTime): Soknad {
-        val gjeldendeVedtak =
-            checkNotNull(vedtak) {
-                "Kan ikke distribuere en søknad som ikke har fått vedtak"
+    fun distribuerBehandlingsutfall(now: OffsetDateTime): Soknad {
+        val gjeldendeBehandlingsutfall =
+            checkNotNull(behandlingsutfall) {
+                "Kan ikke distribuere en søknad som ikke har fått behandlingsutfall"
             }
 
-        return copy(vedtak = gjeldendeVedtak.distribuer(now))
+        return copy(behandlingsutfall = gjeldendeBehandlingsutfall.distribuer(now))
     }
 }

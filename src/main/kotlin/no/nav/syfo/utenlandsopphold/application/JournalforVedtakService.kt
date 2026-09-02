@@ -1,25 +1,32 @@
 package no.nav.syfo.utenlandsopphold.application
 
+import no.nav.syfo.common.distribusjon.dto.Distribusjonstype
+import no.nav.syfo.common.journalforing.Brevkode
 import no.nav.syfo.common.journalforing.JournalpostId
+import no.nav.syfo.utenlandsopphold.domain.Behandlingsutfall
+import no.nav.syfo.utenlandsopphold.domain.Henleggelse
 import no.nav.syfo.utenlandsopphold.domain.Soknad
+import no.nav.syfo.utenlandsopphold.domain.Vedtak
 import no.nav.syfo.utenlandsopphold.infrastructure.journalforing.JournalforingService.Companion.DEFAULT_FAILED_JP_ID
+import no.nav.syfo.utenlandsopphold.infrastructure.journalforing.UtenlandsoppholdBrevkode
 import org.slf4j.LoggerFactory
 import java.time.OffsetDateTime
 import kotlin.time.Duration
 import kotlin.time.toJavaDuration
 
 /**
- * Use case (application service) som orkestrerer journalføring av vedtak:
- * henter u-journalførte søknader, genererer PDF, sender til dokarkiv, og
- * oppdaterer vedtaket med journalpost-id og journalføringstidspunkt.
+ * Use case (application service) som orkestrerer journalføring av behandlingsutfall (vedtak
+ * eller henleggelse): henter u-journalførte søknader, genererer PDF, sender til dokarkiv, og
+ * oppdaterer behandlingsutfallet med journalpost-id og journalføringstidspunkt.
  *
- * Domenet ([Soknad.journalforVedtak]) håndhever invarianten om at et vedtak
- * kun kan journalføres én gang — feiler denne tjenesten på ett vedtak stopper
- * det ikke journalføring av de øvrige.
+ * Domenet ([Soknad.journalforBehandlingsutfall]) håndhever invarianten om at et
+ * behandlingsutfall kun kan journalføres én gang — feiler denne tjenesten på ett
+ * behandlingsutfall stopper det ikke journalføring av de øvrige.
  *
  * @param freshVedtakGracePeriod Brukes av [journalforVedtak] (den periodiske cronjobben) til å
- * ekskludere nylig fattede vedtak fra spørringen, slik at den ikke journalfører et vedtak som
- * API-laget allerede forsøker å journalføre umiddelbart (se [journalforVedtak] med `soknad`-parameter).
+ * ekskludere nylig fattede behandlingsutfall fra spørringen, slik at den ikke journalfører et
+ * behandlingsutfall som API-laget allerede forsøker å journalføre umiddelbart (se
+ * [journalforVedtak] med `soknad`-parameter).
  */
 class JournalforVedtakService(
     private val soknadRepository: ISoknadRepository,
@@ -30,41 +37,42 @@ class JournalforVedtakService(
     private val freshVedtakGracePeriod: Duration = Duration.ZERO,
 ) {
     suspend fun journalforVedtak(): List<Result<Soknad>> {
-        log.debug("Starter journalføring av ujournalførte vedtak")
+        log.debug("Starter journalføring av ujournalførte behandlingsutfall")
         val fattetBefore = OffsetDateTime.now().minus(freshVedtakGracePeriod.toJavaDuration())
         val soknaderMedIkkeJournalforteVedtak = soknadRepository.getIkkeJournalforteSoknader(fattetBefore)
 
         return soknaderMedIkkeJournalforteVedtak.map { soknad ->
             runCatching { journalforVedtak(soknad) }
-                .onFailure { log.error("Feil ved journalføring av vedtak for søknad ${soknad.id}", it) }
+                .onFailure { log.error("Feil ved journalføring av behandlingsutfall for søknad ${soknad.id}", it) }
         }
     }
 
     /**
-     * Journalfører vedtaket for én søknad. Gjenbrukes både av den periodiske cronjobben
-     * ([journalforVedtak]) og av API-laget, som forsøker journalføring umiddelbart etter at
-     * vedtaket er fattet (se [no.nav.syfo.utenlandsopphold.api.soknad.registerSoknadApi]).
-     * Idempotent: [Soknad.journalforVedtak] håndhever at et vedtak kun journalføres én gang,
-     * og dokarkiv dedupliserer på `eksternReferanseId` (vedtakId) dersom denne likevel
-     * skulle bli kalt samtidig fra flere steder for samme vedtak.
+     * Journalfører behandlingsutfallet for én søknad. Gjenbrukes både av den periodiske
+     * cronjobben ([journalforVedtak]) og av API-laget, som forsøker journalføring umiddelbart
+     * etter at behandlingsutfallet er fattet (se
+     * [no.nav.syfo.utenlandsopphold.api.soknad.registerSoknadApi]).
+     * Idempotent: [Soknad.journalforBehandlingsutfall] håndhever at et behandlingsutfall kun
+     * journalføres én gang, og dokarkiv dedupliserer på `eksternReferanseId`
+     * (behandlingsutfallId) dersom denne likevel skulle bli kalt samtidig fra flere steder for
+     * samme behandlingsutfall.
      *
-     * @return den oppdaterte [Soknad]-en med det journalførte vedtaket, slik at API-laget kan
-     * kjede umiddelbar distribusjon ([distribuerVedtak]) rett etter.
+     * @return den oppdaterte [Soknad]-en med det journalførte behandlingsutfallet, slik at
+     * API-laget kan kjede umiddelbar distribusjon ([distribuerVedtak]) rett etter.
      */
     suspend fun journalforVedtak(soknad: Soknad): Soknad {
-        val vedtak =
-            checkNotNull(soknad.vedtak) {
-                "Søknad ${soknad.id} har ikke fattet vedtak, kan ikke journalføre"
+        val behandlingsutfall =
+            checkNotNull(soknad.behandlingsutfall) {
+                "Søknad ${soknad.id} har ikke fattet behandlingsutfall, kan ikke journalføre"
             }
 
         val mottakerNavn = personInfoClient.getNavn(soknad.personident)
 
         val pdf =
-            pdfClient.createVedtakPdf(
+            pdfClient.createPdf(
                 mottakerFodselsnummer = soknad.personident,
                 mottakerNavn = mottakerNavn,
-                utfall = vedtak.utfall,
-                documentComponents = vedtak.document,
+                behandlingsutfall = behandlingsutfall,
             )
 
         val journalpostId: JournalpostId =
@@ -72,88 +80,96 @@ class JournalforVedtakService(
                 .journalfor(
                     personident = soknad.personident,
                     pdf = pdf,
-                    eksternReferanseId = vedtak.vedtakId.toString(),
+                    eksternReferanseId = behandlingsutfall.behandlingsutfallId.toString(),
+                    brevkode = behandlingsutfall.brevkode(),
+                    tittel = behandlingsutfall.journalpostTittel(),
                 ).getOrThrow()
 
         val journalfortTidspunkt = OffsetDateTime.now()
 
         // Bygger den oppdaterte søknaden gjennom aggregatroten for å håndheve
         // idempotens-invarianten før vi lar den slå gjennom i databasen.
-        val journalfortSoknad = soknad.journalforVedtak(journalpostId, journalfortTidspunkt)
-        val journalfortVedtak = checkNotNull(journalfortSoknad.vedtak)
+        val journalfortSoknad = soknad.journalforBehandlingsutfall(journalpostId, journalfortTidspunkt)
+        val journalfortBehandlingsutfall = checkNotNull(journalfortSoknad.behandlingsutfall)
 
-        soknadRepository.setVedtakJournalfort(
-            vedtakId = journalfortVedtak.vedtakId,
+        soknadRepository.setBehandlingsutfallJournalfort(
+            behandlingsutfallId = journalfortBehandlingsutfall.behandlingsutfallId,
             journalpostId = journalpostId,
-            journalfortTidspunkt = checkNotNull(journalfortVedtak.journalfortTidspunkt),
+            journalfortTidspunkt = checkNotNull(journalfortBehandlingsutfall.journalfortTidspunkt),
         )
         log.info(
-            "Vedtak ${journalfortVedtak.vedtakId} for søknad ${soknad.id} journalført med journalpostId ${journalfortVedtak.journalpostId?.value}",
+            "Behandlingsutfall ${journalfortBehandlingsutfall.behandlingsutfallId} for søknad ${soknad.id} " +
+                "journalført med journalpostId ${journalfortBehandlingsutfall.journalpostId?.value}",
         )
         return journalfortSoknad
     }
 
     /**
-     * Bestiller distribusjon (utsending til mottaker) av vedtak som er journalført, men ennå
-     * ikke distribuert. Idempotent pass: kjøres på nytt ved neste intervall for vedtak som
-     * feilet, siden dokdistfordeling selv behandler gjentatte bestillinger på samme
-     * journalpost som suksess (409 Conflict).
+     * Bestiller distribusjon (utsending til mottaker) av behandlingsutfall som er
+     * journalført, men ennå ikke distribuert. Idempotent pass: kjøres på nytt ved neste
+     * intervall for behandlingsutfall som feilet, siden dokdistfordeling selv behandler
+     * gjentatte bestillinger på samme journalpost som suksess (409 Conflict).
      */
     suspend fun distribuerVedtak(): List<Result<Unit>> {
-        log.debug("Starter distribusjon av journalførte, ikke-distribuerte vedtak")
+        log.debug("Starter distribusjon av journalførte, ikke-distribuerte behandlingsutfall")
         val fattetBefore = OffsetDateTime.now().minus(freshVedtakGracePeriod.toJavaDuration())
-        val soknaderMedIkkeDistribuerteVedtak = soknadRepository.getSoknaderMedIkkeDistribuerteVedtak(fattetBefore)
+        val soknaderMedIkkeDistribuerteVedtak =
+            soknadRepository.getSoknaderMedIkkeDistribuerteBehandlingsutfall(fattetBefore)
 
         return soknaderMedIkkeDistribuerteVedtak.map { soknad ->
             runCatching { distribuerVedtak(soknad) }
-                .onFailure { log.error("Feil ved distribusjon av vedtak for søknad ${soknad.id}", it) }
+                .onFailure { log.error("Feil ved distribusjon av behandlingsutfall for søknad ${soknad.id}", it) }
         }
     }
 
     /**
-     * Distribuerer (bestiller utsending av) vedtaket for én søknad. Gjenbrukes både av den
-     * periodiske cronjobben ([distribuerVedtak]) og av API-laget, som forsøker distribusjon
-     * umiddelbart etter en vellykket umiddelbar journalføring (se
+     * Distribuerer (bestiller utsending av) behandlingsutfallet for én søknad. Gjenbrukes
+     * både av den periodiske cronjobben ([distribuerVedtak]) og av API-laget, som forsøker
+     * distribusjon umiddelbart etter en vellykket umiddelbar journalføring (se
      * [no.nav.syfo.utenlandsopphold.api.soknad.registerSoknadApi]).
-     * Idempotent: [Soknad.distribuerVedtak] håndhever at et vedtak må være journalført og kun
-     * distribueres én gang, og dokdistfordeling behandler gjentatte bestillinger på samme
-     * journalpost som suksess (409 Conflict) dersom denne likevel skulle bli kalt samtidig
-     * fra flere steder for samme vedtak.
+     * Idempotent: [Soknad.distribuerBehandlingsutfall] håndhever at et behandlingsutfall må
+     * være journalført og kun distribueres én gang, og dokdistfordeling behandler gjentatte
+     * bestillinger på samme journalpost som suksess (409 Conflict) dersom denne likevel
+     * skulle bli kalt samtidig fra flere steder for samme behandlingsutfall.
      */
     suspend fun distribuerVedtak(soknad: Soknad) {
-        val vedtak =
-            checkNotNull(soknad.vedtak) {
-                "Søknad ${soknad.id} har ikke fattet vedtak, kan ikke distribuere"
+        val behandlingsutfall =
+            checkNotNull(soknad.behandlingsutfall) {
+                "Søknad ${soknad.id} har ikke fattet behandlingsutfall, kan ikke distribuere"
             }
 
         val journalpostId =
-            checkNotNull(vedtak.journalpostId) {
-                "Vedtak ${vedtak.vedtakId} er ikke journalført, kan ikke distribuere"
+            checkNotNull(behandlingsutfall.journalpostId) {
+                "Behandlingsutfall ${behandlingsutfall.behandlingsutfallId} er ikke journalført, kan ikke distribuere"
             }
 
         if (journalpostId.value == DEFAULT_FAILED_JP_ID.value) {
-            // Hvis journalpostId er DEFAULT_FAILED_JP_ID, betyr det at journalføringen feilet i dev-gcp, og vi skal ikke forsøke å distribuere dette vedtaket.
-            soknadRepository.setVedtakDistribuert(
-                vedtakId = vedtak.vedtakId,
+            // Hvis journalpostId er DEFAULT_FAILED_JP_ID, betyr det at journalføringen feilet i dev-gcp, og vi skal ikke forsøke å distribuere dette behandlingsutfallet.
+            soknadRepository.setBehandlingsutfallDistribuert(
+                behandlingsutfallId = behandlingsutfall.behandlingsutfallId,
                 distribuertTidspunkt = OffsetDateTime.now(),
             )
             return
         }
 
-        val bestillingsId = distribusjonService.distribuer(journalpostId).getOrThrow()
+        val bestillingsId =
+            distribusjonService.distribuer(journalpostId, behandlingsutfall.distribusjonstype()).getOrThrow()
 
-        log.info("Distribusjon av vedtak ${vedtak.vedtakId} for søknad ${soknad.id} bestilt, bestillingsId: $bestillingsId")
+        log.info(
+            "Distribusjon av behandlingsutfall ${behandlingsutfall.behandlingsutfallId} for søknad ${soknad.id} " +
+                "bestilt, bestillingsId: $bestillingsId",
+        )
 
         val distribuertTidspunkt = OffsetDateTime.now()
 
         // Bygger den oppdaterte søknaden gjennom aggregatroten for å håndheve
         // idempotens-invarianten før vi lar den slå gjennom i databasen.
-        val distribuertSoknad = soknad.distribuerVedtak(distribuertTidspunkt)
-        val distribuertVedtak = checkNotNull(distribuertSoknad.vedtak)
+        val distribuertSoknad = soknad.distribuerBehandlingsutfall(distribuertTidspunkt)
+        val distribuertBehandlingsutfall = checkNotNull(distribuertSoknad.behandlingsutfall)
 
-        soknadRepository.setVedtakDistribuert(
-            vedtakId = distribuertVedtak.vedtakId,
-            distribuertTidspunkt = checkNotNull(distribuertVedtak.distribuertTidspunkt),
+        soknadRepository.setBehandlingsutfallDistribuert(
+            behandlingsutfallId = distribuertBehandlingsutfall.behandlingsutfallId,
+            distribuertTidspunkt = checkNotNull(distribuertBehandlingsutfall.distribuertTidspunkt),
         )
     }
 
@@ -161,3 +177,21 @@ class JournalforVedtakService(
         private val log = LoggerFactory.getLogger(JournalforVedtakService::class.java)
     }
 }
+
+private fun Behandlingsutfall.brevkode(): Brevkode =
+    when (this) {
+        is Vedtak -> UtenlandsoppholdBrevkode.VEDTAK
+        is Henleggelse -> UtenlandsoppholdBrevkode.HENLEGGELSE
+    }
+
+private fun Behandlingsutfall.journalpostTittel(): String =
+    when (this) {
+        is Vedtak -> "Vedtak om utenlandsopphold"
+        is Henleggelse -> "Henleggelse av søknad om utenlandsopphold"
+    }
+
+private fun Behandlingsutfall.distribusjonstype(): Distribusjonstype =
+    when (this) {
+        is Vedtak -> Distribusjonstype.VEDTAK
+        is Henleggelse -> Distribusjonstype.VIKTIG
+    }

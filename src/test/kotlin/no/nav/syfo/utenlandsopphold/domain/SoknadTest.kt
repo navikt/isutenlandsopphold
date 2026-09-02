@@ -7,6 +7,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 class SoknadTest {
     @Test
@@ -23,7 +24,7 @@ class SoknadTest {
             )
 
         assertEquals(SoknadStatus.INNVILGET, resultat.status)
-        val vedtak = assertNotNull(resultat.vedtak)
+        val vedtak = assertNotNull(resultat.behandlingsutfall as? Vedtak)
         assertEquals(Utfall.Innvilget, vedtak.utfall)
         assertEquals(veileder, vedtak.fattetAv)
         assertEquals(now, vedtak.fattetTidspunkt)
@@ -45,7 +46,7 @@ class SoknadTest {
             )
 
         assertEquals(SoknadStatus.DELVIS_INNVILGET, resultat.status)
-        val vedtak = assertNotNull(resultat.vedtak)
+        val vedtak = assertNotNull(resultat.behandlingsutfall as? Vedtak)
         assertEquals(Utfall.DelvisInnvilget(listOf(innvilgetPeriode)), vedtak.utfall)
         assertEquals(listOf(innvilgetPeriode), vedtak.innvilgedePerioder)
         assertEquals("Delvis innvilget begrunnelse", vedtak.begrunnelse)
@@ -70,7 +71,7 @@ class SoknadTest {
             )
 
         assertEquals(SoknadStatus.DELVIS_INNVILGET, resultat.status)
-        assertEquals(listOf(innvilgetPeriode), resultat.vedtak?.innvilgedePerioder)
+        assertEquals(listOf(innvilgetPeriode), (resultat.behandlingsutfall as? Vedtak)?.innvilgedePerioder)
     }
 
     @Test
@@ -152,7 +153,7 @@ class SoknadTest {
             )
 
         assertEquals(SoknadStatus.AVSLAG, resultat.status)
-        val vedtak = assertNotNull(resultat.vedtak)
+        val vedtak = assertNotNull(resultat.behandlingsutfall as? Vedtak)
         assertEquals(Utfall.Avslag, vedtak.utfall)
         assertEquals(emptyList(), vedtak.innvilgedePerioder)
         assertEquals("Avslag begrunnelse", vedtak.begrunnelse)
@@ -214,7 +215,7 @@ class SoknadTest {
     }
 
     @Test
-    fun `journalforVedtak setter journalpostId på vedtaket`() {
+    fun `journalforBehandlingsutfall setter journalpostId på vedtaket`() {
         val innvilget =
             lagSoknad().fattVedtak(
                 utfall = Utfall.Innvilget,
@@ -226,17 +227,82 @@ class SoknadTest {
         val journalpostId = JournalpostId("123")
         val journalfortTidspunkt = OffsetDateTime.parse("2026-01-11T08:00:00Z")
 
-        val journalfort = innvilget.journalforVedtak(journalpostId, journalfortTidspunkt)
+        val journalfort = innvilget.journalforBehandlingsutfall(journalpostId, journalfortTidspunkt)
 
-        val vedtak = assertNotNull(journalfort.vedtak)
+        val vedtak = assertNotNull(journalfort.behandlingsutfall)
         assertEquals(journalpostId, vedtak.journalpostId)
         assertEquals(journalfortTidspunkt, vedtak.journalfortTidspunkt)
     }
 
     @Test
-    fun `journalforVedtak på søknad uten vedtak kaster feil`() {
+    fun `journalforBehandlingsutfall på søknad uten behandlingsutfall kaster feil`() {
         assertFailsWith<IllegalStateException> {
-            lagSoknad().journalforVedtak(JournalpostId("123"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
+            lagSoknad().journalforBehandlingsutfall(JournalpostId("123"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
         }
+    }
+
+    @Test
+    fun `henlegg på mottatt søknad gir henleggelse og status HENLAGT`() {
+        val now = OffsetDateTime.parse("2026-01-10T12:00:00Z")
+
+        val resultat =
+            lagSoknad().henlegg(
+                fattetAv = veileder,
+                now = now,
+                document = henleggelseDocument,
+                begrunnelse = "Trukket av søker",
+            )
+
+        assertEquals(SoknadStatus.HENLAGT, resultat.status)
+        val henleggelse = assertNotNull(resultat.behandlingsutfall as? Henleggelse)
+        assertEquals(veileder, henleggelse.fattetAv)
+        assertEquals(now, henleggelse.fattetTidspunkt)
+        assertEquals("Trukket av søker", henleggelse.begrunnelse)
+    }
+
+    @Test
+    fun `henlegg på allerede behandlet søknad kaster`() {
+        val alleredeInnvilget =
+            lagSoknad().fattVedtak(
+                utfall = Utfall.Innvilget,
+                fattetAv = veileder,
+                now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
+                document = vedtakDocument,
+                begrunnelse = null,
+            )
+
+        assertFailsWith<IllegalStateException> {
+            alleredeInnvilget.henlegg(
+                fattetAv = veileder,
+                now = OffsetDateTime.parse("2026-01-11T12:00:00Z"),
+                document = henleggelseDocument,
+                begrunnelse = "Trukket av søker",
+            )
+        }
+    }
+
+    @Test
+    fun `journalforBehandlingsutfall setter journalpostId på henleggelsen`() {
+        val henlagt =
+            lagSoknad().henlegg(
+                fattetAv = veileder,
+                now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
+                document = henleggelseDocument,
+                begrunnelse = "Trukket av søker",
+            )
+        val journalpostId = JournalpostId("123")
+        val journalfortTidspunkt = OffsetDateTime.parse("2026-01-11T08:00:00Z")
+
+        val journalfort = henlagt.journalforBehandlingsutfall(journalpostId, journalfortTidspunkt)
+
+        val henleggelse = assertNotNull(journalfort.behandlingsutfall as? Henleggelse)
+        assertEquals(journalpostId, henleggelse.journalpostId)
+        assertEquals(journalfortTidspunkt, henleggelse.journalfortTidspunkt)
+    }
+
+    @Test
+    fun `soknad uten behandlingsutfall har status MOTTATT`() {
+        assertNull(lagSoknad().behandlingsutfall)
+        assertEquals(SoknadStatus.MOTTATT, lagSoknad().status)
     }
 }

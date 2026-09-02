@@ -12,10 +12,12 @@ import no.nav.syfo.utenlandsopphold.infrastructure.pdfgen.PdfClient
 val PDF_INNVILGET_BYTES = "pdf-innvilget".toByteArray()
 val PDF_DELVIS_INNVILGET_BYTES = "pdf-delvis-innvilget".toByteArray()
 val PDF_AVSLAG_BYTES = "pdf-avslag".toByteArray()
+val PDF_HENLEGGELSE_BYTES = "pdf-henleggelse".toByteArray()
 
 /**
- * Mock-handler for ispdfgen. Ruter på path slik at ulike vedtaksutfall (innvilget, delvis
- * innvilget, avslag) gir hver sin PDF, i tråd med [PdfClient] sin utfall-baserte URL-velging.
+ * Mock-handler for ispdfgen. Ruter på path slik at ulike behandlingsutfall (vedtak: innvilget,
+ * delvis innvilget, avslag; og henleggelse) gir hver sin PDF, i tråd med [PdfClient] sin
+ * behandlingsutfall-baserte URL-velging.
  */
 fun MockRequestHandleScope.mockPdfgenRequestHandler(request: HttpRequestData): HttpResponseData {
     val bytes =
@@ -23,6 +25,7 @@ fun MockRequestHandleScope.mockPdfgenRequestHandler(request: HttpRequestData): H
             PdfClient.VEDTAK_INNVILGET_PDF_PATH -> PDF_INNVILGET_BYTES
             PdfClient.VEDTAK_DELVIS_INNVILGET_PDF_PATH -> PDF_DELVIS_INNVILGET_BYTES
             PdfClient.VEDTAK_AVSLAG_PDF_PATH -> PDF_AVSLAG_BYTES
+            PdfClient.HENLEGGELSE_PDF_PATH -> PDF_HENLEGGELSE_BYTES
             else -> error("Unhandled pdfgen request to ${request.url}")
         }
 

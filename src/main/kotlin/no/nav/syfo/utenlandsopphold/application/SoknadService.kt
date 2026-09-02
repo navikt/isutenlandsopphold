@@ -35,7 +35,7 @@ class SoknadService(
                         soknadId = soknadId,
                     ) ?: throw IllegalArgumentException("Søknad med id $soknadId finnes ikke")
 
-                val soknadMedVedtak =
+                val soknadMedBehandlingsutfall =
                     soknad.fattVedtak(
                         utfall = utfall,
                         fattetAv = fattetAv,
@@ -44,23 +44,56 @@ class SoknadService(
                         begrunnelse = begrunnelse,
                     )
 
-                soknadRepository.lagreVedtak(
+                soknadRepository.lagreBehandlingsutfall(
                     transaction = transaction,
-                    soknadMedVedtak = soknadMedVedtak,
+                    soknadMedBehandlingsutfall = soknadMedBehandlingsutfall,
                 )
             }
         journalforOgDistribuerAsync(lagretSoknad)
         return lagretSoknad
     }
 
-    private fun journalforOgDistribuerAsync(soknadMedVedtak: Soknad) {
+    fun henlegg(
+        soknadId: UUID,
+        fattetAv: Navident,
+        document: List<DocumentComponent>,
+        begrunnelse: String,
+    ): Soknad {
+        val lagretSoknad =
+            transactionManager.inTransaction { transaction ->
+                val soknad =
+                    soknadRepository.hentSoknadForUpdate(
+                        transaction = transaction,
+                        soknadId = soknadId,
+                    ) ?: throw IllegalArgumentException("Søknad med id $soknadId finnes ikke")
+
+                val soknadMedBehandlingsutfall =
+                    soknad.henlegg(
+                        fattetAv = fattetAv,
+                        now = OffsetDateTime.now(),
+                        document = document,
+                        begrunnelse = begrunnelse,
+                    )
+
+                soknadRepository.lagreBehandlingsutfall(
+                    transaction = transaction,
+                    soknadMedBehandlingsutfall = soknadMedBehandlingsutfall,
+                )
+            }
+        journalforOgDistribuerAsync(lagretSoknad)
+        return lagretSoknad
+    }
+
+    private fun journalforOgDistribuerAsync(soknadMedBehandlingsutfall: Soknad) {
         launchAsyncTask {
             try {
-                val journalfortSoknad = journalforVedtakService.journalforVedtak(soknadMedVedtak)
+                val journalfortSoknad = journalforVedtakService.journalforVedtak(soknadMedBehandlingsutfall)
                 journalforVedtakService.distribuerVedtak(journalfortSoknad)
             } catch (exception: Exception) {
                 log.error(
-                    "Feil ved umiddelbar journalføring/distribusjon av vedtak ${soknadMedVedtak.vedtak?.vedtakId} for søknad ${soknadMedVedtak.id}",
+                    "Feil ved umiddelbar journalføring/distribusjon av behandlingsutfall " +
+                        "${soknadMedBehandlingsutfall.behandlingsutfall?.behandlingsutfallId} for søknad " +
+                        "${soknadMedBehandlingsutfall.id}",
                     exception,
                 )
             }

@@ -74,7 +74,32 @@ class PublishSoknadstatusServiceTest {
             )
         return transactionManager.inTransaction { transaction ->
             val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
-            repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = soknadMedVedtak.vedtak))
+            repository.lagreBehandlingsutfall(transaction, lagretSoknad.copy(behandlingsutfall = soknadMedVedtak.behandlingsutfall))
+        }
+    }
+
+    private fun lagreSoknadMedHenleggelse(soknad: Soknad): Soknad {
+        repository.lagreMottattSoknad(soknad)
+        val soknadMedHenleggelse =
+            soknad.henlegg(
+                fattetAv = Navident("Z999999"),
+                now = OffsetDateTime.parse("2026-03-05T10:00:00Z"),
+                document =
+                    listOf(
+                        DocumentComponent(
+                            type = DocumentComponentType.HEADER_H1,
+                            title = "Henleggelse",
+                            texts = listOf("Søknaden din er henlagt"),
+                        ),
+                    ),
+                begrunnelse = "Trukket av søker",
+            )
+        return transactionManager.inTransaction { transaction ->
+            val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
+            repository.lagreBehandlingsutfall(
+                transaction,
+                lagretSoknad.copy(behandlingsutfall = soknadMedHenleggelse.behandlingsutfall),
+            )
         }
     }
 
@@ -130,9 +155,27 @@ class PublishSoknadstatusServiceTest {
 
         assertEquals(1, resultater.size)
         assertTrue(resultater.single().isSuccess)
-        assertTrue(repository.getSoknaderMedUnpublishedVedtak().isEmpty())
+        assertTrue(repository.getSoknaderMedUnpublishedBehandlingsutfall().isEmpty())
         verify(exactly = 1) {
             soknadstatusProducerMock.publish(match { it.status == Soknadstatus.BEHANDLET && it.vedtak != null })
+        }
+    }
+
+    @Test
+    fun `publishBehandledeSoknader publiserer og markerer henleggelse som publisert i databasen`() {
+        val soknadMedHenleggelse = lagreSoknadMedHenleggelse(soknad())
+        repository.setSoknadPublished(soknadMedHenleggelse.id, OffsetDateTime.now())
+        every { soknadstatusProducerMock.publish(any()) } returns Result.success(Unit)
+
+        val resultater = service.publishBehandledeSoknader()
+
+        assertEquals(1, resultater.size)
+        assertTrue(resultater.single().isSuccess)
+        assertTrue(repository.getSoknaderMedUnpublishedBehandlingsutfall().isEmpty())
+        verify(exactly = 1) {
+            soknadstatusProducerMock.publish(
+                match { it.status == Soknadstatus.BEHANDLET && it.henleggelse != null && it.vedtak == null },
+            )
         }
     }
 
@@ -184,7 +227,7 @@ class PublishSoknadstatusServiceTest {
 
         assertEquals(1, resultater.count { it.isFailure })
         assertEquals(1, resultater.count { it.isSuccess })
-        val upubliserte = repository.getSoknaderMedUnpublishedVedtak()
+        val upubliserte = repository.getSoknaderMedUnpublishedBehandlingsutfall()
         assertEquals(1, upubliserte.size)
         assertEquals(soknadSomFeiler.id, upubliserte.single().id)
     }

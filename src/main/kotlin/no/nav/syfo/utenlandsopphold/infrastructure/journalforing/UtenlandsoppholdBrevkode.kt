@@ -9,4 +9,7 @@ enum class UtenlandsoppholdBrevkode(
     override val value: String,
 ) : Brevkode {
     VEDTAK("OPPF_VEDTAK_UTENLANDSOPPHOLD"),
+
+    // TODO: placeholder inntil faktisk brevkode for henleggelse er avklart/registrert.
+    HENLEGGELSE("OPPF_HENLEGGELSE_UTENLANDSOPPHOLD"),
 }

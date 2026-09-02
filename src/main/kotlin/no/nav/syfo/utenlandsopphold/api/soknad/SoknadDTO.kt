@@ -1,6 +1,7 @@
 package no.nav.syfo.utenlandsopphold.api.soknad
 
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
+import no.nav.syfo.utenlandsopphold.domain.Henleggelse
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.SoknadStatus
@@ -26,6 +27,11 @@ data class SoknadVedtakPostDTO(
     val begrunnelse: String? = null,
 )
 
+data class SoknadHenleggelsePostDTO(
+    val document: List<DocumentComponent>,
+    val begrunnelse: String,
+)
+
 data class SoknadVedtakResponseDTO(
     val soknad: SoknadDTO,
 )
@@ -37,6 +43,7 @@ data class SoknadDTO(
     val innsendtTidspunkt: LocalDateTime,
     val soktePerioder: List<PeriodeDTO>,
     val vedtak: VedtakDTO?,
+    val henleggelse: HenleggelseDTO?,
 )
 
 data class PeriodeDTO(
@@ -52,7 +59,13 @@ data class VedtakDTO(
     val begrunnelse: String?,
 )
 
-enum class SoknadStatusDTO { MOTTATT, INNVILGET, DELVIS_INNVILGET, AVSLAG }
+data class HenleggelseDTO(
+    val fattetAv: String,
+    val fattetTidspunkt: LocalDateTime,
+    val begrunnelse: String,
+)
+
+enum class SoknadStatusDTO { MOTTATT, INNVILGET, DELVIS_INNVILGET, AVSLAG, HENLAGT }
 
 fun SoknadStatus.toDTO(): SoknadStatusDTO =
     when (this) {
@@ -60,6 +73,7 @@ fun SoknadStatus.toDTO(): SoknadStatusDTO =
         SoknadStatus.INNVILGET -> SoknadStatusDTO.INNVILGET
         SoknadStatus.DELVIS_INNVILGET -> SoknadStatusDTO.DELVIS_INNVILGET
         SoknadStatus.AVSLAG -> SoknadStatusDTO.AVSLAG
+        SoknadStatus.HENLAGT -> SoknadStatusDTO.HENLAGT
     }
 
 fun List<Soknad>.toResponseDTO(): SoknaderResponseDTO = SoknaderResponseDTO(soknader = map { it.toDTO() })
@@ -73,7 +87,8 @@ fun Soknad.toDTO(): SoknadDTO =
         status = status.toDTO(),
         innsendtTidspunkt = innsendtTidspunkt.toLocalDateTimeOslo(),
         soktePerioder = soktePerioder.map { it.toDTO() },
-        vedtak = vedtak?.toDTO(),
+        vedtak = (behandlingsutfall as? Vedtak)?.toDTO(),
+        henleggelse = (behandlingsutfall as? Henleggelse)?.toDTO(),
     )
 
 private fun Periode.toDTO(): PeriodeDTO = PeriodeDTO(fom = fom, tom = tom)
@@ -87,6 +102,13 @@ private fun Vedtak.toDTO(): VedtakDTO =
                 Utfall.Avslag -> "AVSLAG"
             },
         innvilgedePerioder = innvilgedePerioder.map { it.toDTO() },
+        fattetAv = fattetAv.value,
+        fattetTidspunkt = fattetTidspunkt.toLocalDateTimeOslo(),
+        begrunnelse = begrunnelse,
+    )
+
+private fun Henleggelse.toDTO(): HenleggelseDTO =
+    HenleggelseDTO(
         fattetAv = fattetAv.value,
         fattetTidspunkt = fattetTidspunkt.toLocalDateTimeOslo(),
         begrunnelse = begrunnelse,

@@ -1,5 +1,6 @@
 package no.nav.syfo.utenlandsopphold.infrastructure.journalforing
 
+import no.nav.syfo.common.journalforing.Brevkode
 import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.common.journalforing.JournalpostMottaker
 import no.nav.syfo.common.journalforing.client.DokarkivClient
@@ -13,8 +14,8 @@ import no.nav.syfo.utenlandsopphold.application.IJournalforingService
 import org.slf4j.LoggerFactory
 
 /**
- * Journalfører PDF-en for et vedtak i dokarkiv (Joark). `dokarkivClient` og
- * `isJournalforingRetryEnabled` (true i prod, false i dev-gcp) kobles inn fra
+ * Journalfører PDF-en for et vedtak eller en henleggelse i dokarkiv (Joark). `dokarkivClient`
+ * og `isJournalforingRetryEnabled` (true i prod, false i dev-gcp) kobles inn fra
  * infrastructure/clients/ClientsModule.kt basert på Environment.
  */
 class JournalforingService(
@@ -25,13 +26,15 @@ class JournalforingService(
         personident: Personident,
         pdf: ByteArray,
         eksternReferanseId: String,
+        brevkode: Brevkode,
+        tittel: String,
     ): Result<JournalpostId> =
         runCatching {
             val journalpostRequest =
                 createJournalpostRequest(
                     bruker = Bruker(id = personident.value, idType = BrukerIdType.PERSONIDENT.value),
-                    brevkode = UtenlandsoppholdBrevkode.VEDTAK,
-                    tittel = "Vedtak om utenlandsopphold",
+                    brevkode = brevkode,
+                    tittel = tittel,
                     pdf = pdf,
                     eksternReferanseId = eksternReferanseId,
                     journalpostType = JournalpostType.UTGAAENDE,

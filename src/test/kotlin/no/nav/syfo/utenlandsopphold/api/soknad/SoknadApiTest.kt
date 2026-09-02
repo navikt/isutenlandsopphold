@@ -32,9 +32,11 @@ import no.nav.syfo.utenlandsopphold.application.Transaction
 import no.nav.syfo.utenlandsopphold.application.TransactionManager
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponentType
+import no.nav.syfo.utenlandsopphold.domain.Henleggelse
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.Utsending
 import no.nav.syfo.utenlandsopphold.domain.Vedtak
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
 import no.nav.syfo.utenlandsopphold.infrastructure.mock.mockTilgangskontrollClient
@@ -51,6 +53,7 @@ import kotlin.test.assertTrue
 
 const val SOKNADER_QUERY_PATH = "/api/v1/soknader/query"
 const val SOKNAD_VEDTAK_PATH = "/api/v1/soknader/%s/vedtak"
+const val SOKNAD_HENLEGGELSE_PATH = "/api/v1/soknader/%s/henleggelse"
 
 class SoknadApiTest {
     private val repository = mockk<ISoknadRepository>()
@@ -69,16 +72,16 @@ class SoknadApiTest {
         every { repository.hentSoknad(any()) } returns null
     }
 
-    private fun stubHentSoknadOgLagreVedtak(
+    private fun stubHentSoknadOgLagreBehandlingsutfall(
         soknad: Soknad?,
-        lagreVedtak: (Soknad) -> Unit = { _ -> error("Skal ikke kalles") },
+        lagreBehandlingsutfall: (Soknad) -> Unit = { _ -> error("Skal ikke kalles") },
     ) {
         every { repository.hentSoknad(any()) } returns soknad
         every { repository.hentSoknadForUpdate(any(), any()) } returns soknad
-        every { repository.lagreVedtak(any(), any()) } answers {
-            val soknadMedVedtak = secondArg<Soknad>()
-            lagreVedtak(soknadMedVedtak)
-            soknadMedVedtak
+        every { repository.lagreBehandlingsutfall(any(), any()) } answers {
+            val soknadMedBehandlingsutfall = secondArg<Soknad>()
+            lagreBehandlingsutfall(soknadMedBehandlingsutfall)
+            soknadMedBehandlingsutfall
         }
     }
 
@@ -237,7 +240,7 @@ class SoknadApiTest {
                     soktePerioder = listOf(Periode(fom = LocalDate.of(2026, 4, 1), tom = LocalDate.of(2026, 4, 10))),
                     innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
                 )
-            stubHentSoknadOgLagreVedtak(soknad)
+            stubHentSoknadOgLagreBehandlingsutfall(soknad)
             val client = setupApiAndClient()
 
             val response =
@@ -253,7 +256,7 @@ class SoknadApiTest {
     @Test
     fun `vedtak uten token gir 401`() =
         testApplication {
-            stubHentSoknadOgLagreVedtak(ubruktSoknad)
+            stubHentSoknadOgLagreBehandlingsutfall(ubruktSoknad)
             val client = setupApiAndClient()
 
             val response =
@@ -268,7 +271,7 @@ class SoknadApiTest {
     @Test
     fun `vedtak med token med feil audience gir 401`() =
         testApplication {
-            stubHentSoknadOgLagreVedtak(ubruktSoknad)
+            stubHentSoknadOgLagreBehandlingsutfall(ubruktSoknad)
             val client = setupApiAndClient()
 
             val response =
@@ -284,7 +287,7 @@ class SoknadApiTest {
     @Test
     fun `vedtak med ugyldig soknadId gir 400`() =
         testApplication {
-            stubHentSoknadOgLagreVedtak(ubruktSoknad)
+            stubHentSoknadOgLagreBehandlingsutfall(ubruktSoknad)
             val client = setupApiAndClient()
 
             val response =
@@ -316,7 +319,7 @@ class SoknadApiTest {
     @Test
     fun `vedtak med ugyldig utfall gir 400`() =
         testApplication {
-            stubHentSoknadOgLagreVedtak(ubruktSoknad)
+            stubHentSoknadOgLagreBehandlingsutfall(ubruktSoknad)
             val client = setupApiAndClient()
 
             val response =
@@ -345,7 +348,7 @@ class SoknadApiTest {
     @Test
     fun `vedtak med tom document gir 400`() =
         testApplication {
-            stubHentSoknadOgLagreVedtak(ubruktSoknad)
+            stubHentSoknadOgLagreBehandlingsutfall(ubruktSoknad)
             val client = setupApiAndClient()
 
             val response =
@@ -379,7 +382,7 @@ class SoknadApiTest {
                     soktePerioder = innvilgedePerioder,
                     innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
                 )
-            stubHentSoknadOgLagreVedtak(mottattSoknad) { soknadMedVedtak -> lagretSoknad = soknadMedVedtak }
+            stubHentSoknadOgLagreBehandlingsutfall(mottattSoknad) { soknadMedVedtak -> lagretSoknad = soknadMedVedtak }
             val client = setupApiAndClient()
 
             val response =
@@ -404,8 +407,9 @@ class SoknadApiTest {
 
             assertEquals(HttpStatusCode.OK, response.status)
             assertEquals(soknadId, lagretSoknad?.id)
-            assertEquals(Utfall.Innvilget, lagretSoknad?.vedtak?.utfall)
-            assertEquals(innvilgedePerioder, lagretSoknad?.vedtak?.innvilgedePerioder)
+            val lagretVedtak = lagretSoknad?.behandlingsutfall as? Vedtak
+            assertEquals(Utfall.Innvilget, lagretVedtak?.utfall)
+            assertEquals(innvilgedePerioder, lagretVedtak?.innvilgedePerioder)
 
             val body = response.body<SoknadVedtakResponseDTO>()
             assertEquals(soknadId.toString(), body.soknad.soknadId)
@@ -428,7 +432,7 @@ class SoknadApiTest {
                     soktePerioder = soktePerioder,
                     innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
                 )
-            stubHentSoknadOgLagreVedtak(mottattSoknad) { soknadMedVedtak -> lagretSoknad = soknadMedVedtak }
+            stubHentSoknadOgLagreBehandlingsutfall(mottattSoknad) { soknadMedVedtak -> lagretSoknad = soknadMedVedtak }
             val client = setupApiAndClient()
 
             val response =
@@ -445,8 +449,9 @@ class SoknadApiTest {
                 }
 
             assertEquals(HttpStatusCode.OK, response.status)
-            assertEquals(Utfall.DelvisInnvilget(listOf(innvilgetPeriode)), lagretSoknad?.vedtak?.utfall)
-            assertEquals(listOf(innvilgetPeriode), lagretSoknad?.vedtak?.innvilgedePerioder)
+            val lagretVedtak = lagretSoknad?.behandlingsutfall as? Vedtak
+            assertEquals(Utfall.DelvisInnvilget(listOf(innvilgetPeriode)), lagretVedtak?.utfall)
+            assertEquals(listOf(innvilgetPeriode), lagretVedtak?.innvilgedePerioder)
 
             val body = response.body<SoknadVedtakResponseDTO>()
             assertEquals(SoknadStatusDTO.DELVIS_INNVILGET, body.soknad.status)
@@ -469,7 +474,7 @@ class SoknadApiTest {
                     soktePerioder = listOf(Periode(fom = LocalDate.of(2026, 4, 1), tom = LocalDate.of(2026, 4, 10))),
                     innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
                 )
-            stubHentSoknadOgLagreVedtak(mottattSoknad) { soknadMedVedtak -> lagretSoknad = soknadMedVedtak }
+            stubHentSoknadOgLagreBehandlingsutfall(mottattSoknad) { soknadMedVedtak -> lagretSoknad = soknadMedVedtak }
             val client = setupApiAndClient()
 
             val response =
@@ -480,8 +485,9 @@ class SoknadApiTest {
                 }
 
             assertEquals(HttpStatusCode.OK, response.status)
-            assertEquals(Utfall.Avslag, lagretSoknad?.vedtak?.utfall)
-            assertEquals(emptyList(), lagretSoknad?.vedtak?.innvilgedePerioder)
+            val lagretVedtak = lagretSoknad?.behandlingsutfall as? Vedtak
+            assertEquals(Utfall.Avslag, lagretVedtak?.utfall)
+            assertEquals(emptyList(), lagretVedtak?.innvilgedePerioder)
 
             val body = response.body<SoknadVedtakResponseDTO>()
             assertEquals(SoknadStatusDTO.AVSLAG, body.soknad.status)
@@ -493,7 +499,7 @@ class SoknadApiTest {
     @Test
     fun `vedtak med delvis innvilgelse uten innvilgede perioder gir 400`() =
         testApplication {
-            stubHentSoknadOgLagreVedtak(ubruktSoknad)
+            stubHentSoknadOgLagreBehandlingsutfall(ubruktSoknad)
             val client = setupApiAndClient()
 
             val response =
@@ -509,7 +515,7 @@ class SoknadApiTest {
     @Test
     fun `vedtak med delvis innvilgelse med overlappende innvilgede perioder gir 400`() =
         testApplication {
-            stubHentSoknadOgLagreVedtak(ubruktSoknad)
+            stubHentSoknadOgLagreBehandlingsutfall(ubruktSoknad)
             val client = setupApiAndClient()
 
             val response =
@@ -534,7 +540,7 @@ class SoknadApiTest {
     @Test
     fun `vedtak med delvis innvilgelse uten begrunnelse gir 400`() =
         testApplication {
-            stubHentSoknadOgLagreVedtak(ubruktSoknad)
+            stubHentSoknadOgLagreBehandlingsutfall(ubruktSoknad)
             val client = setupApiAndClient()
 
             val response =
@@ -550,7 +556,7 @@ class SoknadApiTest {
     @Test
     fun `vedtak med delvis innvilgelse med blank begrunnelse gir 400`() =
         testApplication {
-            stubHentSoknadOgLagreVedtak(ubruktSoknad)
+            stubHentSoknadOgLagreBehandlingsutfall(ubruktSoknad)
             val client = setupApiAndClient()
 
             val response =
@@ -566,7 +572,7 @@ class SoknadApiTest {
     @Test
     fun `vedtak med avslag uten begrunnelse gir 400`() =
         testApplication {
-            stubHentSoknadOgLagreVedtak(ubruktSoknad)
+            stubHentSoknadOgLagreBehandlingsutfall(ubruktSoknad)
             val client = setupApiAndClient()
 
             val response =
@@ -582,7 +588,7 @@ class SoknadApiTest {
     @Test
     fun `vedtak med avslag med blank begrunnelse gir 400`() =
         testApplication {
-            stubHentSoknadOgLagreVedtak(ubruktSoknad)
+            stubHentSoknadOgLagreBehandlingsutfall(ubruktSoknad)
             val client = setupApiAndClient()
 
             val response =
@@ -598,7 +604,7 @@ class SoknadApiTest {
     @Test
     fun `vedtak med innvilgelse som har begrunnelse gir 400`() =
         testApplication {
-            stubHentSoknadOgLagreVedtak(ubruktSoknad)
+            stubHentSoknadOgLagreBehandlingsutfall(ubruktSoknad)
             val client = setupApiAndClient()
 
             val response =
@@ -626,19 +632,19 @@ class SoknadApiTest {
                     soktePerioder = innvilgedePerioder,
                     innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
                 )
-            stubHentSoknadOgLagreVedtak(mottattSoknad) { _ -> }
+            stubHentSoknadOgLagreBehandlingsutfall(mottattSoknad) { _ -> }
 
             val pdlClientMock = mockk<IPdlClient>()
             val pdfClientMock = mockk<IPdfClient>()
             val journalforingServiceMock = mockk<IJournalforingService>()
             val distribusjonServiceMock = mockk<IDistribusjonService>()
             coEvery { pdlClientMock.getNavn(personident) } returns "Ola Nordmann"
-            coEvery { pdfClientMock.createVedtakPdf(personident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
-            coEvery { journalforingServiceMock.journalfor(personident, any(), any()) } returns
+            coEvery { pdfClientMock.createPdf(personident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
+            coEvery { journalforingServiceMock.journalfor(personident, any(), any(), any(), any()) } returns
                 Result.success(JournalpostId("999"))
-            coEvery { distribusjonServiceMock.distribuer(any()) } returns Result.success("bestilling-1")
-            every { repository.setVedtakJournalfort(any(), any(), any()) } returns Unit
-            every { repository.setVedtakDistribuert(any(), any()) } returns Unit
+            coEvery { distribusjonServiceMock.distribuer(any(), any()) } returns Result.success("bestilling-1")
+            every { repository.setBehandlingsutfallJournalfort(any(), any(), any()) } returns Unit
+            every { repository.setBehandlingsutfallDistribuert(any(), any()) } returns Unit
 
             val journalforVedtakService =
                 JournalforVedtakService(
@@ -659,8 +665,8 @@ class SoknadApiTest {
 
             assertEquals(HttpStatusCode.OK, response.status)
             // Journalføring og distribusjon skjer i en fire-and-forget bakgrunnsoppgave, derfor timeout her.
-            coVerify(timeout = 2000) { journalforingServiceMock.journalfor(personident, any(), any()) }
-            coVerify(timeout = 2000) { distribusjonServiceMock.distribuer(JournalpostId("999")) }
+            coVerify(timeout = 2000) { journalforingServiceMock.journalfor(personident, any(), any(), any(), any()) }
+            coVerify(timeout = 2000) { distribusjonServiceMock.distribuer(JournalpostId("999"), any()) }
         }
 
     @Test
@@ -675,16 +681,16 @@ class SoknadApiTest {
                     personident = UserConstants.PERSON_VEILEDERE_HAR_TILGANG_TIL,
                     soktePerioder = innvilgedePerioder,
                     innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
-                    vedtak =
+                    behandlingsutfall =
                         Vedtak(
                             utfall = Utfall.Innvilget,
                             fattetAv = Navident(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG),
                             fattetTidspunkt = OffsetDateTime.parse("2026-03-02T09:00:00Z"),
                             innvilgedePerioder = innvilgedePerioder,
-                            document = validSoknadVedtakPostDTO().document,
+                            utsending = Utsending(document = validSoknadVedtakPostDTO().document),
                         ),
                 )
-            stubHentSoknadOgLagreVedtak(soknadMedVedtak)
+            stubHentSoknadOgLagreBehandlingsutfall(soknadMedVedtak)
             val client = setupApiAndClient()
 
             val response =
@@ -692,6 +698,177 @@ class SoknadApiTest {
                     bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
                     contentType(ContentType.Application.Json)
                     setBody(validSoknadVedtakPostDTO())
+                }
+
+            assertEquals(HttpStatusCode.Conflict, response.status)
+        }
+
+    @Test
+    fun `henleggelse uten tilgang til person gir 403`() =
+        testApplication {
+            val soknadId = UUID.randomUUID()
+            val soknad =
+                Soknad(
+                    id = soknadId,
+                    eksternId = UUID.randomUUID(),
+                    personident = UserConstants.PERSON_VEILEDERE_IKKE_HAR_TILGANG_TIL,
+                    soktePerioder = listOf(Periode(fom = LocalDate.of(2026, 4, 1), tom = LocalDate.of(2026, 4, 10))),
+                    innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
+                )
+            stubHentSoknadOgLagreBehandlingsutfall(soknad)
+            val client = setupApiAndClient()
+
+            val response =
+                client.post(SOKNAD_HENLEGGELSE_PATH.format(soknadId)) {
+                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
+                    contentType(ContentType.Application.Json)
+                    setBody(validSoknadHenleggelsePostDTO())
+                }
+
+            assertEquals(HttpStatusCode.Forbidden, response.status)
+        }
+
+    @Test
+    fun `henleggelse uten token gir 401`() =
+        testApplication {
+            stubHentSoknadOgLagreBehandlingsutfall(ubruktSoknad)
+            val client = setupApiAndClient()
+
+            val response =
+                client.post(SOKNAD_HENLEGGELSE_PATH.format(UUID.randomUUID())) {
+                    contentType(ContentType.Application.Json)
+                    setBody(validSoknadHenleggelsePostDTO())
+                }
+
+            assertEquals(HttpStatusCode.Unauthorized, response.status)
+        }
+
+    @Test
+    fun `henleggelse med ukjent soknadId gir 404`() =
+        testApplication {
+            stubHentSoknader(emptyList())
+            val client = setupApiAndClient()
+
+            val response =
+                client.post(SOKNAD_HENLEGGELSE_PATH.format(UUID.randomUUID())) {
+                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
+                    contentType(ContentType.Application.Json)
+                    setBody(validSoknadHenleggelsePostDTO())
+                }
+
+            assertEquals(HttpStatusCode.NotFound, response.status)
+        }
+
+    @Test
+    fun `henleggelse med tom document gir 400`() =
+        testApplication {
+            stubHentSoknadOgLagreBehandlingsutfall(ubruktSoknad)
+            val client = setupApiAndClient()
+
+            val response =
+                client.post(SOKNAD_HENLEGGELSE_PATH.format(UUID.randomUUID())) {
+                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
+                    contentType(ContentType.Application.Json)
+                    setBody(validSoknadHenleggelsePostDTO().copy(document = emptyList()))
+                }
+
+            assertEquals(HttpStatusCode.BadRequest, response.status)
+        }
+
+    @Test
+    fun `henleggelse uten begrunnelse gir 400`() =
+        testApplication {
+            stubHentSoknadOgLagreBehandlingsutfall(ubruktSoknad)
+            val client = setupApiAndClient()
+
+            val response =
+                client.post(SOKNAD_HENLEGGELSE_PATH.format(UUID.randomUUID())) {
+                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
+                    contentType(ContentType.Application.Json)
+                    setBody(validSoknadHenleggelsePostDTO().copy(begrunnelse = ""))
+                }
+
+            assertEquals(HttpStatusCode.BadRequest, response.status)
+        }
+
+    @Test
+    fun `henleggelse med blank begrunnelse gir 400`() =
+        testApplication {
+            stubHentSoknadOgLagreBehandlingsutfall(ubruktSoknad)
+            val client = setupApiAndClient()
+
+            val response =
+                client.post(SOKNAD_HENLEGGELSE_PATH.format(UUID.randomUUID())) {
+                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
+                    contentType(ContentType.Application.Json)
+                    setBody(validSoknadHenleggelsePostDTO().copy(begrunnelse = "   "))
+                }
+
+            assertEquals(HttpStatusCode.BadRequest, response.status)
+        }
+
+    @Test
+    fun `henleggelse returnerer 200 med henlagt soknad fra service`() =
+        testApplication {
+            val soknadId = UUID.randomUUID()
+            var lagretSoknad: Soknad? = null
+
+            val mottattSoknad =
+                Soknad(
+                    id = soknadId,
+                    eksternId = UUID.randomUUID(),
+                    personident = Personident("11111111111"),
+                    soktePerioder = listOf(Periode(fom = LocalDate.of(2026, 4, 1), tom = LocalDate.of(2026, 4, 10))),
+                    innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
+                )
+            stubHentSoknadOgLagreBehandlingsutfall(mottattSoknad) { soknadMedHenleggelse -> lagretSoknad = soknadMedHenleggelse }
+            val client = setupApiAndClient()
+
+            val response =
+                client.post(SOKNAD_HENLEGGELSE_PATH.format(soknadId.toString())) {
+                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
+                    contentType(ContentType.Application.Json)
+                    setBody(validSoknadHenleggelsePostDTO())
+                }
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(soknadId, lagretSoknad?.id)
+            val lagretHenleggelse = lagretSoknad?.behandlingsutfall as? Henleggelse
+            assertEquals("Trukket av søker", lagretHenleggelse?.begrunnelse)
+
+            val body = response.body<SoknadVedtakResponseDTO>()
+            assertEquals(soknadId.toString(), body.soknad.soknadId)
+            assertEquals(SoknadStatusDTO.HENLAGT, body.soknad.status)
+            assertEquals("Trukket av søker", body.soknad.henleggelse?.begrunnelse)
+        }
+
+    @Test
+    fun `henleggelse på soknad som allerede har behandlingsutfall gir 409`() =
+        testApplication {
+            val soknadId = UUID.randomUUID()
+            val soknadMedVedtak =
+                Soknad(
+                    id = soknadId,
+                    eksternId = UUID.randomUUID(),
+                    personident = UserConstants.PERSON_VEILEDERE_HAR_TILGANG_TIL,
+                    soktePerioder = listOf(Periode(fom = LocalDate.of(2026, 4, 1), tom = LocalDate.of(2026, 4, 10))),
+                    innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
+                    behandlingsutfall =
+                        Henleggelse(
+                            fattetAv = Navident(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG),
+                            fattetTidspunkt = OffsetDateTime.parse("2026-03-02T09:00:00Z"),
+                            begrunnelse = "Trukket av søker",
+                            utsending = Utsending(document = validSoknadHenleggelsePostDTO().document),
+                        ),
+                )
+            stubHentSoknadOgLagreBehandlingsutfall(soknadMedVedtak)
+            val client = setupApiAndClient()
+
+            val response =
+                client.post(SOKNAD_HENLEGGELSE_PATH.format(soknadId.toString())) {
+                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
+                    contentType(ContentType.Application.Json)
+                    setBody(validSoknadHenleggelsePostDTO())
                 }
 
             assertEquals(HttpStatusCode.Conflict, response.status)
@@ -718,6 +895,19 @@ private fun validSoknadVedtakPostDTO() =
                     texts = listOf("Søknaden din er innvilget"),
                 ),
             ),
+    )
+
+private fun validSoknadHenleggelsePostDTO() =
+    SoknadHenleggelsePostDTO(
+        document =
+            listOf(
+                DocumentComponent(
+                    type = DocumentComponentType.HEADER_H1,
+                    title = "Henleggelse",
+                    texts = listOf("Søknaden din er henlagt"),
+                ),
+            ),
+        begrunnelse = "Trukket av søker",
     )
 
 private object NoopDatabase : DatabaseInterface {

@@ -10,14 +10,16 @@ import io.ktor.http.contentType
 import no.nav.syfo.common.http.defaultHttpClient
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.application.IPdfClient
-import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
+import no.nav.syfo.utenlandsopphold.domain.Behandlingsutfall
+import no.nav.syfo.utenlandsopphold.domain.Henleggelse
 import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.Vedtak
 import no.nav.syfo.utenlandsopphold.domain.sanitizeForPdfGen
 import java.time.LocalDate
 
 /**
- * Client for ispdfgen — genererer PDF-en for et vedtak om utenlandsopphold ut fra
- * dokumentkomponentene lagret på vedtaket.
+ * Client for ispdfgen — genererer PDF-en for et behandlingsutfall (vedtak eller henleggelse)
+ * om utenlandsopphold ut fra dokumentkomponentene lagret på behandlingsutfallet.
  *
  * ispdfgen kjøres intra-cluster, så [defaultHttpClient] (uten utgående proxy) brukes.
  * Ingen autentisering kreves per no. — kun NAIS-nettverkspolicy (accessPolicy) mot ispdfgen.
@@ -28,21 +30,20 @@ class PdfClient(
     private val config: PdfClientConfig,
     private val httpClient: HttpClient = defaultHttpClient(),
 ) : IPdfClient {
-    override suspend fun createVedtakPdf(
+    override suspend fun createPdf(
         mottakerFodselsnummer: Personident,
         mottakerNavn: String,
-        utfall: Utfall,
-        documentComponents: List<DocumentComponent>,
+        behandlingsutfall: Behandlingsutfall,
         datoSendt: LocalDate,
     ): ByteArray {
         val request =
-            VedtakPdfModel(
+            BehandlingsutfallPdfModel(
                 mottakerFodselsnummer = mottakerFodselsnummer.value,
                 mottakerNavn = mottakerNavn,
-                documentComponents = documentComponents.sanitizeForPdfGen(),
+                documentComponents = behandlingsutfall.document.sanitizeForPdfGen(),
                 datoSendt = datoSendt,
             )
-        val url = getVedtakPdfUrl(utfall)
+        val url = getPdfUrl(behandlingsutfall)
 
         val response =
             httpClient.post(url) {
@@ -54,17 +55,22 @@ class PdfClient(
         return response.body()
     }
 
-    private fun getVedtakPdfUrl(utfall: Utfall): String =
-        when (utfall) {
-            Utfall.Innvilget -> "${config.baseUrl}$VEDTAK_INNVILGET_PDF_PATH"
-            is Utfall.DelvisInnvilget -> "${config.baseUrl}$VEDTAK_DELVIS_INNVILGET_PDF_PATH"
-            Utfall.Avslag -> "${config.baseUrl}$VEDTAK_AVSLAG_PDF_PATH"
+    private fun getPdfUrl(behandlingsutfall: Behandlingsutfall): String =
+        when (behandlingsutfall) {
+            is Henleggelse -> "${config.baseUrl}$HENLEGGELSE_PDF_PATH"
+            is Vedtak ->
+                when (behandlingsutfall.utfall) {
+                    Utfall.Innvilget -> "${config.baseUrl}$VEDTAK_INNVILGET_PDF_PATH"
+                    is Utfall.DelvisInnvilget -> "${config.baseUrl}$VEDTAK_DELVIS_INNVILGET_PDF_PATH"
+                    Utfall.Avslag -> "${config.baseUrl}$VEDTAK_AVSLAG_PDF_PATH"
+                }
         }
 
     companion object {
-        // Malen (template) må være registrert for isutenlandsopphold i ispdfgen.
+        // Malene (templates) må være registrert for isutenlandsopphold i ispdfgen.
         const val VEDTAK_INNVILGET_PDF_PATH: String = "/api/v1/genpdf/isutenlandsopphold/vedtak-innvilget"
         const val VEDTAK_DELVIS_INNVILGET_PDF_PATH: String = "/api/v1/genpdf/isutenlandsopphold/vedtak-delvis-innvilget"
         const val VEDTAK_AVSLAG_PDF_PATH: String = "/api/v1/genpdf/isutenlandsopphold/vedtak-avslag"
+        const val HENLEGGELSE_PDF_PATH: String = "/api/v1/genpdf/isutenlandsopphold/henlegg"
     }
 }
