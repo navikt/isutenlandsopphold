@@ -73,5 +73,33 @@ fun Route.registerSoknadApi(
                 call.respond(soknadMedVedtak.toResponseDTO())
             }
         }
+
+        post("/{soknadId}/henleggelse") {
+            val request = call.receive<SoknadHenleggelsePostDTO>()
+            require(request.document.isNotEmpty()) { "document kan ikke være tomt" }
+            require(request.begrunnelse.isNotBlank()) { "begrunnelse er påkrevd og kan ikke være blank" }
+
+            val soknadId = UUID.fromString(requireNotNull(call.parameters["soknadId"]) { "Missing soknadId" })
+            val soknad =
+                soknadService.hentSoknad(soknadId = soknadId)
+                    ?: throw NotFoundException("Søknad med id $soknadId finnes ikke")
+
+            checkPersonAndSyfoTilgang(
+                action = "henlegg søknad om utenlandsopphold for person",
+                personident = soknad.personident,
+                tilgangskontrollClient = tilgangskontrollClient,
+                requiresWriteAccess = true,
+            ) { authorizedUser, _, _ ->
+                val soknadMedHenleggelse =
+                    soknadService.henleggSoknad(
+                        soknadId = soknadId,
+                        henlagtAv = authorizedUser.navident,
+                        begrunnelse = request.begrunnelse,
+                        document = request.document,
+                    )
+
+                call.respond(soknadMedHenleggelse.toHenleggelseResponseDTO())
+            }
+        }
     }
 }

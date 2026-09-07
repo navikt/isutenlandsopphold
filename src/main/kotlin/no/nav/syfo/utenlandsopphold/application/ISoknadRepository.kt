@@ -22,6 +22,15 @@ interface ISoknadRepository {
     ): Soknad
 
     /**
+     * Lagrer en henleggelse for en søknad. Krever at søknaden er MOTTATT
+     * (håndheves av [Soknad.henlegg]).
+     */
+    fun lagreHenleggelse(
+        transaction: Transaction,
+        soknadMedHenleggelse: Soknad,
+    ): Soknad
+
+    /**
      * Henter søknader hvor det fattede vedtaket ennå ikke er journalført
      * (`vedtak.journalpost_id IS NULL`). Brukes av journalføringsjobben.
      *
@@ -61,6 +70,43 @@ interface ISoknadRepository {
         distribuertTidspunkt: OffsetDateTime,
     )
 
+    /**
+     * Henter søknader hvor henleggelsen ennå ikke er journalført
+     * (`henleggelse.journalpost_id IS NULL`). Brukes av journalføringsjobben.
+     *
+     * @param henlagtBefore Kun henleggelser gjort før dette tidspunktet inkluderes. Brukes til
+     * å gi API-laget (som forsøker journalføring umiddelbart etter at en søknad er henlagt) rom
+     * til å journalføre selv, uten at cronjobben forsøker det samme samtidig.
+     */
+    fun getIkkeJournalforteHenleggelser(henlagtBefore: OffsetDateTime): List<Soknad>
+
+    /**
+     * Markerer at en henleggelse er journalført ved å sette `journalpost_id` og
+     * `journalfort_tidspunkt` på raden. Kalles etter vellykket arkivering i dokarkiv.
+     */
+    fun setHenleggelseJournalfort(
+        henleggelseId: UUID,
+        journalpostId: JournalpostId,
+        journalfortTidspunkt: OffsetDateTime,
+    )
+
+    /**
+     * Henter søknader hvor henleggelsen er journalført, men ennå ikke distribuert.
+     * Brukes av distribusjonsjobben.
+     *
+     * @param henlagtBefore Kun henleggelser gjort før dette tidspunktet inkluderes.
+     */
+    fun getHenleggelserMedIkkeDistribuert(henlagtBefore: OffsetDateTime): List<Soknad>
+
+    /**
+     * Markerer at en henleggelse er distribuert ved å sette `distribuert_tidspunkt` på raden.
+     * Kalles etter vellykket bestilling i dokdistfordeling.
+     */
+    fun setHenleggelseDistribuert(
+        henleggelseId: UUID,
+        distribuertTidspunkt: OffsetDateTime,
+    )
+
     fun getUnpublishedSoknader(): List<Soknad>
 
     fun setSoknadPublished(
@@ -72,6 +118,13 @@ interface ISoknadRepository {
 
     fun setVedtakPublished(
         vedtakId: UUID,
+        publishedAt: OffsetDateTime,
+    )
+
+    fun getSoknaderMedUnpublishedHenleggelse(): List<Soknad>
+
+    fun setHenleggelsePublished(
+        henleggelseId: UUID,
         publishedAt: OffsetDateTime,
     )
 

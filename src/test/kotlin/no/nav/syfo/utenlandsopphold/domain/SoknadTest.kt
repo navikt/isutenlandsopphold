@@ -239,4 +239,134 @@ class SoknadTest {
             lagSoknad().journalforVedtak(JournalpostId("123"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
         }
     }
+
+    @Test
+    fun `henlegg på mottatt søknad gir status HENLAGT`() {
+        val now = OffsetDateTime.parse("2026-01-10T12:00:00Z")
+
+        val resultat =
+            lagSoknad().henlegg(
+                begrunnelse = "Søker har trukket søknaden",
+                henlagtAv = veileder,
+                now = now,
+                document = henleggelseDocument,
+            )
+
+        assertEquals(SoknadStatus.HENLAGT, resultat.status)
+        val henleggelse = assertNotNull(resultat.henleggelse)
+        assertEquals("Søker har trukket søknaden", henleggelse.begrunnelse)
+        assertEquals(veileder, henleggelse.henlagtAv)
+        assertEquals(now, henleggelse.henlagtTidspunkt)
+    }
+
+    @Test
+    fun `henlegg på søknad med vedtak kaster`() {
+        val soknadMedVedtak =
+            lagSoknad().fattVedtak(
+                utfall = Utfall.Innvilget,
+                fattetAv = veileder,
+                now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
+                document = vedtakDocument,
+                begrunnelse = null,
+            )
+
+        assertFailsWith<IllegalStateException> {
+            soknadMedVedtak.henlegg(
+                begrunnelse = "Søker har trukket søknaden",
+                henlagtAv = veileder,
+                now = OffsetDateTime.parse("2026-01-11T12:00:00Z"),
+                document = henleggelseDocument,
+            )
+        }
+    }
+
+    @Test
+    fun `henlegg på allerede henlagt søknad kaster`() {
+        val alleredeHenlagt =
+            lagSoknad().henlegg(
+                begrunnelse = "Søker har trukket søknaden",
+                henlagtAv = veileder,
+                now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
+                document = henleggelseDocument,
+            )
+
+        assertFailsWith<IllegalStateException> {
+            alleredeHenlagt.henlegg(
+                begrunnelse = "Ny begrunnelse",
+                henlagtAv = veileder,
+                now = OffsetDateTime.parse("2026-01-11T12:00:00Z"),
+                document = henleggelseDocument,
+            )
+        }
+    }
+
+    @Test
+    fun `fattVedtak på henlagt søknad kaster`() {
+        val henlagt =
+            lagSoknad().henlegg(
+                begrunnelse = "Søker har trukket søknaden",
+                henlagtAv = veileder,
+                now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
+                document = henleggelseDocument,
+            )
+
+        assertFailsWith<IllegalStateException> {
+            henlagt.fattVedtak(
+                utfall = Utfall.Innvilget,
+                fattetAv = veileder,
+                now = OffsetDateTime.parse("2026-01-11T12:00:00Z"),
+                document = vedtakDocument,
+                begrunnelse = null,
+            )
+        }
+    }
+
+    @Test
+    fun `soknad med både vedtak og henleggelse kaster`() {
+        val vedtak =
+            Vedtak(
+                utfall = Utfall.Innvilget,
+                fattetAv = veileder,
+                fattetTidspunkt = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
+                innvilgedePerioder = listOf(Periode(LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 9))),
+                document = vedtakDocument,
+            )
+        val henleggelse =
+            Henleggelse(
+                begrunnelse = "Søker har trukket søknaden",
+                henlagtAv = veileder,
+                henlagtTidspunkt = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
+                document = henleggelseDocument,
+            )
+
+        assertFailsWith<IllegalStateException> {
+            lagSoknad(vedtak = vedtak, henleggelse = henleggelse)
+        }
+    }
+
+    @Test
+    fun `journalforHenleggelse setter journalpostId på henleggelsen`() {
+        val henlagt =
+            lagSoknad().henlegg(
+                begrunnelse = "Søker har trukket søknaden",
+                henlagtAv = veileder,
+                now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
+                document = henleggelseDocument,
+            )
+        val journalpostId = JournalpostId("123")
+        val journalfortTidspunkt = OffsetDateTime.parse("2026-01-11T08:00:00Z")
+
+        val journalfort = henlagt.journalforHenleggelse(journalpostId, journalfortTidspunkt)
+
+        val henleggelse = assertNotNull(journalfort.henleggelse)
+        assertEquals(journalpostId, henleggelse.journalpostId)
+        assertEquals(journalfortTidspunkt, henleggelse.journalfortTidspunkt)
+    }
+
+    @Test
+    fun `journalforHenleggelse på søknad uten henleggelse kaster feil`() {
+        assertFailsWith<IllegalStateException> {
+            lagSoknad().journalforHenleggelse(JournalpostId("123"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
+        }
+    }
 }

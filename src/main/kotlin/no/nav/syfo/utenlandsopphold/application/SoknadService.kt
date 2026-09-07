@@ -13,6 +13,7 @@ class SoknadService(
     private val transactionManager: TransactionManager,
     private val soknadRepository: ISoknadRepository,
     private val journalforVedtakService: JournalforVedtakService,
+    private val journalforHenleggelseService: JournalforHenleggelseService,
 ) {
     fun hentSoknad(soknadId: UUID): Soknad? = soknadRepository.hentSoknad(soknadId)
 
@@ -49,11 +50,42 @@ class SoknadService(
                     soknadMedVedtak = soknadMedVedtak,
                 )
             }
-        journalforOgDistribuerAsync(lagretSoknad)
+        journalforOgDistribuerVedtakAsync(lagretSoknad)
         return lagretSoknad
     }
 
-    private fun journalforOgDistribuerAsync(soknadMedVedtak: Soknad) {
+    fun henleggSoknad(
+        soknadId: UUID,
+        henlagtAv: Navident,
+        begrunnelse: String,
+        document: List<DocumentComponent>,
+    ): Soknad {
+        val lagretSoknad =
+            transactionManager.inTransaction { transaction ->
+                val soknad =
+                    soknadRepository.hentSoknadForUpdate(
+                        transaction = transaction,
+                        soknadId = soknadId,
+                    ) ?: throw IllegalArgumentException("Søknad med id $soknadId finnes ikke")
+
+                val soknadMedHenleggelse =
+                    soknad.henlegg(
+                        begrunnelse = begrunnelse,
+                        henlagtAv = henlagtAv,
+                        now = OffsetDateTime.now(),
+                        document = document,
+                    )
+
+                soknadRepository.lagreHenleggelse(
+                    transaction = transaction,
+                    soknadMedHenleggelse = soknadMedHenleggelse,
+                )
+            }
+        journalforOgDistribuerHenleggelseAsync(lagretSoknad)
+        return lagretSoknad
+    }
+
+    private fun journalforOgDistribuerVedtakAsync(soknadMedVedtak: Soknad) {
         launchAsyncTask {
             try {
                 val journalfortSoknad = journalforVedtakService.journalforVedtak(soknadMedVedtak)
@@ -61,6 +93,21 @@ class SoknadService(
             } catch (exception: Exception) {
                 log.error(
                     "Feil ved umiddelbar journalføring/distribusjon av vedtak ${soknadMedVedtak.vedtak?.vedtakId} for søknad ${soknadMedVedtak.id}",
+                    exception,
+                )
+            }
+        }
+    }
+
+    private fun journalforOgDistribuerHenleggelseAsync(soknadMedHenleggelse: Soknad) {
+        launchAsyncTask {
+            try {
+                val journalfortSoknad = journalforHenleggelseService.journalforHenleggelse(soknadMedHenleggelse)
+                journalforHenleggelseService.distribuerHenleggelse(journalfortSoknad)
+            } catch (exception: Exception) {
+                log.error(
+                    "Feil ved umiddelbar journalføring/distribusjon av henleggelse " +
+                        "${soknadMedHenleggelse.henleggelse?.henleggelseId} for søknad ${soknadMedHenleggelse.id}",
                     exception,
                 )
             }

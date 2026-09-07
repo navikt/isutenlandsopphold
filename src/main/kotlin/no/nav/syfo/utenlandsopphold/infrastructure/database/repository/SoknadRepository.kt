@@ -5,6 +5,7 @@ import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.application.ISoknadRepository
 import no.nav.syfo.utenlandsopphold.application.LagreMottattSoknadResultat
 import no.nav.syfo.utenlandsopphold.application.Transaction
+import no.nav.syfo.utenlandsopphold.domain.Henleggelse
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.Vedtak
@@ -81,6 +82,20 @@ class SoknadRepository(
         return soknadMedVedtak
     }
 
+    override fun lagreHenleggelse(
+        transaction: Transaction,
+        soknadMedHenleggelse: Soknad,
+    ): Soknad {
+        val henleggelse =
+            checkNotNull(soknadMedHenleggelse.henleggelse) {
+                "Søknad ${soknadMedHenleggelse.id} mangler henleggelse etter henlegg"
+            }
+
+        transaction.jdbcConnection().lagreHenleggelse(soknadMedHenleggelse.id, henleggelse)
+
+        return soknadMedHenleggelse
+    }
+
     override fun getIkkeJournalforteSoknader(fattetBefore: OffsetDateTime): List<Soknad> =
         withConnection(Connection.TRANSACTION_REPEATABLE_READ) { connection ->
             val pSoknader = connection.getIkkeJournalforteSoknader(fattetBefore)
@@ -116,6 +131,46 @@ class SoknadRepository(
             connection.prepareStatement(SET_VEDTAK_DISTRIBUERT).use {
                 it.setObject(1, distribuertTidspunkt)
                 it.setObject(2, vedtakId)
+                it.executeUpdate()
+            }
+        }
+    }
+
+    override fun getIkkeJournalforteHenleggelser(henlagtBefore: OffsetDateTime): List<Soknad> =
+        withConnection(Connection.TRANSACTION_REPEATABLE_READ) { connection ->
+            val pSoknader = connection.getIkkeJournalforteHenleggelser(henlagtBefore)
+            connection.toSoknader(pSoknader)
+        }
+
+    override fun setHenleggelseJournalfort(
+        henleggelseId: UUID,
+        journalpostId: JournalpostId,
+        journalfortTidspunkt: OffsetDateTime,
+    ) {
+        withConnection { connection ->
+            connection.prepareStatement(SET_HENLEGGELSE_JOURNALFORT).use {
+                it.setString(1, journalpostId.value)
+                it.setObject(2, journalfortTidspunkt)
+                it.setObject(3, henleggelseId)
+                it.executeUpdate()
+            }
+        }
+    }
+
+    override fun getHenleggelserMedIkkeDistribuert(henlagtBefore: OffsetDateTime): List<Soknad> =
+        withConnection(Connection.TRANSACTION_REPEATABLE_READ) { connection ->
+            val pSoknader = connection.getHenleggelserMedIkkeDistribuert(henlagtBefore)
+            connection.toSoknader(pSoknader)
+        }
+
+    override fun setHenleggelseDistribuert(
+        henleggelseId: UUID,
+        distribuertTidspunkt: OffsetDateTime,
+    ) {
+        withConnection { connection ->
+            connection.prepareStatement(SET_HENLEGGELSE_DISTRIBUERT).use {
+                it.setObject(1, distribuertTidspunkt)
+                it.setObject(2, henleggelseId)
                 it.executeUpdate()
             }
         }
@@ -159,6 +214,25 @@ class SoknadRepository(
         }
     }
 
+    override fun getSoknaderMedUnpublishedHenleggelse(): List<Soknad> =
+        withConnection(Connection.TRANSACTION_REPEATABLE_READ) { connection ->
+            val pSoknader = connection.getSoknaderMedUnpublishedHenleggelse()
+            connection.toSoknader(pSoknader)
+        }
+
+    override fun setHenleggelsePublished(
+        henleggelseId: UUID,
+        publishedAt: OffsetDateTime,
+    ) {
+        withConnection { connection ->
+            connection.prepareStatement(SET_HENLEGGELSE_PUBLISHED_AT).use {
+                it.setObject(1, publishedAt)
+                it.setObject(2, henleggelseId)
+                it.executeUpdate()
+            }
+        }
+    }
+
     private fun Connection.getSoknad(soknadId: UUID): Soknad? =
         getSoknadBySoknadUuid(soknadId)?.let { pSoknad ->
             toSoknad(pSoknad)
@@ -180,6 +254,7 @@ class SoknadRepository(
         val vedtakPerioderPerVedtak =
             getVedtakPerioder(vedtakPerSoknad.values.map { it.id })
                 .groupBy { it.vedtakId }
+        val henleggelsePerSoknad = getHenleggelser(soknadIds).associateBy { it.soknadId }
 
         return pSoknader.map { pSoknad ->
             val pVedtak = vedtakPerSoknad[pSoknad.id]
@@ -187,6 +262,7 @@ class SoknadRepository(
                 soktePerioder = perioderPerSoknad[pSoknad.id].orEmpty(),
                 vedtak = pVedtak,
                 vedtakPerioder = pVedtak?.let { vedtakPerioderPerVedtak[it.id] }.orEmpty(),
+                henleggelse = henleggelsePerSoknad[pSoknad.id],
             )
         }
     }
@@ -240,6 +316,29 @@ class SoknadRepository(
 
     private fun Connection.getSoknaderMedUnpublishedVedtak(): List<PSoknad> =
         prepareStatement(GET_SOKNADER_MED_UNPUBLISHED_VEDTAK).use {
+            it.executeQuery().toList { toPSoknad() }
+        }
+
+    private fun Connection.getHenleggelser(soknadIds: List<Int>): List<PHenleggelse> =
+        prepareStatement(GET_HENLEGGELSE).use {
+            it.setArray(1, createArrayOf("integer", soknadIds.toTypedArray()))
+            it.executeQuery().toList { toPHenleggelse() }
+        }
+
+    private fun Connection.getIkkeJournalforteHenleggelser(henlagtBefore: OffsetDateTime): List<PSoknad> =
+        prepareStatement(GET_IKKE_JOURNALFORTE_HENLEGGELSER).use {
+            it.setObject(1, henlagtBefore)
+            it.executeQuery().toList { toPSoknad() }
+        }
+
+    private fun Connection.getHenleggelserMedIkkeDistribuert(henlagtBefore: OffsetDateTime): List<PSoknad> =
+        prepareStatement(GET_IKKE_DISTRIBUERTE_HENLEGGELSER).use {
+            it.setObject(1, henlagtBefore)
+            it.executeQuery().toList { toPSoknad() }
+        }
+
+    private fun Connection.getSoknaderMedUnpublishedHenleggelse(): List<PSoknad> =
+        prepareStatement(GET_SOKNADER_MED_UNPUBLISHED_HENLEGGELSE).use {
             it.executeQuery().toList { toPSoknad() }
         }
 
@@ -316,6 +415,27 @@ class SoknadRepository(
         }
     }
 
+    private fun Connection.lagreHenleggelse(
+        soknadId: UUID,
+        henleggelse: Henleggelse,
+    ) {
+        val documentJson =
+            PGobject().apply {
+                type = "jsonb"
+                value = henleggelse.document.serializeToJson()
+            }
+        prepareStatement(CREATE_HENLEGGELSE).use {
+            it.setObject(1, henleggelse.henleggelseId)
+            it.setString(2, henleggelse.begrunnelse)
+            it.setString(3, henleggelse.henlagtAv.value)
+            it.setObject(4, henleggelse.henlagtTidspunkt)
+            it.setObject(5, documentJson)
+            it.setObject(6, soknadId)
+            it.executeQuery().toList { toPHenleggelse() }.singleOrNull()
+                ?: throw IllegalArgumentException("Fant ikke søknad med id $soknadId")
+        }
+    }
+
     companion object {
         private const val GET_SOKNADER_BY_UUID =
             """
@@ -342,6 +462,11 @@ class SoknadRepository(
                 SELECT * FROM vedtak WHERE soknad_id = ANY(?)
             """
 
+        private const val GET_HENLEGGELSE =
+            """
+                SELECT * FROM henleggelse WHERE soknad_id = ANY(?)
+            """
+
         private const val GET_IKKE_JOURNALFORTE_SOKNADER =
             """
                 SELECT DISTINCT s.* FROM soknad s
@@ -357,6 +482,21 @@ class SoknadRepository(
                     AND v.fattet_tidspunkt < ?
             """
 
+        private const val GET_IKKE_JOURNALFORTE_HENLEGGELSER =
+            """
+                SELECT DISTINCT s.* FROM soknad s
+                    INNER JOIN henleggelse h ON h.soknad_id = s.id
+                WHERE h.journalpost_id IS NULL AND h.henlagt_tidspunkt < ?
+            """
+
+        private const val GET_IKKE_DISTRIBUERTE_HENLEGGELSER =
+            """
+                SELECT DISTINCT s.* FROM soknad s
+                    INNER JOIN henleggelse h ON h.soknad_id = s.id
+                WHERE h.journalpost_id IS NOT NULL AND h.distribuert_tidspunkt IS NULL
+                    AND h.henlagt_tidspunkt < ?
+            """
+
         private const val GET_UNPUBLISHED_SOKNADER =
             """
                 SELECT * FROM soknad WHERE soknad_published_at IS NULL
@@ -367,6 +507,13 @@ class SoknadRepository(
                 SELECT DISTINCT s.* FROM soknad s
                     INNER JOIN vedtak v ON v.soknad_id = s.id
                 WHERE v.vedtak_published_at IS NULL AND s.soknad_published_at IS NOT NULL
+            """
+
+        private const val GET_SOKNADER_MED_UNPUBLISHED_HENLEGGELSE =
+            """
+                SELECT DISTINCT s.* FROM soknad s
+                    INNER JOIN henleggelse h ON h.soknad_id = s.id
+                WHERE h.henleggelse_published_at IS NULL AND s.soknad_published_at IS NOT NULL
             """
 
         private const val SET_VEDTAK_JOURNALFORT =
@@ -383,6 +530,20 @@ class SoknadRepository(
                 WHERE uuid = ?
             """
 
+        private const val SET_HENLEGGELSE_JOURNALFORT =
+            """
+                UPDATE henleggelse
+                SET journalpost_id = ?, journalfort_tidspunkt = ?
+                WHERE uuid = ?
+            """
+
+        private const val SET_HENLEGGELSE_DISTRIBUERT =
+            """
+                UPDATE henleggelse
+                SET distribuert_tidspunkt = ?
+                WHERE uuid = ?
+            """
+
         private const val SET_SOKNAD_PUBLISHED_AT =
             """
                 UPDATE soknad
@@ -394,6 +555,13 @@ class SoknadRepository(
             """
                 UPDATE vedtak
                 SET vedtak_published_at = ?
+                WHERE uuid = ?
+            """
+
+        private const val SET_HENLEGGELSE_PUBLISHED_AT =
+            """
+                UPDATE henleggelse
+                SET henleggelse_published_at = ?
                 WHERE uuid = ?
             """
 
@@ -449,6 +617,22 @@ class SoknadRepository(
                     tom
                 ) VALUES (?, ?, ?)
             """
+
+        private const val CREATE_HENLEGGELSE =
+            """
+                INSERT INTO henleggelse (
+                    uuid,
+                    soknad_id,
+                    begrunnelse,
+                    henlagt_av,
+                    henlagt_tidspunkt,
+                    document
+                )
+                SELECT ?, s.id, ?, ?, ?, ?
+                FROM soknad s
+                WHERE s.uuid = ?
+                RETURNING *
+            """
     }
 }
 
@@ -489,6 +673,21 @@ internal fun ResultSet.toPVedtak(): PVedtak =
         fattetTidspunkt = getObject("fattet_tidspunkt", OffsetDateTime::class.java),
         document = getString("document"),
         begrunnelse = getString("begrunnelse"),
+        journalpostId = getString("journalpost_id"),
+        journalfortTidspunkt = getObject("journalfort_tidspunkt", OffsetDateTime::class.java),
+        distribuertTidspunkt = getObject("distribuert_tidspunkt", OffsetDateTime::class.java),
+    )
+
+internal fun ResultSet.toPHenleggelse(): PHenleggelse =
+    PHenleggelse(
+        id = getInt("id"),
+        uuid = getObject("uuid", UUID::class.java),
+        createdAt = getObject("created_at", OffsetDateTime::class.java),
+        soknadId = getInt("soknad_id"),
+        begrunnelse = getString("begrunnelse"),
+        henlagtAv = getString("henlagt_av"),
+        henlagtTidspunkt = getObject("henlagt_tidspunkt", OffsetDateTime::class.java),
+        document = getString("document"),
         journalpostId = getString("journalpost_id"),
         journalfortTidspunkt = getObject("journalfort_tidspunkt", OffsetDateTime::class.java),
         distribuertTidspunkt = getObject("distribuert_tidspunkt", OffsetDateTime::class.java),

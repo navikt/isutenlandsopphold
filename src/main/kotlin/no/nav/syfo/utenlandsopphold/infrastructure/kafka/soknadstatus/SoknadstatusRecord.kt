@@ -12,6 +12,7 @@ data class SoknadstatusRecord(
     val personident: String,
     val status: Soknadstatus,
     val vedtak: VedtakRecord? = null,
+    val henleggelse: HenleggelseRecord? = null,
 ) {
     companion object {
         fun fromSoknad(soknad: Soknad) =
@@ -41,12 +42,32 @@ data class SoknadstatusRecord(
                     ),
             )
         }
+
+        fun fromSoknadHenlagt(soknad: Soknad): SoknadstatusRecord {
+            val henleggelse =
+                requireNotNull(soknad.henleggelse) {
+                    "Soknad må ha henleggelse for å lage SoknadstatusRecord med henleggelse"
+                }
+            return SoknadstatusRecord(
+                uuid = soknad.eksternId,
+                createdAt = soknad.innsendtTidspunkt,
+                personident = soknad.personident.value,
+                status = Soknadstatus.HENLAGT,
+                henleggelse =
+                    HenleggelseRecord(
+                        uuid = henleggelse.henleggelseId,
+                        createdAt = henleggelse.henlagtTidspunkt,
+                        veilederident = henleggelse.henlagtAv.value,
+                    ),
+            )
+        }
     }
 }
 
 enum class Soknadstatus {
     MOTTATT,
     BEHANDLET,
+    HENLAGT,
 }
 
 data class VedtakRecord(
@@ -66,6 +87,12 @@ enum class VedtakRecordUtfall {
 data class VedtakRecordPeriode(
     val fom: LocalDate,
     val tom: LocalDate,
+)
+
+data class HenleggelseRecord(
+    val uuid: UUID,
+    val createdAt: OffsetDateTime,
+    val veilederident: String,
 )
 
 private fun Utfall.toVedtakRecordUtfall(): VedtakRecordUtfall =

@@ -1,8 +1,10 @@
 package no.nav.syfo.utenlandsopphold.application
 
+import no.nav.syfo.common.distribusjon.dto.Distribusjonstype
 import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.infrastructure.journalforing.JournalforingService.Companion.DEFAULT_FAILED_JP_ID
+import no.nav.syfo.utenlandsopphold.infrastructure.journalforing.UtenlandsoppholdBrevkode
 import org.slf4j.LoggerFactory
 import java.time.OffsetDateTime
 import kotlin.time.Duration
@@ -73,6 +75,8 @@ class JournalforVedtakService(
                     personident = soknad.personident,
                     pdf = pdf,
                     eksternReferanseId = vedtak.vedtakId.toString(),
+                    brevkode = UtenlandsoppholdBrevkode.VEDTAK,
+                    tittel = "Vedtak om utenlandsopphold",
                 ).getOrThrow()
 
         val journalfortTidspunkt = OffsetDateTime.now()
@@ -140,7 +144,7 @@ class JournalforVedtakService(
             return
         }
 
-        val bestillingsId = distribusjonService.distribuer(journalpostId).getOrThrow()
+        val bestillingsId = distribusjonService.distribuer(journalpostId, Distribusjonstype.VEDTAK).getOrThrow()
 
         log.info("Distribusjon av vedtak ${vedtak.vedtakId} for søknad ${soknad.id} bestilt, bestillingsId: $bestillingsId")
 

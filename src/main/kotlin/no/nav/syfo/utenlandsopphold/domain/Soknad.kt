@@ -11,6 +11,7 @@ enum class SoknadStatus {
     INNVILGET,
     DELVIS_INNVILGET,
     AVSLAG,
+    HENLAGT,
 }
 
 data class Soknad(
@@ -20,11 +21,13 @@ data class Soknad(
     val soktePerioder: List<Periode>,
     val innsendtTidspunkt: OffsetDateTime,
     val vedtak: Vedtak? = null,
+    val henleggelse: Henleggelse? = null,
 ) {
     val status: SoknadStatus
         get() =
-            when (vedtak) {
-                null -> SoknadStatus.MOTTATT
+            when {
+                henleggelse != null -> SoknadStatus.HENLAGT
+                vedtak == null -> SoknadStatus.MOTTATT
                 else ->
                     when (vedtak.utfall) {
                         Utfall.Innvilget -> SoknadStatus.INNVILGET
@@ -36,6 +39,9 @@ data class Soknad(
     init {
         if (soktePerioder.isEmpty()) {
             throw ManglerSoktePerioderException()
+        }
+        check(vedtak == null || henleggelse == null) {
+            "Soknad kan ikke ha både vedtak og henleggelse"
         }
     }
 
@@ -112,5 +118,62 @@ data class Soknad(
             }
 
         return copy(vedtak = gjeldendeVedtak.distribuer(now))
+    }
+
+    /**
+     * Henlegger søknaden. En henleggelse er ikke et vedtak — søknaden avsluttes uten at det
+     * er tatt stilling til utfallet. Kan kun gjøres på en MOTTATT søknad, og er gjensidig
+     * utelukkende med [fattVedtak] (håndhevet av init-blokken over).
+     */
+    fun henlegg(
+        begrunnelse: String,
+        henlagtAv: Navident,
+        now: OffsetDateTime,
+        document: List<DocumentComponent>,
+    ): Soknad {
+        check(status == SoknadStatus.MOTTATT) {
+            "Henleggelse kan kun gjøres på en MOTTATT soknad, men status er $status"
+        }
+
+        return copy(
+            henleggelse =
+                Henleggelse(
+                    begrunnelse = begrunnelse,
+                    henlagtAv = henlagtAv,
+                    henlagtTidspunkt = now,
+                    document = document,
+                ),
+        )
+    }
+
+    /**
+     * Aggregatroten (Soknad) styrer invarianten om at journalføring kun kan skje
+     * på en søknad som faktisk er henlagt. Selve idempotens-sjekken (kan ikke
+     * journalføres to ganger) håndheves av Henleggelse.journalfor().
+     */
+    fun journalforHenleggelse(
+        journalpostId: JournalpostId,
+        now: OffsetDateTime,
+    ): Soknad {
+        val gjeldendeHenleggelse =
+            checkNotNull(henleggelse) {
+                "Kan ikke journalføre en søknad som ikke er henlagt"
+            }
+
+        return copy(henleggelse = gjeldendeHenleggelse.journalfor(journalpostId, now))
+    }
+
+    /**
+     * Aggregatroten (Soknad) styrer invarianten om at distribusjon kun kan skje
+     * på en søknad som faktisk er henlagt. Selve idempotens- og rekkefølge-sjekken
+     * (må være journalført, kan ikke distribueres to ganger) håndheves av Henleggelse.distribuer().
+     */
+    fun distribuerHenleggelse(now: OffsetDateTime): Soknad {
+        val gjeldendeHenleggelse =
+            checkNotNull(henleggelse) {
+                "Kan ikke distribuere en søknad som ikke er henlagt"
+            }
+
+        return copy(henleggelse = gjeldendeHenleggelse.distribuer(now))
     }
 }

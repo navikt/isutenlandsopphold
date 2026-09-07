@@ -6,7 +6,7 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * Konfigurasjon for [JournalforVedtakCronjob].
+ * Konfigurasjon for [JournalforingCronjob].
  *
  * @param initialDelayMinutes Tid fra applikasjonen er klar til cronjobben kjører første gang.
  * @param interval Tid mellom hver kjøring av cronjobben.

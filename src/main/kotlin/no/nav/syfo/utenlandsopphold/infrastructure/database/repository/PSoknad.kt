@@ -6,6 +6,7 @@ import no.nav.syfo.common.types.ident.Navident
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.common.util.configuredJacksonMapper
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
+import no.nav.syfo.utenlandsopphold.domain.Henleggelse
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.Utfall
@@ -26,6 +27,7 @@ data class PSoknad(
         soktePerioder: List<PSoknadPeriode>,
         vedtak: PVedtak?,
         vedtakPerioder: List<PVedtakPeriode>,
+        henleggelse: PHenleggelse?,
     ): Soknad =
         Soknad(
             id = uuid,
@@ -34,6 +36,7 @@ data class PSoknad(
             soktePerioder = soktePerioder.map { it.toPeriode() },
             innsendtTidspunkt = innsendtTidspunkt,
             vedtak = vedtak?.toVedtak(innvilgedePerioder = vedtakPerioder.map { it.toPeriode() }),
+            henleggelse = henleggelse?.toHenleggelse(),
         )
 }
 
@@ -78,6 +81,32 @@ data class PVedtak(
             innvilgedePerioder = innvilgedePerioder,
             document = document.toDocumentComponents(),
             begrunnelse = begrunnelse,
+            journalpostId = journalpostId?.let { JournalpostId(it) },
+            journalfortTidspunkt = journalfortTidspunkt,
+            distribuertTidspunkt = distribuertTidspunkt,
+        )
+}
+
+data class PHenleggelse(
+    val id: Int,
+    val uuid: UUID,
+    val createdAt: OffsetDateTime,
+    val soknadId: Int,
+    val begrunnelse: String,
+    val henlagtAv: String,
+    val henlagtTidspunkt: OffsetDateTime,
+    val document: String,
+    val journalpostId: String?,
+    val journalfortTidspunkt: OffsetDateTime?,
+    val distribuertTidspunkt: OffsetDateTime?,
+) {
+    fun toHenleggelse(): Henleggelse =
+        Henleggelse(
+            henleggelseId = uuid,
+            begrunnelse = begrunnelse,
+            henlagtAv = Navident(henlagtAv),
+            henlagtTidspunkt = henlagtTidspunkt,
+            document = document.toDocumentComponents(),
             journalpostId = journalpostId?.let { JournalpostId(it) },
             journalfortTidspunkt = journalfortTidspunkt,
             distribuertTidspunkt = distribuertTidspunkt,

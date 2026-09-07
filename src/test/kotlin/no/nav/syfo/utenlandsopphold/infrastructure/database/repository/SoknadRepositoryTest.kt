@@ -6,6 +6,7 @@ import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.application.LagreMottattSoknadResultat
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponentType
+import no.nav.syfo.utenlandsopphold.domain.Henleggelse
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.SoknadStatus
@@ -257,6 +258,144 @@ class SoknadRepositoryTest {
         }
     }
 
+    @Test
+    fun `lagreHenleggelse lagrer henleggelse og oppdaterer status til HENLAGT`() {
+        val soknad = soknad()
+        repository.lagreMottattSoknad(soknad)
+
+        val henleggelse = generateHenleggelse()
+        val oppdatertSoknad =
+            transactionManager.inTransaction { transaction ->
+                val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
+                repository.lagreHenleggelse(transaction, lagretSoknad.copy(henleggelse = henleggelse))
+            }
+
+        assertEquals(SoknadStatus.HENLAGT, oppdatertSoknad.status)
+        assertEquals(henleggelse.begrunnelse, oppdatertSoknad.henleggelse?.begrunnelse)
+        assertEquals(henleggelse.henlagtAv, oppdatertSoknad.henleggelse?.henlagtAv)
+        assertEquals(henleggelse.henlagtTidspunkt, oppdatertSoknad.henleggelse?.henlagtTidspunkt)
+        assertEquals(henleggelse.document, oppdatertSoknad.henleggelse?.document)
+    }
+
+    @Test
+    fun `lagreHenleggelse persisteres og hentes på nytt via hentSoknader`() {
+        val soknad = soknad()
+        repository.lagreMottattSoknad(soknad)
+        val henleggelse = generateHenleggelse()
+        transactionManager.inTransaction { transaction ->
+            val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
+            repository.lagreHenleggelse(transaction, lagretSoknad.copy(henleggelse = henleggelse))
+        }
+
+        val hentetPaNytt = repository.hentSoknader(personident).single()
+
+        assertEquals(SoknadStatus.HENLAGT, hentetPaNytt.status)
+        assertEquals(henleggelse.henleggelseId, hentetPaNytt.henleggelse?.henleggelseId)
+    }
+
+    @Test
+    fun `lagreHenleggelse kan kun lagre en henleggelse per soknad`() {
+        val soknad = soknad()
+        repository.lagreMottattSoknad(soknad)
+        transactionManager.inTransaction { transaction ->
+            val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
+            repository.lagreHenleggelse(transaction, lagretSoknad.copy(henleggelse = generateHenleggelse()))
+        }
+
+        assertFailsWith<PSQLException> {
+            transactionManager.inTransaction { transaction ->
+                val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
+                repository.lagreHenleggelse(transaction, lagretSoknad.copy(henleggelse = generateHenleggelse()))
+            }
+        }
+    }
+
+    @Test
+    fun `lagreHenleggelse for ukjent soknadId kaster IllegalArgumentException`() {
+        val ukjentSoknadId = UUID.randomUUID()
+        assertFailsWith<IllegalArgumentException> {
+            transactionManager.inTransaction { transaction ->
+                repository.lagreHenleggelse(transaction, soknad().copy(id = ukjentSoknadId, henleggelse = generateHenleggelse()))
+            }
+        }
+    }
+
+    @Test
+    fun `getIkkeJournalforteHenleggelser returnerer kun soknader med u-journalfort henleggelse`() {
+        opprettSoknadMedHenleggelse(journalpostId = null)
+        opprettSoknadMedHenleggelse(journalpostId = "111")
+
+        val ikkeJournalforte = repository.getIkkeJournalforteHenleggelser(henlagtBefore = etterAlleTestVedtak)
+
+        assertEquals(1, ikkeJournalforte.size)
+        assertTrue(ikkeJournalforte.single().henleggelse?.erJournalfort == false)
+    }
+
+    @Test
+    fun `setHenleggelseJournalfort oppdaterer journalpost_id og journalfort_tidspunkt`() {
+        val henleggelseId = opprettSoknadMedHenleggelse(journalpostId = null)
+        val journalpostId = JournalpostId("999")
+        val journalfortTidspunkt = OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS)
+
+        repository.setHenleggelseJournalfort(henleggelseId, journalpostId, journalfortTidspunkt)
+
+        assertTrue(repository.getIkkeJournalforteHenleggelser(henlagtBefore = etterAlleTestVedtak).isEmpty())
+    }
+
+    @Test
+    fun `getHenleggelserMedIkkeDistribuert returnerer kun journalforte, ikke-distribuerte henleggelser`() {
+        opprettSoknadMedHenleggelse(journalpostId = null)
+        opprettSoknadMedHenleggelse(journalpostId = "111", distribuertTidspunkt = null)
+        opprettSoknadMedHenleggelse(journalpostId = "222", distribuertTidspunkt = OffsetDateTime.now())
+
+        val ikkeDistribuerte = repository.getHenleggelserMedIkkeDistribuert(henlagtBefore = etterAlleTestVedtak)
+
+        assertEquals(1, ikkeDistribuerte.size)
+        val henleggelse = ikkeDistribuerte.single().henleggelse
+        assertEquals(true, henleggelse?.erJournalfort)
+        assertEquals(false, henleggelse?.erDistribuert)
+    }
+
+    @Test
+    fun `setHenleggelseDistribuert oppdaterer distribuert_tidspunkt`() {
+        val henleggelseId = opprettSoknadMedHenleggelse(journalpostId = "111", distribuertTidspunkt = null)
+        val distribuertTidspunkt = OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS)
+
+        repository.setHenleggelseDistribuert(henleggelseId, distribuertTidspunkt)
+
+        assertTrue(repository.getHenleggelserMedIkkeDistribuert(henlagtBefore = etterAlleTestVedtak).isEmpty())
+    }
+
+    @Test
+    fun `getSoknaderMedUnpublishedHenleggelse returnerer kun soknader med publisert soknad og upublisert henleggelse`() {
+        opprettSoknadMedHenleggelse(journalpostId = null, soknadPublishedAt = null, henleggelsePublishedAt = null)
+        opprettSoknadMedHenleggelse(journalpostId = null, soknadPublishedAt = OffsetDateTime.now(), henleggelsePublishedAt = null)
+        opprettSoknadMedHenleggelse(
+            journalpostId = null,
+            soknadPublishedAt = OffsetDateTime.now(),
+            henleggelsePublishedAt = OffsetDateTime.now(),
+        )
+
+        val soknaderMedUnpublishedHenleggelse = repository.getSoknaderMedUnpublishedHenleggelse()
+
+        assertEquals(1, soknaderMedUnpublishedHenleggelse.size)
+    }
+
+    @Test
+    fun `setHenleggelsePublished oppdaterer henleggelse_published_at`() {
+        val henleggelseId =
+            opprettSoknadMedHenleggelse(
+                journalpostId = null,
+                soknadPublishedAt = OffsetDateTime.now(),
+                henleggelsePublishedAt = null,
+            )
+        assertEquals(1, repository.getSoknaderMedUnpublishedHenleggelse().size)
+
+        repository.setHenleggelsePublished(henleggelseId, OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS))
+
+        assertTrue(repository.getSoknaderMedUnpublishedHenleggelse().isEmpty())
+    }
+
     private fun soknad(
         eksternId: UUID = UUID.randomUUID(),
         personident: Personident = this.personident,
@@ -503,6 +642,87 @@ class SoknadRepositoryTest {
         return vedtakUuid
     }
 
+    private fun opprettSoknadMedHenleggelse(
+        journalpostId: String?,
+        distribuertTidspunkt: OffsetDateTime? = null,
+        henlagtTidspunkt: OffsetDateTime = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
+        soknadPublishedAt: OffsetDateTime? = null,
+        henleggelsePublishedAt: OffsetDateTime? = null,
+    ): UUID {
+        val soknadUuid = UUID.randomUUID()
+        val henleggelseUuid = UUID.randomUUID()
+
+        database.connection.use { connection ->
+            connection
+                .prepareStatement(
+                    """
+                    INSERT INTO SOKNAD (uuid, ekstern_id, personident, innsendt_tidspunkt, soknad_published_at)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                ).use { statement ->
+                    statement.setObject(1, soknadUuid)
+                    statement.setObject(2, UUID.randomUUID())
+                    statement.setString(3, personident.value)
+                    statement.setObject(4, OffsetDateTime.parse("2026-01-02T08:00:00Z"))
+                    statement.setObject(5, soknadPublishedAt)
+                    statement.executeUpdate()
+                }
+
+            val soknadId =
+                connection.prepareStatement("SELECT id FROM SOKNAD WHERE uuid = ?").use { statement ->
+                    statement.setObject(1, soknadUuid)
+                    statement.executeQuery().use { rs ->
+                        rs.next()
+                        rs.getInt("id")
+                    }
+                }
+
+            connection
+                .prepareStatement(
+                    "INSERT INTO SOKNAD_PERIODE (soknad_id, fom, tom) VALUES (?, ?, ?)",
+                ).use { statement ->
+                    statement.setInt(1, soknadId)
+                    statement.setObject(2, LocalDate.of(2026, 1, 5))
+                    statement.setObject(3, LocalDate.of(2026, 1, 9))
+                    statement.executeUpdate()
+                }
+
+            connection
+                .prepareStatement(
+                    """
+                    INSERT INTO HENLEGGELSE (
+                        uuid,
+                        soknad_id,
+                        begrunnelse,
+                        henlagt_av,
+                        henlagt_tidspunkt,
+                        document,
+                        journalpost_id,
+                        journalfort_tidspunkt,
+                        distribuert_tidspunkt,
+                        henleggelse_published_at
+                    )
+                    VALUES (?, ?, ?, 'Z990000', ?, ?::jsonb, ?, ?, ?, ?)
+                    """,
+                ).use { statement ->
+                    statement.setObject(1, henleggelseUuid)
+                    statement.setInt(2, soknadId)
+                    statement.setString(3, "Søker har trukket søknaden")
+                    statement.setObject(4, henlagtTidspunkt)
+                    statement.setString(5, DOCUMENT_JSON)
+                    statement.setString(6, journalpostId)
+                    statement.setObject(7, journalpostId?.let { OffsetDateTime.now() })
+                    statement.setObject(8, distribuertTidspunkt)
+                    statement.setObject(9, henleggelsePublishedAt)
+                    statement.executeUpdate()
+                }
+
+            connection.commit()
+        }
+
+        return henleggelseUuid
+    }
+
     companion object {
         private const val DOCUMENT_JSON =
             """[{"type": "PARAGRAPH", "title": "Tittel", "texts": ["Innhold"]}]"""
@@ -536,6 +756,21 @@ class SoknadRepositoryTest {
                         type = DocumentComponentType.HEADER_H1,
                         title = "Vedtak",
                         texts = listOf("Søknaden din er innvilget"),
+                    ),
+                ),
+        )
+
+    private fun generateHenleggelse(): Henleggelse =
+        Henleggelse(
+            begrunnelse = "Søker har trukket søknaden",
+            henlagtAv = Navident("Z999999"),
+            henlagtTidspunkt = OffsetDateTime.parse("2026-03-05T10:00:00Z"),
+            document =
+                listOf(
+                    DocumentComponent(
+                        type = DocumentComponentType.HEADER_H1,
+                        title = "Henleggelse",
+                        texts = listOf("Søknaden din er henlagt"),
                     ),
                 ),
         )

@@ -8,11 +8,12 @@ import no.nav.syfo.common.tilgangskontroll.client.TilgangskontrollClient
 import no.nav.syfo.common.token.texas.EntraIdClient
 import no.nav.syfo.utenlandsopphold.api.apiModule
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
+import no.nav.syfo.utenlandsopphold.application.JournalforHenleggelseService
 import no.nav.syfo.utenlandsopphold.application.JournalforVedtakService
 import no.nav.syfo.utenlandsopphold.application.PublishSoknadstatusService
 import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.infrastructure.clients.ClientsModule
-import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.journalforing.JournalforVedtakCronjob
+import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.journalforing.JournalforingCronjob
 import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.journalforing.JournalforingCronjobConfig
 import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.launchCronjobs
 import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.soknadstatus.PublishSoknadstatusCronjob
@@ -70,12 +71,22 @@ fun main(args: Array<String>) {
             distribusjonService = clientsModule.distribusjonService,
             freshVedtakGracePeriod = journalforingCronjobConfig.freshVedtakGracePeriod,
         )
+    val journalforHenleggelseService =
+        JournalforHenleggelseService(
+            soknadRepository = soknadRepository,
+            personInfoClient = clientsModule.personInfoClient,
+            pdfClient = clientsModule.pdfClient,
+            journalforingService = clientsModule.journalforingService,
+            distribusjonService = clientsModule.distribusjonService,
+            freshHenleggelseGracePeriod = journalforingCronjobConfig.freshVedtakGracePeriod,
+        )
 
     val soknadService =
         SoknadService(
             transactionManager = transactionManager,
             soknadRepository = soknadRepository,
             journalforVedtakService = journalforVedtakService,
+            journalforHenleggelseService = journalforHenleggelseService,
         )
 
     val soknadstatusProducer =
@@ -124,8 +135,9 @@ fun main(args: Array<String>) {
                         leaderElection = clientsModule.leaderElection,
                         cronjobs =
                             listOf(
-                                JournalforVedtakCronjob(
+                                JournalforingCronjob(
                                     journalforVedtakService = journalforVedtakService,
+                                    journalforHenleggelseService = journalforHenleggelseService,
                                     initialDelayMinutes = journalforingCronjobConfig.initialDelayMinutes,
                                     intervalDelayMinutes = journalforingCronjobConfig.interval.inWholeMinutes,
                                 ),

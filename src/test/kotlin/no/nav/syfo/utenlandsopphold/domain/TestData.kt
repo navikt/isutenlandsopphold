@@ -15,6 +15,7 @@ internal fun lagSoknad(
             ),
         ),
     vedtak: Vedtak? = null,
+    henleggelse: Henleggelse? = null,
 ): Soknad =
     Soknad(
         id = UUID.randomUUID(),
@@ -23,6 +24,7 @@ internal fun lagSoknad(
         soktePerioder = soktePerioder,
         innsendtTidspunkt = OffsetDateTime.parse("2026-01-02T08:00:00Z"),
         vedtak = vedtak,
+        henleggelse = henleggelse,
     )
 
 internal val veileder = Navident("Z990000")
@@ -33,5 +35,14 @@ internal val vedtakDocument =
             type = DocumentComponentType.HEADER_H1,
             title = "Vedtak",
             texts = listOf("Søknaden din er innvilget"),
+        ),
+    )
+
+internal val henleggelseDocument =
+    listOf(
+        DocumentComponent(
+            type = DocumentComponentType.HEADER_H1,
+            title = "Henleggelse",
+            texts = listOf("Søknaden din er henlagt"),
         ),
     )

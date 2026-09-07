@@ -168,10 +168,59 @@ class PublishSoknadstatusServiceTest {
         assertEquals(soknadSomFeiler.id, upubliserte.single().id)
     }
 
+    private fun lagreSoknadMedHenleggelse(soknad: Soknad): Soknad {
+        repository.lagreMottattSoknad(soknad)
+        val soknadMedHenleggelse =
+            soknad.henlegg(
+                begrunnelse = "Søker har trukket søknaden",
+                henlagtAv = Navident("Z999999"),
+                now = OffsetDateTime.parse("2026-03-05T10:00:00Z"),
+                document =
+                    listOf(
+                        DocumentComponent(
+                            type = DocumentComponentType.HEADER_H1,
+                            title = "Henleggelse",
+                            texts = listOf("Søknaden din er henlagt"),
+                        ),
+                    ),
+            )
+        return transactionManager.inTransaction { transaction ->
+            val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
+            repository.lagreHenleggelse(transaction, lagretSoknad.copy(henleggelse = soknadMedHenleggelse.henleggelse))
+        }
+    }
+
     @Test
-    fun `feil for en soknad stopper ikke publisering av BEHANDLET for de andre`() {
-        val soknadSomFeiler = lagreSoknadMedVedtak(soknad())
-        val soknadSomLykkes = lagreSoknadMedVedtak(soknad(Personident("22222222222")))
+    fun `publishHenlagteSoknader publiserer og markerer henleggelse som publisert i databasen`() {
+        val soknadMedHenleggelse = lagreSoknadMedHenleggelse(soknad())
+        repository.setSoknadPublished(soknadMedHenleggelse.id, OffsetDateTime.now())
+        every { soknadstatusProducerMock.publish(any()) } returns Result.success(Unit)
+
+        val resultater = service.publishHenlagteSoknader()
+
+        assertEquals(1, resultater.size)
+        assertTrue(resultater.single().isSuccess)
+        assertTrue(repository.getSoknaderMedUnpublishedHenleggelse().isEmpty())
+        verify(exactly = 1) {
+            soknadstatusProducerMock.publish(match { it.status == Soknadstatus.HENLAGT && it.henleggelse != null })
+        }
+    }
+
+    @Test
+    fun `publishHenlagteSoknader publiserer ikke henleggelse for soknad som ikke er MOTTATT-publisert`() {
+        lagreSoknadMedHenleggelse(soknad())
+        every { soknadstatusProducerMock.publish(any()) } returns Result.success(Unit)
+
+        val resultater = service.publishHenlagteSoknader()
+
+        assertTrue(resultater.isEmpty())
+        verify(exactly = 0) { soknadstatusProducerMock.publish(any()) }
+    }
+
+    @Test
+    fun `feil for en soknad stopper ikke publisering av HENLAGT for de andre`() {
+        val soknadSomFeiler = lagreSoknadMedHenleggelse(soknad())
+        val soknadSomLykkes = lagreSoknadMedHenleggelse(soknad(Personident("22222222222")))
         repository.setSoknadPublished(soknadSomFeiler.id, OffsetDateTime.now())
         repository.setSoknadPublished(soknadSomLykkes.id, OffsetDateTime.now())
 
@@ -180,11 +229,11 @@ class PublishSoknadstatusServiceTest {
         every { soknadstatusProducerMock.publish(match { it.uuid == soknadSomLykkes.eksternId }) } returns
             Result.success(Unit)
 
-        val resultater = service.publishBehandledeSoknader()
+        val resultater = service.publishHenlagteSoknader()
 
         assertEquals(1, resultater.count { it.isFailure })
         assertEquals(1, resultater.count { it.isSuccess })
-        val upubliserte = repository.getSoknaderMedUnpublishedVedtak()
+        val upubliserte = repository.getSoknaderMedUnpublishedHenleggelse()
         assertEquals(1, upubliserte.size)
         assertEquals(soknadSomFeiler.id, upubliserte.single().id)
     }

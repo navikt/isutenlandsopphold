@@ -45,6 +45,27 @@ class PublishSoknadstatusService(
         log.info("Vedtak ${vedtak.vedtakId} for søknad ${soknad.id} publisert som BEHANDLET")
     }
 
+    fun publishHenlagteSoknader(): List<Result<Unit>> {
+        val soknaderMedUnpublishedHenleggelse = soknadRepository.getSoknaderMedUnpublishedHenleggelse()
+
+        return soknaderMedUnpublishedHenleggelse.map { soknad ->
+            runCatching { publishHenlagtSoknad(soknad) }
+                .onFailure { log.error("Feil ved publisering av HENLAGT-status for søknad ${soknad.id}", it) }
+        }
+    }
+
+    private fun publishHenlagtSoknad(soknad: Soknad) {
+        val henleggelse =
+            checkNotNull(soknad.henleggelse) {
+                "Søknad ${soknad.id} er ikke henlagt, kan ikke publisere HENLAGT-status"
+            }
+
+        soknadstatusProducer.publish(SoknadstatusRecord.fromSoknadHenlagt(soknad)).getOrThrow()
+
+        soknadRepository.setHenleggelsePublished(henleggelseId = henleggelse.henleggelseId, publishedAt = OffsetDateTime.now())
+        log.info("Henleggelse ${henleggelse.henleggelseId} for søknad ${soknad.id} publisert som HENLAGT")
+    }
+
     companion object {
         private val log = LoggerFactory.getLogger(PublishSoknadstatusService::class.java)
     }

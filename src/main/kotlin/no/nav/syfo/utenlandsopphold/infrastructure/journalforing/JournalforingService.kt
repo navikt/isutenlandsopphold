@@ -1,5 +1,6 @@
 package no.nav.syfo.utenlandsopphold.infrastructure.journalforing
 
+import no.nav.syfo.common.journalforing.Brevkode
 import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.common.journalforing.JournalpostMottaker
 import no.nav.syfo.common.journalforing.client.DokarkivClient
@@ -25,13 +26,15 @@ class JournalforingService(
         personident: Personident,
         pdf: ByteArray,
         eksternReferanseId: String,
+        brevkode: Brevkode,
+        tittel: String,
     ): Result<JournalpostId> =
         runCatching {
             val journalpostRequest =
                 createJournalpostRequest(
                     bruker = Bruker(id = personident.value, idType = BrukerIdType.PERSONIDENT.value),
-                    brevkode = UtenlandsoppholdBrevkode.VEDTAK,
-                    tittel = "Vedtak om utenlandsopphold",
+                    brevkode = brevkode,
+                    tittel = tittel,
                     pdf = pdf,
                     eksternReferanseId = eksternReferanseId,
                     journalpostType = JournalpostType.UTGAAENDE,

@@ -4,8 +4,8 @@ import no.nav.syfo.utenlandsopphold.application.PublishSoknadstatusService
 import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.Cronjob
 
 /**
- * Cronjob som periodisk publiserer status for søknader (MOTTATT) og fattede vedtak (BEHANDLET)
- * til soknadstatus-topicet.
+ * Cronjob som periodisk publiserer status for søknader (MOTTATT), fattede vedtak (BEHANDLET)
+ * og henleggelser (HENLAGT) til soknadstatus-topicet.
  */
 class PublishSoknadstatusCronjob(
     private val publishSoknadstatusService: PublishSoknadstatusService,
@@ -13,5 +13,7 @@ class PublishSoknadstatusCronjob(
     override val intervalDelayMinutes: Long,
 ) : Cronjob {
     override suspend fun run(): List<Result<Any>> =
-        publishSoknadstatusService.publishMottatteSoknader() + publishSoknadstatusService.publishBehandledeSoknader()
+        publishSoknadstatusService.publishMottatteSoknader() +
+            publishSoknadstatusService.publishBehandledeSoknader() +
+            publishSoknadstatusService.publishHenlagteSoknader()
 }

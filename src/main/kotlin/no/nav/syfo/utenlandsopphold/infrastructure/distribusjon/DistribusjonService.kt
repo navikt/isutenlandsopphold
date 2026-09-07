@@ -16,14 +16,17 @@ class DistribusjonService(
     private val dokdistfordelingClient: DokdistfordelingClient,
     private val bestillendeFagsystem: String,
 ) : IDistribusjonService {
-    override suspend fun distribuer(journalpostId: JournalpostId): Result<String> =
+    override suspend fun distribuer(
+        journalpostId: JournalpostId,
+        distribusjonstype: Distribusjonstype,
+    ): Result<String> =
         runCatching {
             val request =
                 createDistribuerJournalpostRequest(
                     journalpostId = journalpostId.value,
                     bestillendeFagsystem = bestillendeFagsystem,
                     dokumentProdApp = "isutenlandsopphold",
-                    distribusjonstype = Distribusjonstype.VEDTAK,
+                    distribusjonstype = distribusjonstype,
                     distribusjonstidspunkt = Distribusjonstidspunkt.KJERNETID,
                 )
 
