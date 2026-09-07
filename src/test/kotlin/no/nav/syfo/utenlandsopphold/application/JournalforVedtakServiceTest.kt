@@ -63,7 +63,8 @@ class JournalforVedtakServiceTest {
             every { repositoryMock.setVedtakJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
             coEvery { pdfClientMock.createVedtakPdf(testPersonident, any(), Utfall.Innvilget, any()) } returns byteArrayOf(1, 2, 3)
-            coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any(), any()) } returns Result.success(JournalpostId("999"))
+            coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any(), any()) } returns
+                Result.success(JournalpostId("999"))
 
             service.journalforVedtak()
 
@@ -87,7 +88,8 @@ class JournalforVedtakServiceTest {
             every { repositoryMock.setVedtakJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
             coEvery { pdfClientMock.createVedtakPdf(testPersonident, any(), delvisInnvilget, any()) } returns byteArrayOf(1, 2, 3)
-            coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any(), any()) } returns Result.success(JournalpostId("999"))
+            coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any(), any()) } returns
+                Result.success(JournalpostId("999"))
 
             service.journalforVedtak()
 
@@ -107,7 +109,8 @@ class JournalforVedtakServiceTest {
             every { repositoryMock.setVedtakJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
             coEvery { pdfClientMock.createVedtakPdf(testPersonident, any(), Utfall.Avslag, any()) } returns byteArrayOf(1, 2, 3)
-            coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any(), any()) } returns Result.success(JournalpostId("999"))
+            coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any(), any()) } returns
+                Result.success(JournalpostId("999"))
 
             service.journalforVedtak()
 
@@ -150,7 +153,8 @@ class JournalforVedtakServiceTest {
             every { repositoryMock.setVedtakJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
             coEvery { pdfClientMock.createVedtakPdf(testPersonident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
-            coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any(), any()) } returns Result.success(JournalpostId("999"))
+            coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any(), any()) } returns
+                Result.success(JournalpostId("999"))
 
             service.journalforVedtak()
 
@@ -166,7 +170,8 @@ class JournalforVedtakServiceTest {
             every { repositoryMock.setVedtakJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
             coEvery { pdfClientMock.createVedtakPdf(testPersonident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
-            coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any(), any()) } returns Result.success(JournalpostId("999"))
+            coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any(), any()) } returns
+                Result.success(JournalpostId("999"))
 
             service.journalforVedtak(soknad)
 
