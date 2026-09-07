@@ -16,8 +16,8 @@ import no.nav.syfo.utenlandsopphold.domain.sanitizeForPdfGen
 import java.time.LocalDate
 
 /**
- * Client for ispdfgen — genererer PDF-en for et vedtak om utenlandsopphold ut fra
- * dokumentkomponentene lagret på vedtaket.
+ * Client for ispdfgen — genererer PDF-en for utfallet av en søknad om utenlandsopphold ut fra
+ * dokumentkomponentene lagret på behandlingsutfallet.
  *
  * ispdfgen kjøres intra-cluster, så [defaultHttpClient] (uten utgående proxy) brukes.
  * Ingen autentisering kreves per no. — kun NAIS-nettverkspolicy (accessPolicy) mot ispdfgen.
@@ -28,7 +28,7 @@ class PdfClient(
     private val config: PdfClientConfig,
     private val httpClient: HttpClient = defaultHttpClient(),
 ) : IPdfClient {
-    override suspend fun createVedtakPdf(
+    override suspend fun createBehandlingsutfallPdf(
         mottakerFodselsnummer: Personident,
         mottakerNavn: String,
         utfall: Utfall,
@@ -36,13 +36,13 @@ class PdfClient(
         datoSendt: LocalDate,
     ): ByteArray {
         val request =
-            VedtakPdfModel(
+            BehandlingsutfallPdfModel(
                 mottakerFodselsnummer = mottakerFodselsnummer.value,
                 mottakerNavn = mottakerNavn,
                 documentComponents = documentComponents.sanitizeForPdfGen(),
                 datoSendt = datoSendt,
             )
-        val url = getVedtakPdfUrl(utfall)
+        val url = getBehandlingsutfallPdfUrl(utfall)
 
         val response =
             httpClient.post(url) {
@@ -54,7 +54,7 @@ class PdfClient(
         return response.body()
     }
 
-    private fun getVedtakPdfUrl(utfall: Utfall): String =
+    private fun getBehandlingsutfallPdfUrl(utfall: Utfall): String =
         when (utfall) {
             Utfall.Innvilget -> "${config.baseUrl}$VEDTAK_INNVILGET_PDF_PATH"
             is Utfall.DelvisInnvilget -> "${config.baseUrl}$VEDTAK_DELVIS_INNVILGET_PDF_PATH"

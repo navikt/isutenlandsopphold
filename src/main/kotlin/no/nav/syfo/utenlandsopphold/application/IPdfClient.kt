@@ -6,10 +6,10 @@ import no.nav.syfo.utenlandsopphold.domain.Utfall
 import java.time.LocalDate
 
 /**
- * Genererer en PDF for et vedtak om utenlandsopphold via ispdfgen.
+ * Genererer en PDF for utfallet av en søknad om utenlandsopphold via ispdfgen.
  */
 interface IPdfClient {
-    suspend fun createVedtakPdf(
+    suspend fun createBehandlingsutfallPdf(
         mottakerFodselsnummer: Personident,
         mottakerNavn: String,
         utfall: Utfall,

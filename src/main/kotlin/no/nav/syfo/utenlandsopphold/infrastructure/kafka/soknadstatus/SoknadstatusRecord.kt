@@ -6,6 +6,12 @@ import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID
 
+/**
+ * Kafka-kontrakt for søknadsstatus. Feltnavnene her (inkludert det nestede `vedtak`-objektet)
+ * er en ekstern kontrakt mot konsumenter, og beholdes uendret selv om domenet internt er
+ * generalisert fra `Vedtak` til `Behandlingsutfall`. Mappingen under fungerer derfor som en
+ * bevisst adapter fra domenet til den eksisterende kontrakten.
+ */
 data class SoknadstatusRecord(
     val uuid: UUID,
     val createdAt: OffsetDateTime,
@@ -22,10 +28,11 @@ data class SoknadstatusRecord(
                 status = Soknadstatus.MOTTATT,
             )
 
-        fun fromSoknadMedVedtak(soknad: Soknad): SoknadstatusRecord {
-            require(soknad.vedtak != null) {
-                "Soknad må ha vedtak for å lage SoknadstatusRecord med vedtak"
-            }
+        fun fromSoknadMedBehandlingsutfall(soknad: Soknad): SoknadstatusRecord {
+            val behandlingsutfall =
+                requireNotNull(soknad.behandlingsutfall) {
+                    "Soknad må ha behandlingsutfall for å lage SoknadstatusRecord med vedtak"
+                }
             return SoknadstatusRecord(
                 uuid = soknad.eksternId,
                 createdAt = soknad.innsendtTidspunkt,
@@ -33,11 +40,11 @@ data class SoknadstatusRecord(
                 status = Soknadstatus.BEHANDLET,
                 vedtak =
                     VedtakRecord(
-                        uuid = soknad.vedtak.vedtakId,
-                        createdAt = soknad.vedtak.fattetTidspunkt,
-                        veilederident = soknad.vedtak.fattetAv.value,
-                        utfall = soknad.vedtak.utfall.toVedtakRecordUtfall(),
-                        innvilgedePerioder = soknad.vedtak.innvilgedePerioder.map { VedtakRecordPeriode(it.fom, it.tom) },
+                        uuid = behandlingsutfall.behandlingsutfallId,
+                        createdAt = behandlingsutfall.fattetTidspunkt,
+                        veilederident = behandlingsutfall.fattetAv.value,
+                        utfall = behandlingsutfall.utfall.toVedtakRecordUtfall(),
+                        innvilgedePerioder = behandlingsutfall.innvilgedePerioder.map { VedtakRecordPeriode(it.fom, it.tom) },
                     ),
             )
         }

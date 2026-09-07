@@ -20,14 +20,14 @@ data class Soknad(
     val personident: Personident,
     val soktePerioder: List<Periode>,
     val innsendtTidspunkt: OffsetDateTime,
-    val vedtak: Vedtak? = null,
+    val behandlingsutfall: Behandlingsutfall? = null,
 ) {
     val status: SoknadStatus
         get() =
-            when (vedtak) {
+            when (behandlingsutfall) {
                 null -> SoknadStatus.MOTTATT
                 else ->
-                    when (vedtak.utfall) {
+                    when (behandlingsutfall.utfall) {
                         Utfall.Innvilget -> SoknadStatus.INNVILGET
                         is Utfall.DelvisInnvilget -> SoknadStatus.DELVIS_INNVILGET
                         Utfall.Avslag -> SoknadStatus.AVSLAG
@@ -41,7 +41,11 @@ data class Soknad(
         }
     }
 
-    fun fattVedtak(
+    /**
+     * Registrerer utfallet av behandlingen av søknaden. Utfallet er ikke nødvendigvis et vedtak —
+     * en henleggelse ([Utfall.Henlagt]) avslutter behandlingen uten at det fattes vedtak.
+     */
+    fun registrerBehandlingsutfall(
         utfall: Utfall,
         fattetAv: Navident,
         now: OffsetDateTime,
@@ -49,7 +53,7 @@ data class Soknad(
         begrunnelse: String?,
     ): Soknad {
         check(status == SoknadStatus.MOTTATT) {
-            "Vedtak kan kun fattes på en MOTTATT soknad, men status er $status"
+            "Behandlingsutfall kan kun registreres på en MOTTATT soknad, men status er $status"
         }
 
         val innvilgedePerioder =
@@ -74,8 +78,8 @@ data class Soknad(
             }
 
         return copy(
-            vedtak =
-                Vedtak(
+            behandlingsutfall =
+                Behandlingsutfall(
                     utfall = utfall,
                     fattetAv = fattetAv,
                     fattetTidspunkt = now,
@@ -88,32 +92,33 @@ data class Soknad(
 
     /**
      * Aggregatroten (Soknad) styrer invarianten om at journalføring kun kan skje
-     * på en søknad som faktisk har et vedtak. Selve idempotens-sjekken (kan ikke
-     * journalføres to ganger) håndheves av Vedtak.journalfor().
+     * på en søknad som faktisk er ferdigbehandlet. Selve idempotens-sjekken (kan ikke
+     * journalføres to ganger) håndheves av Behandlingsutfall.journalfor().
      */
-    fun journalforVedtak(
+    fun journalforBehandlingsutfall(
         journalpostId: JournalpostId,
         now: OffsetDateTime,
     ): Soknad {
-        val gjeldendeVedtak =
-            checkNotNull(vedtak) {
-                "Kan ikke journalføre en søknad som ikke har fått vedtak"
+        val gjeldendeBehandlingsutfall =
+            checkNotNull(behandlingsutfall) {
+                "Kan ikke journalføre en søknad som ikke er ferdigbehandlet"
             }
 
-        return copy(vedtak = gjeldendeVedtak.journalfor(journalpostId, now))
+        return copy(behandlingsutfall = gjeldendeBehandlingsutfall.journalfor(journalpostId, now))
     }
 
     /**
      * Aggregatroten (Soknad) styrer invarianten om at distribusjon kun kan skje
-     * på en søknad som faktisk har et vedtak. Selve idempotens- og rekkefølge-sjekken
-     * (må være journalført, kan ikke distribueres to ganger) håndheves av Vedtak.distribuer().
+     * på en søknad som faktisk er ferdigbehandlet. Selve idempotens- og rekkefølge-sjekken
+     * (må være journalført, kan ikke distribueres to ganger) håndheves av
+     * Behandlingsutfall.distribuer().
      */
-    fun distribuerVedtak(now: OffsetDateTime): Soknad {
-        val gjeldendeVedtak =
-            checkNotNull(vedtak) {
-                "Kan ikke distribuere en søknad som ikke har fått vedtak"
+    fun distribuerBehandlingsutfall(now: OffsetDateTime): Soknad {
+        val gjeldendeBehandlingsutfall =
+            checkNotNull(behandlingsutfall) {
+                "Kan ikke distribuere en søknad som ikke er ferdigbehandlet"
             }
 
-        return copy(vedtak = gjeldendeVedtak.distribuer(now))
+        return copy(behandlingsutfall = gjeldendeBehandlingsutfall.distribuer(now))
     }
 }

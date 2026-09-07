@@ -5,6 +5,12 @@ import no.nav.syfo.common.types.ident.Navident
 import java.time.OffsetDateTime
 import java.util.UUID
 
+/**
+ * Utfallet av behandlingen av en søknad om utenlandsopphold.
+ *
+ * Merk at ikke alle utfall er vedtak: [Henlagt] er en henleggelse, ikke et vedtak i
+ * folketrygdrettslig forstand. Nye utfall som ikke er vedtak kan komme til senere.
+ */
 sealed interface Utfall {
     data object Innvilget : Utfall
 
@@ -37,12 +43,19 @@ sealed interface Utfall {
     }
 }
 
-data class Vedtak(
+/**
+ * Resultatet av at en søknad om utenlandsopphold er ferdigbehandlet.
+ *
+ * Et behandlingsutfall er ikke nødvendigvis et vedtak — en henleggelse ([Utfall.Henlagt])
+ * avslutter behandlingen uten at det fattes et vedtak. Journalføring og distribusjon gjelder
+ * likevel for alle utfall, og invariantene under håndheves uavhengig av hvilket utfall det er.
+ */
+data class Behandlingsutfall(
     val utfall: Utfall,
     val fattetAv: Navident,
     val fattetTidspunkt: OffsetDateTime,
     val innvilgedePerioder: List<Periode>,
-    val vedtakId: UUID = UUID.randomUUID(),
+    val behandlingsutfallId: UUID = UUID.randomUUID(),
     val document: List<DocumentComponent>,
     val begrunnelse: String? = null,
     val journalpostId: JournalpostId? = null,
@@ -58,7 +71,7 @@ data class Vedtak(
             is Utfall.DelvisInnvilget -> {
                 require(utfall.innvilgedePerioder.isNotEmpty()) { "Delvis innvilget vedtak må ha innvilgede perioder" }
                 require(utfall.innvilgedePerioder == innvilgedePerioder) {
-                    "Innvilgede perioder på utfall og vedtak må være like"
+                    "Innvilgede perioder på utfall og behandlingsutfall må være like"
                 }
                 require(!begrunnelse.isNullOrBlank()) { "Delvis innvilget vedtak må ha begrunnelse" }
             }
@@ -67,8 +80,8 @@ data class Vedtak(
                 require(!begrunnelse.isNullOrBlank()) { "Avslått vedtak må ha begrunnelse" }
             }
             Utfall.Henlagt -> {
-                require(innvilgedePerioder.isEmpty()) { "Henlagt vedtak skal ikke ha innvilgede perioder" }
-                require(!begrunnelse.isNullOrBlank()) { "Henlagt vedtak må ha begrunnelse" }
+                require(innvilgedePerioder.isEmpty()) { "Henlagt søknad skal ikke ha innvilgede perioder" }
+                require(!begrunnelse.isNullOrBlank()) { "Henlagt søknad må ha begrunnelse" }
             }
         }
     }
@@ -80,32 +93,32 @@ data class Vedtak(
         get() = distribuertTidspunkt != null
 
     /**
-     * Rød sone: dette er en kjerne-invariant for journalføring. Et vedtak skal aldri
+     * Rød sone: dette er en kjerne-invariant for journalføring. Et behandlingsutfall skal aldri
      * journalføres mer enn én gang (idempotens) — kall denne kun etter en vellykket
      * arkivering i dokarkiv, aldri på forhånd.
      */
     fun journalfor(
         journalpostId: JournalpostId,
         tidspunkt: OffsetDateTime,
-    ): Vedtak {
+    ): Behandlingsutfall {
         check(!erJournalfort) {
-            "Vedtak $vedtakId er allerede journalført med journalpostId ${this.journalpostId}"
+            "Behandlingsutfall $behandlingsutfallId er allerede journalført med journalpostId ${this.journalpostId}"
         }
 
         return copy(journalpostId = journalpostId, journalfortTidspunkt = tidspunkt)
     }
 
     /**
-     * Rød sone: kjerne-invariant for distribusjon. Et vedtak kan kun distribueres etter at
+     * Rød sone: kjerne-invariant for distribusjon. Et behandlingsutfall kan kun distribueres etter at
      * det er journalført, og skal aldri distribueres mer enn én gang (idempotens) — kall
      * denne kun etter en vellykket bestilling i dokdistfordeling, aldri på forhånd.
      */
-    fun distribuer(tidspunkt: OffsetDateTime): Vedtak {
+    fun distribuer(tidspunkt: OffsetDateTime): Behandlingsutfall {
         check(erJournalfort) {
-            "Vedtak $vedtakId må være journalført før det kan distribueres"
+            "Behandlingsutfall $behandlingsutfallId må være journalført før det kan distribueres"
         }
         check(!erDistribuert) {
-            "Vedtak $vedtakId er allerede distribuert (distribuertTidspunkt=$distribuertTidspunkt)"
+            "Behandlingsutfall $behandlingsutfallId er allerede distribuert (distribuertTidspunkt=$distribuertTidspunkt)"
         }
 
         return copy(distribuertTidspunkt = tidspunkt)

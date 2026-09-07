@@ -10,41 +10,41 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class VedtakTest {
-    private fun lagVedtak() =
-        Vedtak(
+    private fun lagBehandlingsutfall() =
+        Behandlingsutfall(
             utfall = Utfall.Innvilget,
             fattetAv = veileder,
             fattetTidspunkt = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
             innvilgedePerioder = listOf(Periode(LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 9))),
-            document = vedtakDocument,
+            document = behandlingsutfallDocument,
         )
 
     @Test
-    fun `nyfattet vedtak er ikke journalført`() {
-        val vedtak = lagVedtak()
+    fun `nyfattet behandlingsutfall er ikke journalført`() {
+        val behandlingsutfall = lagBehandlingsutfall()
 
-        assertFalse(vedtak.erJournalfort)
+        assertFalse(behandlingsutfall.erJournalfort)
     }
 
     @Test
-    fun `delvis innvilget vedtak krever samme innvilgede perioder på utfall og vedtak`() {
+    fun `delvis innvilget behandlingsutfall krever samme innvilgede perioder på utfall og behandlingsutfall`() {
         val innvilgetPeriode = Periode(LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 7))
 
-        val vedtak =
-            lagVedtak().copy(
+        val behandlingsutfall =
+            lagBehandlingsutfall().copy(
                 utfall = Utfall.DelvisInnvilget(listOf(innvilgetPeriode)),
                 innvilgedePerioder = listOf(innvilgetPeriode),
                 begrunnelse = "Delvis innvilget begrunnelse",
             )
 
-        assertEquals(Utfall.DelvisInnvilget(listOf(innvilgetPeriode)), vedtak.utfall)
-        assertEquals(listOf(innvilgetPeriode), vedtak.innvilgedePerioder)
+        assertEquals(Utfall.DelvisInnvilget(listOf(innvilgetPeriode)), behandlingsutfall.utfall)
+        assertEquals(listOf(innvilgetPeriode), behandlingsutfall.innvilgedePerioder)
     }
 
     @Test
-    fun `delvis innvilget vedtak uten innvilgede perioder kaster`() {
+    fun `delvis innvilget behandlingsutfall uten innvilgede perioder kaster`() {
         assertFailsWith<IllegalArgumentException> {
-            lagVedtak().copy(
+            lagBehandlingsutfall().copy(
                 utfall = Utfall.DelvisInnvilget(emptyList()),
                 innvilgedePerioder = emptyList(),
             )
@@ -52,65 +52,65 @@ class VedtakTest {
     }
 
     @Test
-    fun `avslatt vedtak med innvilgede perioder kaster`() {
+    fun `avslatt behandlingsutfall med innvilgede perioder kaster`() {
         assertFailsWith<IllegalArgumentException> {
-            lagVedtak().copy(utfall = Utfall.Avslag, begrunnelse = "Avslag begrunnelse")
+            lagBehandlingsutfall().copy(utfall = Utfall.Avslag, begrunnelse = "Avslag begrunnelse")
         }
     }
 
     @Test
-    fun `avslatt vedtak uten begrunnelse kaster`() {
+    fun `avslatt behandlingsutfall uten begrunnelse kaster`() {
         assertFailsWith<IllegalArgumentException> {
-            lagVedtak().copy(utfall = Utfall.Avslag, innvilgedePerioder = emptyList(), begrunnelse = null)
+            lagBehandlingsutfall().copy(utfall = Utfall.Avslag, innvilgedePerioder = emptyList(), begrunnelse = null)
         }
     }
 
     @Test
-    fun `avslatt vedtak med blank begrunnelse kaster`() {
+    fun `avslatt behandlingsutfall med blank begrunnelse kaster`() {
         assertFailsWith<IllegalArgumentException> {
-            lagVedtak().copy(utfall = Utfall.Avslag, innvilgedePerioder = emptyList(), begrunnelse = "   ")
+            lagBehandlingsutfall().copy(utfall = Utfall.Avslag, innvilgedePerioder = emptyList(), begrunnelse = "   ")
         }
     }
 
     @Test
-    fun `henlagt vedtak uten innvilgede perioder og med begrunnelse er gyldig`() {
-        val vedtak =
-            lagVedtak().copy(
+    fun `henlagt behandlingsutfall uten innvilgede perioder og med begrunnelse er gyldig`() {
+        val behandlingsutfall =
+            lagBehandlingsutfall().copy(
                 utfall = Utfall.Henlagt,
                 innvilgedePerioder = emptyList(),
                 begrunnelse = "Søker har trukket søknaden",
             )
 
-        assertEquals(Utfall.Henlagt, vedtak.utfall)
+        assertEquals(Utfall.Henlagt, behandlingsutfall.utfall)
     }
 
     @Test
-    fun `henlagt vedtak med innvilgede perioder kaster`() {
+    fun `henlagt behandlingsutfall med innvilgede perioder kaster`() {
         assertFailsWith<IllegalArgumentException> {
-            lagVedtak().copy(utfall = Utfall.Henlagt, begrunnelse = "Henleggelse begrunnelse")
+            lagBehandlingsutfall().copy(utfall = Utfall.Henlagt, begrunnelse = "Henleggelse begrunnelse")
         }
     }
 
     @Test
-    fun `henlagt vedtak uten begrunnelse kaster`() {
+    fun `henlagt behandlingsutfall uten begrunnelse kaster`() {
         assertFailsWith<IllegalArgumentException> {
-            lagVedtak().copy(utfall = Utfall.Henlagt, innvilgedePerioder = emptyList(), begrunnelse = null)
+            lagBehandlingsutfall().copy(utfall = Utfall.Henlagt, innvilgedePerioder = emptyList(), begrunnelse = null)
         }
     }
 
     @Test
-    fun `henlagt vedtak med blank begrunnelse kaster`() {
+    fun `henlagt behandlingsutfall med blank begrunnelse kaster`() {
         assertFailsWith<IllegalArgumentException> {
-            lagVedtak().copy(utfall = Utfall.Henlagt, innvilgedePerioder = emptyList(), begrunnelse = "   ")
+            lagBehandlingsutfall().copy(utfall = Utfall.Henlagt, innvilgedePerioder = emptyList(), begrunnelse = "   ")
         }
     }
 
     @Test
-    fun `delvis innvilget vedtak uten begrunnelse kaster`() {
+    fun `delvis innvilget behandlingsutfall uten begrunnelse kaster`() {
         val innvilgetPeriode = Periode(LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 7))
 
         assertFailsWith<IllegalArgumentException> {
-            lagVedtak().copy(
+            lagBehandlingsutfall().copy(
                 utfall = Utfall.DelvisInnvilget(listOf(innvilgetPeriode)),
                 innvilgedePerioder = listOf(innvilgetPeriode),
                 begrunnelse = null,
@@ -119,11 +119,11 @@ class VedtakTest {
     }
 
     @Test
-    fun `delvis innvilget vedtak med blank begrunnelse kaster`() {
+    fun `delvis innvilget behandlingsutfall med blank begrunnelse kaster`() {
         val innvilgetPeriode = Periode(LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 7))
 
         assertFailsWith<IllegalArgumentException> {
-            lagVedtak().copy(
+            lagBehandlingsutfall().copy(
                 utfall = Utfall.DelvisInnvilget(listOf(innvilgetPeriode)),
                 innvilgedePerioder = listOf(innvilgetPeriode),
                 begrunnelse = " ",
@@ -132,19 +132,19 @@ class VedtakTest {
     }
 
     @Test
-    fun `innvilget vedtak med begrunnelse kaster`() {
+    fun `innvilget behandlingsutfall med begrunnelse kaster`() {
         assertFailsWith<IllegalArgumentException> {
-            lagVedtak().copy(begrunnelse = "Skal ikke være satt")
+            lagBehandlingsutfall().copy(begrunnelse = "Skal ikke være satt")
         }
     }
 
     @Test
     fun `journalfor setter journalpostId og journalfortTidspunkt`() {
-        val vedtak = lagVedtak()
+        val behandlingsutfall = lagBehandlingsutfall()
         val journalpostId = JournalpostId("123")
         val journalfortTidspunkt = OffsetDateTime.parse("2026-01-11T08:00:00Z")
 
-        val journalfort = vedtak.journalfor(journalpostId, journalfortTidspunkt)
+        val journalfort = behandlingsutfall.journalfor(journalpostId, journalfortTidspunkt)
 
         assertTrue(journalfort.erJournalfort)
         assertEquals(journalpostId, journalfort.journalpostId)
@@ -152,8 +152,8 @@ class VedtakTest {
     }
 
     @Test
-    fun `journalfor på allerede journalført vedtak kaster`() {
-        val journalfort = lagVedtak().journalfor(JournalpostId("123"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
+    fun `journalfor på allerede journalført behandlingsutfall kaster`() {
+        val journalfort = lagBehandlingsutfall().journalfor(JournalpostId("123"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
 
         assertFailsWith<IllegalStateException> {
             journalfort.journalfor(JournalpostId("456"), OffsetDateTime.parse("2026-01-12T08:00:00Z"))
@@ -161,24 +161,24 @@ class VedtakTest {
     }
 
     @Test
-    fun `nyfattet vedtak er ikke distribuert`() {
-        val vedtak = lagVedtak()
+    fun `nyfattet behandlingsutfall er ikke distribuert`() {
+        val behandlingsutfall = lagBehandlingsutfall()
 
-        assertFalse(vedtak.erDistribuert)
+        assertFalse(behandlingsutfall.erDistribuert)
     }
 
     @Test
-    fun `distribuer på ikke-journalført vedtak kaster`() {
-        val vedtak = lagVedtak()
+    fun `distribuer på ikke-journalført behandlingsutfall kaster`() {
+        val behandlingsutfall = lagBehandlingsutfall()
 
         assertFailsWith<IllegalStateException> {
-            vedtak.distribuer(OffsetDateTime.parse("2026-01-12T08:00:00Z"))
+            behandlingsutfall.distribuer(OffsetDateTime.parse("2026-01-12T08:00:00Z"))
         }
     }
 
     @Test
-    fun `distribuer setter distribuertTidspunkt for journalført vedtak`() {
-        val journalfort = lagVedtak().journalfor(JournalpostId("123"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
+    fun `distribuer setter distribuertTidspunkt for journalført behandlingsutfall`() {
+        val journalfort = lagBehandlingsutfall().journalfor(JournalpostId("123"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
         val distribuertTidspunkt = OffsetDateTime.parse("2026-01-12T08:00:00Z")
 
         val distribuert = journalfort.distribuer(distribuertTidspunkt)
@@ -188,9 +188,9 @@ class VedtakTest {
     }
 
     @Test
-    fun `distribuer på allerede distribuert vedtak kaster`() {
+    fun `distribuer på allerede distribuert behandlingsutfall kaster`() {
         val distribuert =
-            lagVedtak()
+            lagBehandlingsutfall()
                 .journalfor(JournalpostId("123"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
                 .distribuer(OffsetDateTime.parse("2026-01-12T08:00:00Z"))
 

@@ -4,13 +4,13 @@ import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.common.types.ident.Navident
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.application.LagreMottattSoknadResultat
+import no.nav.syfo.utenlandsopphold.domain.Behandlingsutfall
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponentType
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.SoknadStatus
 import no.nav.syfo.utenlandsopphold.domain.Utfall
-import no.nav.syfo.utenlandsopphold.domain.Vedtak
 import no.nav.syfo.utenlandsopphold.infrastructure.database.JdbcTransactionManager
 import no.nav.syfo.utenlandsopphold.infrastructure.database.TestDatabase
 import no.nav.syfo.utenlandsopphold.infrastructure.database.dropData
@@ -47,7 +47,7 @@ class SoknadRepositoryTest {
     }
 
     @Test
-    fun `lagrer og henter soknad uten vedtak`() {
+    fun `lagrer og henter soknad uten behandlingsutfall`() {
         val soknad = soknad(soktePerioder = listOf(Periode(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 10))))
 
         repository.lagreMottattSoknad(soknad)
@@ -61,7 +61,7 @@ class SoknadRepositoryTest {
         assertEquals(soknad.soktePerioder, lagret.soktePerioder)
         assertEquals(soknad.innsendtTidspunkt, lagret.innsendtTidspunkt)
         assertEquals(SoknadStatus.MOTTATT, lagret.status)
-        assertNull(lagret.vedtak)
+        assertNull(lagret.behandlingsutfall)
     }
 
     @Test
@@ -127,155 +127,158 @@ class SoknadRepositoryTest {
     }
 
     @Test
-    fun `lagreVedtak lagrer vedtak og oppdaterer status til INNVILGET`() {
+    fun `lagreBehandlingsutfall lagrer behandlingsutfall og oppdaterer status til INNVILGET`() {
         val soktePerioder = listOf(Periode(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 10)))
         val soknad = soknad(soktePerioder = soktePerioder)
         repository.lagreMottattSoknad(soknad)
 
-        val vedtak = generateVedtak(innvilgedePerioder = soktePerioder)
+        val behandlingsutfall = generateBehandlingsutfall(innvilgedePerioder = soktePerioder)
         val oppdatertSoknad =
             transactionManager.inTransaction { transaction ->
                 val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
-                repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = vedtak))
+                repository.lagreBehandlingsutfall(transaction, lagretSoknad.copy(behandlingsutfall = behandlingsutfall))
             }
 
         assertEquals(SoknadStatus.INNVILGET, oppdatertSoknad.status)
-        assertEquals(Utfall.Innvilget, oppdatertSoknad.vedtak?.utfall)
-        assertEquals(vedtak.fattetAv, oppdatertSoknad.vedtak?.fattetAv)
-        assertEquals(vedtak.fattetTidspunkt, oppdatertSoknad.vedtak?.fattetTidspunkt)
-        assertEquals(soktePerioder, oppdatertSoknad.vedtak?.innvilgedePerioder)
-        assertEquals(vedtak.document, oppdatertSoknad.vedtak?.document)
+        assertEquals(Utfall.Innvilget, oppdatertSoknad.behandlingsutfall?.utfall)
+        assertEquals(behandlingsutfall.fattetAv, oppdatertSoknad.behandlingsutfall?.fattetAv)
+        assertEquals(behandlingsutfall.fattetTidspunkt, oppdatertSoknad.behandlingsutfall?.fattetTidspunkt)
+        assertEquals(soktePerioder, oppdatertSoknad.behandlingsutfall?.innvilgedePerioder)
+        assertEquals(behandlingsutfall.document, oppdatertSoknad.behandlingsutfall?.document)
     }
 
     @Test
-    fun `lagreVedtak persisteres og hentes på nytt via hentSoknader`() {
+    fun `lagreBehandlingsutfall persisteres og hentes på nytt via hentSoknader`() {
         val soktePerioder = listOf(Periode(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 10)))
         val soknad = soknad(soktePerioder = soktePerioder)
         repository.lagreMottattSoknad(soknad)
-        val vedtak = generateVedtak(innvilgedePerioder = soktePerioder)
+        val behandlingsutfall = generateBehandlingsutfall(innvilgedePerioder = soktePerioder)
         transactionManager.inTransaction { transaction ->
             val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
-            repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = vedtak))
+            repository.lagreBehandlingsutfall(transaction, lagretSoknad.copy(behandlingsutfall = behandlingsutfall))
         }
 
         val hentetPaNytt = repository.hentSoknader(personident).single()
 
         assertEquals(SoknadStatus.INNVILGET, hentetPaNytt.status)
-        assertEquals(soktePerioder, hentetPaNytt.vedtak?.innvilgedePerioder)
-        assertEquals(vedtak.vedtakId, hentetPaNytt.vedtak?.vedtakId)
+        assertEquals(soktePerioder, hentetPaNytt.behandlingsutfall?.innvilgedePerioder)
+        assertEquals(behandlingsutfall.behandlingsutfallId, hentetPaNytt.behandlingsutfall?.behandlingsutfallId)
     }
 
     @Test
-    fun `lagreVedtak kan kun lagre ett vedtak per soknad`() {
+    fun `lagreBehandlingsutfall kan kun lagre ett behandlingsutfall per soknad`() {
         val soknad = soknad()
         repository.lagreMottattSoknad(soknad)
         transactionManager.inTransaction { transaction ->
             val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
-            repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = generateVedtak()))
+            repository.lagreBehandlingsutfall(transaction, lagretSoknad.copy(behandlingsutfall = generateBehandlingsutfall()))
         }
 
         assertFailsWith<PSQLException> {
             transactionManager.inTransaction { transaction ->
                 val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
-                repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = generateVedtak()))
+                repository.lagreBehandlingsutfall(transaction, lagretSoknad.copy(behandlingsutfall = generateBehandlingsutfall()))
             }
         }
     }
 
     @Test
-    fun `lagreVedtak persisterer og henter delvis innvilget vedtak`() {
+    fun `lagreBehandlingsutfall persisterer og henter delvis innvilget behandlingsutfall`() {
         val soktePerioder = listOf(Periode(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 10)))
         val innvilgedePerioder = listOf(Periode(LocalDate.of(2026, 4, 3), LocalDate.of(2026, 4, 5)))
         val soknad = soknad(soktePerioder = soktePerioder)
         repository.lagreMottattSoknad(soknad)
-        val vedtak =
-            generateVedtak(
+        val behandlingsutfall =
+            generateBehandlingsutfall(
                 utfall = Utfall.DelvisInnvilget(innvilgedePerioder),
                 innvilgedePerioder = innvilgedePerioder,
                 begrunnelse = "Delvis innvilget begrunnelse",
             )
         transactionManager.inTransaction { transaction ->
             val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
-            repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = vedtak))
+            repository.lagreBehandlingsutfall(transaction, lagretSoknad.copy(behandlingsutfall = behandlingsutfall))
         }
 
         val hentetPaNytt = repository.hentSoknader(personident).single()
 
         assertEquals(SoknadStatus.DELVIS_INNVILGET, hentetPaNytt.status)
-        assertEquals(Utfall.DelvisInnvilget(innvilgedePerioder), hentetPaNytt.vedtak?.utfall)
-        assertEquals(innvilgedePerioder, hentetPaNytt.vedtak?.innvilgedePerioder)
-        assertEquals("Delvis innvilget begrunnelse", hentetPaNytt.vedtak?.begrunnelse)
+        assertEquals(Utfall.DelvisInnvilget(innvilgedePerioder), hentetPaNytt.behandlingsutfall?.utfall)
+        assertEquals(innvilgedePerioder, hentetPaNytt.behandlingsutfall?.innvilgedePerioder)
+        assertEquals("Delvis innvilget begrunnelse", hentetPaNytt.behandlingsutfall?.begrunnelse)
     }
 
     @Test
-    fun `lagreVedtak persisterer og henter avslag uten innvilgede perioder`() {
+    fun `lagreBehandlingsutfall persisterer og henter avslag uten innvilgede perioder`() {
         val soknad = soknad()
         repository.lagreMottattSoknad(soknad)
-        val vedtak =
-            generateVedtak(
+        val behandlingsutfall =
+            generateBehandlingsutfall(
                 utfall = Utfall.Avslag,
                 innvilgedePerioder = emptyList(),
                 begrunnelse = "Avslag begrunnelse",
             )
         transactionManager.inTransaction { transaction ->
             val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
-            repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = vedtak))
+            repository.lagreBehandlingsutfall(transaction, lagretSoknad.copy(behandlingsutfall = behandlingsutfall))
         }
 
         val hentetPaNytt = repository.hentSoknader(personident).single()
 
         assertEquals(SoknadStatus.AVSLAG, hentetPaNytt.status)
-        assertEquals(Utfall.Avslag, hentetPaNytt.vedtak?.utfall)
-        assertEquals(emptyList(), hentetPaNytt.vedtak?.innvilgedePerioder)
-        assertEquals("Avslag begrunnelse", hentetPaNytt.vedtak?.begrunnelse)
+        assertEquals(Utfall.Avslag, hentetPaNytt.behandlingsutfall?.utfall)
+        assertEquals(emptyList(), hentetPaNytt.behandlingsutfall?.innvilgedePerioder)
+        assertEquals("Avslag begrunnelse", hentetPaNytt.behandlingsutfall?.begrunnelse)
     }
 
     @Test
-    fun `lagreVedtak persisterer og henter henleggelse uten innvilgede perioder`() {
+    fun `lagreBehandlingsutfall persisterer og henter henleggelse uten innvilgede perioder`() {
         val soknad = soknad()
         repository.lagreMottattSoknad(soknad)
-        val vedtak =
-            generateVedtak(
+        val behandlingsutfall =
+            generateBehandlingsutfall(
                 utfall = Utfall.Henlagt,
                 innvilgedePerioder = emptyList(),
                 begrunnelse = "Søker har trukket søknaden",
             )
         transactionManager.inTransaction { transaction ->
             val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
-            repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = vedtak))
+            repository.lagreBehandlingsutfall(transaction, lagretSoknad.copy(behandlingsutfall = behandlingsutfall))
         }
 
         val hentetPaNytt = repository.hentSoknader(personident).single()
 
         assertEquals(SoknadStatus.HENLAGT, hentetPaNytt.status)
-        assertEquals(Utfall.Henlagt, hentetPaNytt.vedtak?.utfall)
-        assertEquals(emptyList(), hentetPaNytt.vedtak?.innvilgedePerioder)
-        assertEquals("Søker har trukket søknaden", hentetPaNytt.vedtak?.begrunnelse)
+        assertEquals(Utfall.Henlagt, hentetPaNytt.behandlingsutfall?.utfall)
+        assertEquals(emptyList(), hentetPaNytt.behandlingsutfall?.innvilgedePerioder)
+        assertEquals("Søker har trukket søknaden", hentetPaNytt.behandlingsutfall?.begrunnelse)
     }
 
     @Test
-    fun `lagreVedtak persisterer null begrunnelse for innvilget vedtak`() {
+    fun `lagreBehandlingsutfall persisterer null begrunnelse for innvilget behandlingsutfall`() {
         val soktePerioder = listOf(Periode(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 10)))
         val soknad = soknad(soktePerioder = soktePerioder)
         repository.lagreMottattSoknad(soknad)
-        val vedtak = generateVedtak(innvilgedePerioder = soktePerioder)
+        val behandlingsutfall = generateBehandlingsutfall(innvilgedePerioder = soktePerioder)
         transactionManager.inTransaction { transaction ->
             val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
-            repository.lagreVedtak(transaction, lagretSoknad.copy(vedtak = vedtak))
+            repository.lagreBehandlingsutfall(transaction, lagretSoknad.copy(behandlingsutfall = behandlingsutfall))
         }
 
         val hentetPaNytt = repository.hentSoknader(personident).single()
 
         assertEquals(SoknadStatus.INNVILGET, hentetPaNytt.status)
-        assertNull(hentetPaNytt.vedtak?.begrunnelse)
+        assertNull(hentetPaNytt.behandlingsutfall?.begrunnelse)
     }
 
     @Test
-    fun `lagreVedtak for ukjent soknadId kaster IllegalArgumentException`() {
+    fun `lagreBehandlingsutfall for ukjent soknadId kaster IllegalArgumentException`() {
         val ukjentSoknadId = UUID.randomUUID()
         assertFailsWith<IllegalArgumentException> {
             transactionManager.inTransaction { transaction ->
-                repository.lagreVedtak(transaction, soknad().copy(id = ukjentSoknadId, vedtak = generateVedtak()))
+                repository.lagreBehandlingsutfall(
+                    transaction,
+                    soknad().copy(id = ukjentSoknadId, behandlingsutfall = generateBehandlingsutfall()),
+                )
             }
         }
     }
@@ -295,74 +298,74 @@ class SoknadRepositoryTest {
         )
 
     @Test
-    fun `getIkkeJournalforteSoknader returnerer kun soknader med u-journalfort vedtak`() {
-        opprettSoknadMedVedtak(journalpostId = null)
-        opprettSoknadMedVedtak(journalpostId = "111")
+    fun `getIkkeJournalforteSoknader returnerer kun soknader med u-journalfort behandlingsutfall`() {
+        opprettSoknadMedBehandlingsutfall(journalpostId = null)
+        opprettSoknadMedBehandlingsutfall(journalpostId = "111")
 
-        val ikkeJournalforte = repository.getIkkeJournalforteSoknader(fattetBefore = etterAlleTestVedtak)
+        val ikkeJournalforte = repository.getIkkeJournalforteSoknader(fattetBefore = etterAlleTestBehandlingsutfall)
 
         assertEquals(1, ikkeJournalforte.size)
-        assertTrue(ikkeJournalforte.single().vedtak?.erJournalfort == false)
+        assertTrue(ikkeJournalforte.single().behandlingsutfall?.erJournalfort == false)
     }
 
     @Test
-    fun `getIkkeJournalforteSoknader ekskluderer vedtak fattet etter fattetBefore`() {
-        opprettSoknadMedVedtak(journalpostId = null, fattetTidspunkt = OffsetDateTime.parse("2026-01-10T12:00:00Z"))
-        opprettSoknadMedVedtak(journalpostId = null, fattetTidspunkt = OffsetDateTime.parse("2026-01-12T12:00:00Z"))
+    fun `getIkkeJournalforteSoknader ekskluderer behandlingsutfall fattet etter fattetBefore`() {
+        opprettSoknadMedBehandlingsutfall(journalpostId = null, fattetTidspunkt = OffsetDateTime.parse("2026-01-10T12:00:00Z"))
+        opprettSoknadMedBehandlingsutfall(journalpostId = null, fattetTidspunkt = OffsetDateTime.parse("2026-01-12T12:00:00Z"))
 
         val ikkeJournalforte = repository.getIkkeJournalforteSoknader(fattetBefore = OffsetDateTime.parse("2026-01-11T00:00:00Z"))
 
         assertEquals(1, ikkeJournalforte.size)
-        assertEquals(OffsetDateTime.parse("2026-01-10T12:00:00Z"), ikkeJournalforte.single().vedtak?.fattetTidspunkt)
+        assertEquals(OffsetDateTime.parse("2026-01-10T12:00:00Z"), ikkeJournalforte.single().behandlingsutfall?.fattetTidspunkt)
     }
 
     @Test
     fun `getIkkeJournalforteSoknader leser document og perioder`() {
-        val vedtakId = opprettSoknadMedVedtak(journalpostId = null)
+        val behandlingsutfallId = opprettSoknadMedBehandlingsutfall(journalpostId = null)
 
-        val soknad = repository.getIkkeJournalforteSoknader(fattetBefore = etterAlleTestVedtak).single()
+        val soknad = repository.getIkkeJournalforteSoknader(fattetBefore = etterAlleTestBehandlingsutfall).single()
 
-        assertEquals(vedtakId, soknad.vedtak?.vedtakId)
-        assertEquals(1, soknad.vedtak?.document?.size)
+        assertEquals(behandlingsutfallId, soknad.behandlingsutfall?.behandlingsutfallId)
+        assertEquals(1, soknad.behandlingsutfall?.document?.size)
         assertEquals(
             "Tittel",
-            soknad.vedtak
+            soknad.behandlingsutfall
                 ?.document
                 ?.first()
                 ?.title,
         )
         assertEquals(1, soknad.soktePerioder.size)
-        assertEquals(soknad.soktePerioder, soknad.vedtak?.innvilgedePerioder)
+        assertEquals(soknad.soktePerioder, soknad.behandlingsutfall?.innvilgedePerioder)
     }
 
     @Test
-    fun `setVedtakJournalfort oppdaterer journalpost_id og journalfort_tidspunkt`() {
-        val vedtakId = opprettSoknadMedVedtak(journalpostId = null)
+    fun `setBehandlingsutfallJournalfort oppdaterer journalpost_id og journalfort_tidspunkt`() {
+        val behandlingsutfallId = opprettSoknadMedBehandlingsutfall(journalpostId = null)
         val journalpostId = JournalpostId("999")
         val journalfortTidspunkt = OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS)
 
-        repository.setVedtakJournalfort(vedtakId, journalpostId, journalfortTidspunkt)
+        repository.setBehandlingsutfallJournalfort(behandlingsutfallId, journalpostId, journalfortTidspunkt)
 
-        assertTrue(repository.getIkkeJournalforteSoknader(fattetBefore = etterAlleTestVedtak).isEmpty())
+        assertTrue(repository.getIkkeJournalforteSoknader(fattetBefore = etterAlleTestBehandlingsutfall).isEmpty())
     }
 
     @Test
-    fun `getSoknaderMedIkkeDistribuerteVedtak returnerer kun journalforte, ikke-distribuerte vedtak`() {
-        opprettSoknadMedVedtak(journalpostId = null)
-        opprettSoknadMedVedtak(journalpostId = "111", distribuertTidspunkt = null)
-        opprettSoknadMedVedtak(journalpostId = "222", distribuertTidspunkt = OffsetDateTime.now())
+    fun `getSoknaderMedIkkeDistribuerteBehandlingsutfall returnerer kun journalforte, ikke-distribuerte behandlingsutfall`() {
+        opprettSoknadMedBehandlingsutfall(journalpostId = null)
+        opprettSoknadMedBehandlingsutfall(journalpostId = "111", distribuertTidspunkt = null)
+        opprettSoknadMedBehandlingsutfall(journalpostId = "222", distribuertTidspunkt = OffsetDateTime.now())
 
-        val ikkeDistribuerte = repository.getSoknaderMedIkkeDistribuerteVedtak(fattetBefore = etterAlleTestVedtak)
+        val ikkeDistribuerte = repository.getSoknaderMedIkkeDistribuerteBehandlingsutfall(fattetBefore = etterAlleTestBehandlingsutfall)
 
         assertEquals(1, ikkeDistribuerte.size)
-        val vedtak = ikkeDistribuerte.single().vedtak
-        assertEquals(true, vedtak?.erJournalfort)
-        assertEquals(false, vedtak?.erDistribuert)
+        val behandlingsutfall = ikkeDistribuerte.single().behandlingsutfall
+        assertEquals(true, behandlingsutfall?.erJournalfort)
+        assertEquals(false, behandlingsutfall?.erDistribuert)
     }
 
     @Test
-    fun `getSoknaderMedIkkeDistribuerteVedtak ekskluderer vedtak fattet etter fattetBefore (grace)`() {
-        opprettSoknadMedVedtak(
+    fun `getSoknaderMedIkkeDistribuerteBehandlingsutfall ekskluderer behandlingsutfall fattet etter fattetBefore (grace)`() {
+        opprettSoknadMedBehandlingsutfall(
             journalpostId = "111",
             distribuertTidspunkt = null,
             fattetTidspunkt = OffsetDateTime.parse("2026-05-01T12:00:00Z"),
@@ -370,24 +373,24 @@ class SoknadRepositoryTest {
 
         val foerFattetTidspunkt = OffsetDateTime.parse("2026-04-01T00:00:00Z")
 
-        assertTrue(repository.getSoknaderMedIkkeDistribuerteVedtak(fattetBefore = foerFattetTidspunkt).isEmpty())
-        assertEquals(1, repository.getSoknaderMedIkkeDistribuerteVedtak(fattetBefore = etterAlleTestVedtak).size)
+        assertTrue(repository.getSoknaderMedIkkeDistribuerteBehandlingsutfall(fattetBefore = foerFattetTidspunkt).isEmpty())
+        assertEquals(1, repository.getSoknaderMedIkkeDistribuerteBehandlingsutfall(fattetBefore = etterAlleTestBehandlingsutfall).size)
     }
 
     @Test
-    fun `setVedtakDistribuert oppdaterer distribuert_tidspunkt`() {
-        val vedtakId = opprettSoknadMedVedtak(journalpostId = "111", distribuertTidspunkt = null)
+    fun `setBehandlingsutfallDistribuert oppdaterer distribuert_tidspunkt`() {
+        val behandlingsutfallId = opprettSoknadMedBehandlingsutfall(journalpostId = "111", distribuertTidspunkt = null)
         val distribuertTidspunkt = OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS)
 
-        repository.setVedtakDistribuert(vedtakId, distribuertTidspunkt)
+        repository.setBehandlingsutfallDistribuert(behandlingsutfallId, distribuertTidspunkt)
 
-        assertTrue(repository.getSoknaderMedIkkeDistribuerteVedtak(fattetBefore = etterAlleTestVedtak).isEmpty())
+        assertTrue(repository.getSoknaderMedIkkeDistribuerteBehandlingsutfall(fattetBefore = etterAlleTestBehandlingsutfall).isEmpty())
     }
 
     @Test
     fun `getUnpublishedSoknader returnerer kun soknader uten soknad_publisert_at`() {
-        opprettSoknadMedVedtak(journalpostId = null, soknadPublishedAt = null)
-        opprettSoknadMedVedtak(journalpostId = null, soknadPublishedAt = OffsetDateTime.now())
+        opprettSoknadMedBehandlingsutfall(journalpostId = null, soknadPublishedAt = null)
+        opprettSoknadMedBehandlingsutfall(journalpostId = null, soknadPublishedAt = OffsetDateTime.now())
 
         val upubliserte = repository.getUnpublishedSoknader()
 
@@ -406,40 +409,48 @@ class SoknadRepositoryTest {
     }
 
     @Test
-    fun `getSoknaderMedUnpublishedVedtak returnerer kun soknader med publisert soknad og upublisert vedtak`() {
-        opprettSoknadMedVedtak(journalpostId = null, soknadPublishedAt = null, vedtakPublishedAt = null)
-        opprettSoknadMedVedtak(journalpostId = null, soknadPublishedAt = OffsetDateTime.now(), vedtakPublishedAt = null)
-        opprettSoknadMedVedtak(
+    fun `getSoknaderMedUnpublishedBehandlingsutfall returnerer kun soknader med publisert soknad og upublisert behandlingsutfall`() {
+        opprettSoknadMedBehandlingsutfall(journalpostId = null, soknadPublishedAt = null, behandlingsutfallPublishedAt = null)
+        opprettSoknadMedBehandlingsutfall(
             journalpostId = null,
             soknadPublishedAt = OffsetDateTime.now(),
-            vedtakPublishedAt = OffsetDateTime.now(),
+            behandlingsutfallPublishedAt = null,
+        )
+        opprettSoknadMedBehandlingsutfall(
+            journalpostId = null,
+            soknadPublishedAt = OffsetDateTime.now(),
+            behandlingsutfallPublishedAt = OffsetDateTime.now(),
         )
 
-        val soknaderMedUnpublishedVedtak = repository.getSoknaderMedUnpublishedVedtak()
+        val soknaderMedUnpublishedBehandlingsutfall = repository.getSoknaderMedUnpublishedBehandlingsutfall()
 
-        assertEquals(1, soknaderMedUnpublishedVedtak.size)
+        assertEquals(1, soknaderMedUnpublishedBehandlingsutfall.size)
     }
 
     @Test
-    fun `setVedtakPublished oppdaterer vedtak_published_at`() {
-        val vedtakId =
-            opprettSoknadMedVedtak(journalpostId = null, soknadPublishedAt = OffsetDateTime.now(), vedtakPublishedAt = null)
-        assertEquals(1, repository.getSoknaderMedUnpublishedVedtak().size)
+    fun `setBehandlingsutfallPublished oppdaterer behandlingsutfall_published_at`() {
+        val behandlingsutfallId =
+            opprettSoknadMedBehandlingsutfall(
+                journalpostId = null,
+                soknadPublishedAt = OffsetDateTime.now(),
+                behandlingsutfallPublishedAt = null,
+            )
+        assertEquals(1, repository.getSoknaderMedUnpublishedBehandlingsutfall().size)
 
-        repository.setVedtakPublished(vedtakId, OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS))
+        repository.setBehandlingsutfallPublished(behandlingsutfallId, OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS))
 
-        assertTrue(repository.getSoknaderMedUnpublishedVedtak().isEmpty())
+        assertTrue(repository.getSoknaderMedUnpublishedBehandlingsutfall().isEmpty())
     }
 
-    private fun opprettSoknadMedVedtak(
+    private fun opprettSoknadMedBehandlingsutfall(
         journalpostId: String?,
         distribuertTidspunkt: OffsetDateTime? = null,
         fattetTidspunkt: OffsetDateTime = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
         soknadPublishedAt: OffsetDateTime? = null,
-        vedtakPublishedAt: OffsetDateTime? = null,
+        behandlingsutfallPublishedAt: OffsetDateTime? = null,
     ): UUID {
         val soknadUuid = UUID.randomUUID()
-        val vedtakUuid = UUID.randomUUID()
+        val behandlingsutfallUuid = UUID.randomUUID()
 
         database.connection.use { connection ->
             connection
@@ -476,11 +487,11 @@ class SoknadRepositoryTest {
                     statement.executeUpdate()
                 }
 
-            val vedtakId =
+            val behandlingsutfallId =
                 connection
                     .prepareStatement(
                         """
-                        INSERT INTO VEDTAK (
+                        INSERT INTO BEHANDLINGSUTFALL (
                             uuid,
                             soknad_id,
                             utfall,
@@ -490,20 +501,20 @@ class SoknadRepositoryTest {
                             journalpost_id,
                             journalfort_tidspunkt,
                             distribuert_tidspunkt,
-                            vedtak_published_at
+                            behandlingsutfall_published_at
                         )
                         VALUES (?, ?, 'INNVILGET', 'Z990000', ?, ?::jsonb, ?, ?, ?, ?)
                         RETURNING id
                         """,
                     ).use { statement ->
-                        statement.setObject(1, vedtakUuid)
+                        statement.setObject(1, behandlingsutfallUuid)
                         statement.setInt(2, soknadId)
                         statement.setObject(3, fattetTidspunkt)
                         statement.setString(4, DOCUMENT_JSON)
                         statement.setString(5, journalpostId)
                         statement.setObject(6, journalpostId?.let { OffsetDateTime.now() })
                         statement.setObject(7, distribuertTidspunkt)
-                        statement.setObject(8, vedtakPublishedAt)
+                        statement.setObject(8, behandlingsutfallPublishedAt)
                         statement.executeQuery().use { rs ->
                             rs.next()
                             rs.getInt("id")
@@ -512,9 +523,9 @@ class SoknadRepositoryTest {
 
             connection
                 .prepareStatement(
-                    "INSERT INTO VEDTAK_PERIODE (vedtak_id, fom, tom) VALUES (?, ?, ?)",
+                    "INSERT INTO VEDTAK_PERIODE (behandlingsutfall_id, fom, tom) VALUES (?, ?, ?)",
                 ).use { statement ->
-                    statement.setInt(1, vedtakId)
+                    statement.setInt(1, behandlingsutfallId)
                     statement.setObject(2, LocalDate.of(2026, 1, 5))
                     statement.setObject(3, LocalDate.of(2026, 1, 9))
                     statement.executeUpdate()
@@ -523,7 +534,7 @@ class SoknadRepositoryTest {
             connection.commit()
         }
 
-        return vedtakUuid
+        return behandlingsutfallUuid
     }
 
     companion object {
@@ -531,12 +542,12 @@ class SoknadRepositoryTest {
             """[{"type": "PARAGRAPH", "title": "Tittel", "texts": ["Innhold"]}]"""
 
         // Cutoff langt etter alle fattet_tidspunkt brukt i disse testene, slik at
-        // getIkkeJournalforteSoknader/getSoknaderMedIkkeDistribuerteVedtak sine
+        // getIkkeJournalforteSoknader/getSoknaderMedIkkeDistribuerteBehandlingsutfall sine
         // eksisterende asserts ikke påvirkes av grace-vinduet.
-        private val etterAlleTestVedtak = OffsetDateTime.parse("2026-06-01T00:00:00Z")
+        private val etterAlleTestBehandlingsutfall = OffsetDateTime.parse("2026-06-01T00:00:00Z")
     }
 
-    private fun generateVedtak(
+    private fun generateBehandlingsutfall(
         utfall: Utfall = Utfall.Innvilget,
         innvilgedePerioder: List<Periode> =
             listOf(
@@ -546,8 +557,8 @@ class SoknadRepositoryTest {
                 ),
             ),
         begrunnelse: String? = null,
-    ): Vedtak =
-        Vedtak(
+    ): Behandlingsutfall =
+        Behandlingsutfall(
             utfall = utfall,
             fattetAv = Navident("Z999999"),
             fattetTidspunkt = OffsetDateTime.parse("2026-03-05T10:00:00Z"),
@@ -557,7 +568,7 @@ class SoknadRepositoryTest {
                 listOf(
                     DocumentComponent(
                         type = DocumentComponentType.HEADER_H1,
-                        title = "Vedtak",
+                        title = "Behandlingsutfall",
                         texts = listOf("Søknaden din er innvilget"),
                     ),
                 ),

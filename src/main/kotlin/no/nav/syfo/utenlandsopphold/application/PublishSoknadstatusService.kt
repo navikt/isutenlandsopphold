@@ -25,24 +25,27 @@ class PublishSoknadstatusService(
     }
 
     fun publishBehandledeSoknader(): List<Result<Unit>> {
-        val soknaderMedUnpublishedVedtak = soknadRepository.getSoknaderMedUnpublishedVedtak()
+        val soknaderMedUnpublishedBehandlingsutfall = soknadRepository.getSoknaderMedUnpublishedBehandlingsutfall()
 
-        return soknaderMedUnpublishedVedtak.map { soknad ->
+        return soknaderMedUnpublishedBehandlingsutfall.map { soknad ->
             runCatching { publishBehandletSoknad(soknad) }
                 .onFailure { log.error("Feil ved publisering av BEHANDLET-status for søknad ${soknad.id}", it) }
         }
     }
 
     private fun publishBehandletSoknad(soknad: Soknad) {
-        val vedtak =
-            checkNotNull(soknad.vedtak) {
-                "Søknad ${soknad.id} har ikke fattet vedtak, kan ikke publisere BEHANDLET-status"
+        val behandlingsutfall =
+            checkNotNull(soknad.behandlingsutfall) {
+                "Søknad ${soknad.id} er ikke ferdigbehandlet, kan ikke publisere BEHANDLET-status"
             }
 
-        soknadstatusProducer.publish(SoknadstatusRecord.fromSoknadMedVedtak(soknad)).getOrThrow()
+        soknadstatusProducer.publish(SoknadstatusRecord.fromSoknadMedBehandlingsutfall(soknad)).getOrThrow()
 
-        soknadRepository.setVedtakPublished(vedtakId = vedtak.vedtakId, publishedAt = OffsetDateTime.now())
-        log.info("Vedtak ${vedtak.vedtakId} for søknad ${soknad.id} publisert som BEHANDLET")
+        soknadRepository.setBehandlingsutfallPublished(
+            behandlingsutfallId = behandlingsutfall.behandlingsutfallId,
+            publishedAt = OffsetDateTime.now(),
+        )
+        log.info("Behandlingsutfall ${behandlingsutfall.behandlingsutfallId} for søknad ${soknad.id} publisert som BEHANDLET")
     }
 
     companion object {

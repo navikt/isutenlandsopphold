@@ -4,7 +4,7 @@ import kotlinx.coroutines.test.runTest
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Utfall
-import no.nav.syfo.utenlandsopphold.domain.vedtakDocument
+import no.nav.syfo.utenlandsopphold.domain.behandlingsutfallDocument
 import no.nav.syfo.utenlandsopphold.infrastructure.mock.PDF_AVSLAG_BYTES
 import no.nav.syfo.utenlandsopphold.infrastructure.mock.PDF_DELVIS_INNVILGET_BYTES
 import no.nav.syfo.utenlandsopphold.infrastructure.mock.PDF_HENLAGT_BYTES
@@ -22,11 +22,11 @@ class PdfClientTest {
     fun `henter innvilget-pdf ved innvilgelse`() =
         runTest {
             val pdf =
-                pdfClient.createVedtakPdf(
+                pdfClient.createBehandlingsutfallPdf(
                     mottakerFodselsnummer = testPersonident,
                     mottakerNavn = "Ola Nordmann",
                     utfall = Utfall.Innvilget,
-                    documentComponents = vedtakDocument,
+                    documentComponents = behandlingsutfallDocument,
                 )
 
             assertTrue(PDF_INNVILGET_BYTES.contentEquals(pdf))
@@ -41,11 +41,11 @@ class PdfClientTest {
                 )
 
             val pdf =
-                pdfClient.createVedtakPdf(
+                pdfClient.createBehandlingsutfallPdf(
                     mottakerFodselsnummer = testPersonident,
                     mottakerNavn = "Ola Nordmann",
                     utfall = delvisInnvilget,
-                    documentComponents = vedtakDocument,
+                    documentComponents = behandlingsutfallDocument,
                 )
 
             assertTrue(PDF_DELVIS_INNVILGET_BYTES.contentEquals(pdf))
@@ -55,11 +55,11 @@ class PdfClientTest {
     fun `henter avslag-pdf ved avslag`() =
         runTest {
             val pdf =
-                pdfClient.createVedtakPdf(
+                pdfClient.createBehandlingsutfallPdf(
                     mottakerFodselsnummer = testPersonident,
                     mottakerNavn = "Ola Nordmann",
                     utfall = Utfall.Avslag,
-                    documentComponents = vedtakDocument,
+                    documentComponents = behandlingsutfallDocument,
                 )
 
             assertTrue(PDF_AVSLAG_BYTES.contentEquals(pdf))
@@ -69,11 +69,11 @@ class PdfClientTest {
     fun `henter henlagt-pdf ved henleggelse`() =
         runTest {
             val pdf =
-                pdfClient.createVedtakPdf(
+                pdfClient.createBehandlingsutfallPdf(
                     mottakerFodselsnummer = testPersonident,
                     mottakerNavn = "Ola Nordmann",
                     utfall = Utfall.Henlagt,
-                    documentComponents = vedtakDocument,
+                    documentComponents = behandlingsutfallDocument,
                 )
 
             assertTrue(PDF_HENLAGT_BYTES.contentEquals(pdf))

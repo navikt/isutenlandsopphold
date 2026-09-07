@@ -4,7 +4,7 @@ import no.nav.syfo.utenlandsopphold.application.PublishSoknadstatusService
 import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.Cronjob
 
 /**
- * Cronjob som periodisk publiserer status for søknader (MOTTATT) og fattede vedtak (BEHANDLET)
+ * Cronjob som periodisk publiserer status for søknader (MOTTATT) og registrerte behandlingsutfall (BEHANDLET)
  * til soknadstatus-topicet.
  */
 class PublishSoknadstatusCronjob(

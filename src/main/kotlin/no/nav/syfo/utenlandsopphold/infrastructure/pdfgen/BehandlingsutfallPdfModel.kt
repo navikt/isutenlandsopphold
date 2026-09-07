@@ -4,7 +4,7 @@ import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import java.time.LocalDate
 
 /**
- * Request body sent to ispdfgen for å generere PDF-en for et vedtak om
+ * Request body sent to ispdfgen for å generere PDF-en for utfallet av en søknad om
  * utenlandsopphold. Feltnavnene må matche malen (template) registrert for
  * denne appen i ispdfgen (`isutenlandsopphold/vedtak`).
  *
@@ -12,7 +12,7 @@ import java.time.LocalDate
  * for å unngå overraskelser ved Jackson-serialisering av inline-klasser, i tråd med
  * hvordan andre DTO-er i common-biblioteket (f.eks. Bruker) gjør det.
  */
-data class VedtakPdfModel(
+data class BehandlingsutfallPdfModel(
     val mottakerFodselsnummer: String,
     val mottakerNavn: String,
     val documentComponents: List<DocumentComponent>,

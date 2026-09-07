@@ -5,11 +5,11 @@ import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.common.types.ident.Navident
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.common.util.configuredJacksonMapper
+import no.nav.syfo.utenlandsopphold.domain.Behandlingsutfall
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.Utfall
-import no.nav.syfo.utenlandsopphold.domain.Vedtak
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -24,8 +24,8 @@ data class PSoknad(
 ) {
     fun toSoknad(
         soktePerioder: List<PSoknadPeriode>,
-        vedtak: PVedtak?,
-        vedtakPerioder: List<PVedtakPeriode>,
+        behandlingsutfall: PBehandlingsutfall?,
+        behandlingsutfallPerioder: List<PBehandlingsutfallPeriode>,
     ): Soknad =
         Soknad(
             id = uuid,
@@ -33,7 +33,10 @@ data class PSoknad(
             personident = personident,
             soktePerioder = soktePerioder.map { it.toPeriode() },
             innsendtTidspunkt = innsendtTidspunkt,
-            vedtak = vedtak?.toVedtak(innvilgedePerioder = vedtakPerioder.map { it.toPeriode() }),
+            behandlingsutfall =
+                behandlingsutfall?.toBehandlingsutfall(
+                    innvilgedePerioder = behandlingsutfallPerioder.map { it.toPeriode() },
+                ),
         )
 }
 
@@ -46,16 +49,16 @@ data class PSoknadPeriode(
     fun toPeriode(): Periode = Periode(fom = fom, tom = tom)
 }
 
-data class PVedtakPeriode(
+data class PBehandlingsutfallPeriode(
     val id: Int,
-    val vedtakId: Int,
+    val behandlingsutfallId: Int,
     val fom: LocalDate,
     val tom: LocalDate,
 ) {
     fun toPeriode(): Periode = Periode(fom = fom, tom = tom)
 }
 
-data class PVedtak(
+data class PBehandlingsutfall(
     val id: Int,
     val uuid: UUID,
     val createdAt: OffsetDateTime,
@@ -69,9 +72,9 @@ data class PVedtak(
     val journalfortTidspunkt: OffsetDateTime?,
     val distribuertTidspunkt: OffsetDateTime?,
 ) {
-    fun toVedtak(innvilgedePerioder: List<Periode>): Vedtak =
-        Vedtak(
-            vedtakId = uuid,
+    fun toBehandlingsutfall(innvilgedePerioder: List<Periode>): Behandlingsutfall =
+        Behandlingsutfall(
+            behandlingsutfallId = uuid,
             utfall = utfall.toUtfall(innvilgedePerioder),
             fattetAv = Navident(fattetAv),
             fattetTidspunkt = fattetTidspunkt,

@@ -6,22 +6,22 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * Konfigurasjon for [JournalforVedtakCronjob].
+ * Konfigurasjon for [JournalforBehandlingsutfallCronjob].
  *
  * @param initialDelayMinutes Tid fra applikasjonen er klar til cronjobben kjører første gang.
  * @param interval Tid mellom hver kjøring av cronjobben.
- * @param freshVedtakGracePeriod Cronjobben plukker ikke opp vedtak som er fattet innenfor dette
- * tidsvinduet. Dette gir API-laget (som forsøker journalføring og deretter distribusjon
- * umiddelbart etter at et vedtak er fattet, se
+ * @param freshBehandlingsutfallGracePeriod Cronjobben plukker ikke opp behandlingsutfall som er
+ * registrert innenfor dette tidsvinduet. Dette gir API-laget (som forsøker journalføring og deretter
+ * distribusjon umiddelbart etter at et behandlingsutfall er registrert, se
  * [no.nav.syfo.utenlandsopphold.api.soknad.registerSoknadApi]) rom til å journalføre og
- * distribuere vedtaket selv, uten at cronjobben forsøker det samme samtidig. Verdien bør være
+ * distribuere selv, uten at cronjobben forsøker det samme samtidig. Verdien bør være
  * komfortabelt større enn forventet samlet varighet på journalføring **og** distribusjon
  * (PDL + PDF-generering + dokarkiv + dokdistfordeling).
  */
 data class JournalforingCronjobConfig(
     val initialDelayMinutes: Long,
     val interval: Duration,
-    val freshVedtakGracePeriod: Duration,
+    val freshBehandlingsutfallGracePeriod: Duration,
 ) {
     companion object {
         /**
@@ -34,7 +34,8 @@ data class JournalforingCronjobConfig(
             JournalforingCronjobConfig(
                 initialDelayMinutes = getEnvVar("JOURNALFORING_CRONJOB_INITIAL_DELAY_MINUTES", "2").toLong(),
                 interval = getEnvVar("JOURNALFORING_CRONJOB_INTERVAL_MINUTES", "10").toLong().minutes,
-                freshVedtakGracePeriod = getEnvVar("JOURNALFORING_FRESH_VEDTAK_GRACE_SECONDS", "60").toLong().seconds,
+                freshBehandlingsutfallGracePeriod =
+                    getEnvVar("JOURNALFORING_FRESH_VEDTAK_GRACE_SECONDS", "60").toLong().seconds,
             )
     }
 }

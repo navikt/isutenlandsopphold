@@ -9,7 +9,7 @@ import java.net.InetAddress
 
 /**
  * Rød sone: leder-valg avgjør hvilken pod som får kjøre cronjobben. Uten dette
- * ville alle replikaer journalført samme vedtak samtidig og risikert duplikate
+ * ville alle replikaer journalført samme behandlingsutfall samtidig og risikert duplikate
  * journalposter i Joark. NAIS eksponerer `ELECTOR_GET_URL` når `leaderElection: true`
  * er satt i nais-manifestet.
  */

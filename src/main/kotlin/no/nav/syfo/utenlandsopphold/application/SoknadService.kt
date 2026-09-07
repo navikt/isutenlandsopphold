@@ -12,7 +12,7 @@ import java.util.UUID
 class SoknadService(
     private val transactionManager: TransactionManager,
     private val soknadRepository: ISoknadRepository,
-    private val journalforVedtakService: JournalforVedtakService,
+    private val journalforBehandlingsutfallService: JournalforBehandlingsutfallService,
 ) {
     fun hentSoknad(soknadId: UUID): Soknad? = soknadRepository.hentSoknad(soknadId)
 
@@ -20,7 +20,7 @@ class SoknadService(
 
     fun mottaSoknad(soknad: Soknad): LagreMottattSoknadResultat = soknadRepository.lagreMottattSoknad(soknad)
 
-    fun fattVedtak(
+    fun registrerBehandlingsutfall(
         soknadId: UUID,
         fattetAv: Navident,
         utfall: Utfall,
@@ -35,8 +35,8 @@ class SoknadService(
                         soknadId = soknadId,
                     ) ?: throw IllegalArgumentException("Søknad med id $soknadId finnes ikke")
 
-                val soknadMedVedtak =
-                    soknad.fattVedtak(
+                val soknadMedBehandlingsutfall =
+                    soknad.registrerBehandlingsutfall(
                         utfall = utfall,
                         fattetAv = fattetAv,
                         now = OffsetDateTime.now(),
@@ -44,23 +44,26 @@ class SoknadService(
                         begrunnelse = begrunnelse,
                     )
 
-                soknadRepository.lagreVedtak(
+                soknadRepository.lagreBehandlingsutfall(
                     transaction = transaction,
-                    soknadMedVedtak = soknadMedVedtak,
+                    soknadMedBehandlingsutfall = soknadMedBehandlingsutfall,
                 )
             }
         journalforOgDistribuerAsync(lagretSoknad)
         return lagretSoknad
     }
 
-    private fun journalforOgDistribuerAsync(soknadMedVedtak: Soknad) {
+    private fun journalforOgDistribuerAsync(soknadMedBehandlingsutfall: Soknad) {
         launchAsyncTask {
             try {
-                val journalfortSoknad = journalforVedtakService.journalforVedtak(soknadMedVedtak)
-                journalforVedtakService.distribuerVedtak(journalfortSoknad)
+                val journalfortSoknad =
+                    journalforBehandlingsutfallService.journalforBehandlingsutfall(soknadMedBehandlingsutfall)
+                journalforBehandlingsutfallService.distribuerBehandlingsutfall(journalfortSoknad)
             } catch (exception: Exception) {
                 log.error(
-                    "Feil ved umiddelbar journalføring/distribusjon av vedtak ${soknadMedVedtak.vedtak?.vedtakId} for søknad ${soknadMedVedtak.id}",
+                    "Feil ved umiddelbar journalføring/distribusjon av behandlingsutfall " +
+                        "${soknadMedBehandlingsutfall.behandlingsutfall?.behandlingsutfallId} " +
+                        "for søknad ${soknadMedBehandlingsutfall.id}",
                     exception,
                 )
             }

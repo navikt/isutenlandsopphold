@@ -5,9 +5,9 @@ import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.application.ISoknadRepository
 import no.nav.syfo.utenlandsopphold.application.LagreMottattSoknadResultat
 import no.nav.syfo.utenlandsopphold.application.Transaction
+import no.nav.syfo.utenlandsopphold.domain.Behandlingsutfall
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
-import no.nav.syfo.utenlandsopphold.domain.Vedtak
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
 import no.nav.syfo.utenlandsopphold.infrastructure.database.jdbcConnection
 import no.nav.syfo.utenlandsopphold.infrastructure.database.toList
@@ -67,18 +67,18 @@ class SoknadRepository(
             connection.toSoknader(pSoknader)
         }
 
-    override fun lagreVedtak(
+    override fun lagreBehandlingsutfall(
         transaction: Transaction,
-        soknadMedVedtak: Soknad,
+        soknadMedBehandlingsutfall: Soknad,
     ): Soknad {
-        val vedtak =
-            checkNotNull(soknadMedVedtak.vedtak) {
-                "Søknad ${soknadMedVedtak.id} mangler vedtak etter fattVedtak"
+        val behandlingsutfall =
+            checkNotNull(soknadMedBehandlingsutfall.behandlingsutfall) {
+                "Søknad ${soknadMedBehandlingsutfall.id} mangler behandlingsutfall etter registrerBehandlingsutfall"
             }
 
-        transaction.jdbcConnection().lagreVedtak(soknadMedVedtak.id, vedtak)
+        transaction.jdbcConnection().lagreBehandlingsutfall(soknadMedBehandlingsutfall.id, behandlingsutfall)
 
-        return soknadMedVedtak
+        return soknadMedBehandlingsutfall
     }
 
     override fun getIkkeJournalforteSoknader(fattetBefore: OffsetDateTime): List<Soknad> =
@@ -87,35 +87,35 @@ class SoknadRepository(
             connection.toSoknader(pSoknader)
         }
 
-    override fun setVedtakJournalfort(
-        vedtakId: UUID,
+    override fun setBehandlingsutfallJournalfort(
+        behandlingsutfallId: UUID,
         journalpostId: JournalpostId,
         journalfortTidspunkt: OffsetDateTime,
     ) {
         withConnection { connection ->
-            connection.prepareStatement(SET_VEDTAK_JOURNALFORT).use {
+            connection.prepareStatement(SET_BEHANDLINGSUTFALL_JOURNALFORT).use {
                 it.setString(1, journalpostId.value)
                 it.setObject(2, journalfortTidspunkt)
-                it.setObject(3, vedtakId)
+                it.setObject(3, behandlingsutfallId)
                 it.executeUpdate()
             }
         }
     }
 
-    override fun getSoknaderMedIkkeDistribuerteVedtak(fattetBefore: OffsetDateTime): List<Soknad> =
+    override fun getSoknaderMedIkkeDistribuerteBehandlingsutfall(fattetBefore: OffsetDateTime): List<Soknad> =
         withConnection(Connection.TRANSACTION_REPEATABLE_READ) { connection ->
-            val pSoknader = connection.getSoknaderMedIkkeDistribuerteVedtak(fattetBefore)
+            val pSoknader = connection.getSoknaderMedIkkeDistribuerteBehandlingsutfall(fattetBefore)
             connection.toSoknader(pSoknader)
         }
 
-    override fun setVedtakDistribuert(
-        vedtakId: UUID,
+    override fun setBehandlingsutfallDistribuert(
+        behandlingsutfallId: UUID,
         distribuertTidspunkt: OffsetDateTime,
     ) {
         withConnection { connection ->
-            connection.prepareStatement(SET_VEDTAK_DISTRIBUERT).use {
+            connection.prepareStatement(SET_BEHANDLINGSUTFALL_DISTRIBUERT).use {
                 it.setObject(1, distribuertTidspunkt)
-                it.setObject(2, vedtakId)
+                it.setObject(2, behandlingsutfallId)
                 it.executeUpdate()
             }
         }
@@ -140,20 +140,20 @@ class SoknadRepository(
         }
     }
 
-    override fun getSoknaderMedUnpublishedVedtak(): List<Soknad> =
+    override fun getSoknaderMedUnpublishedBehandlingsutfall(): List<Soknad> =
         withConnection(Connection.TRANSACTION_REPEATABLE_READ) { connection ->
-            val pSoknader = connection.getSoknaderMedUnpublishedVedtak()
+            val pSoknader = connection.getSoknaderMedUnpublishedBehandlingsutfall()
             connection.toSoknader(pSoknader)
         }
 
-    override fun setVedtakPublished(
-        vedtakId: UUID,
+    override fun setBehandlingsutfallPublished(
+        behandlingsutfallId: UUID,
         publishedAt: OffsetDateTime,
     ) {
         withConnection { connection ->
-            connection.prepareStatement(SET_VEDTAK_PUBLISHED_AT).use {
+            connection.prepareStatement(SET_BEHANDLINGSUTFALL_PUBLISHED_AT).use {
                 it.setObject(1, publishedAt)
-                it.setObject(2, vedtakId)
+                it.setObject(2, behandlingsutfallId)
                 it.executeUpdate()
             }
         }
@@ -176,17 +176,17 @@ class SoknadRepository(
 
         val soknadIds = pSoknader.map { it.id }
         val perioderPerSoknad = getSoknadPerioder(soknadIds).groupBy { it.soknadId }
-        val vedtakPerSoknad = getVedtak(soknadIds).associateBy { it.soknadId }
-        val vedtakPerioderPerVedtak =
-            getVedtakPerioder(vedtakPerSoknad.values.map { it.id })
-                .groupBy { it.vedtakId }
+        val behandlingsutfallPerSoknad = getBehandlingsutfall(soknadIds).associateBy { it.soknadId }
+        val perioderPerBehandlingsutfall =
+            getBehandlingsutfallPerioder(behandlingsutfallPerSoknad.values.map { it.id })
+                .groupBy { it.behandlingsutfallId }
 
         return pSoknader.map { pSoknad ->
-            val pVedtak = vedtakPerSoknad[pSoknad.id]
+            val pBehandlingsutfall = behandlingsutfallPerSoknad[pSoknad.id]
             pSoknad.toSoknad(
                 soktePerioder = perioderPerSoknad[pSoknad.id].orEmpty(),
-                vedtak = pVedtak,
-                vedtakPerioder = pVedtak?.let { vedtakPerioderPerVedtak[it.id] }.orEmpty(),
+                behandlingsutfall = pBehandlingsutfall,
+                behandlingsutfallPerioder = pBehandlingsutfall?.let { perioderPerBehandlingsutfall[it.id] }.orEmpty(),
             )
         }
     }
@@ -215,10 +215,10 @@ class SoknadRepository(
             it.executeQuery().toList { toPSoknadPeriode() }
         }
 
-    private fun Connection.getVedtak(soknadIds: List<Int>): List<PVedtak> =
-        prepareStatement(GET_VEDTAK).use {
+    private fun Connection.getBehandlingsutfall(soknadIds: List<Int>): List<PBehandlingsutfall> =
+        prepareStatement(GET_BEHANDLINGSUTFALL).use {
             it.setArray(1, createArrayOf("integer", soknadIds.toTypedArray()))
-            it.executeQuery().toList { toPVedtak() }
+            it.executeQuery().toList { toPBehandlingsutfall() }
         }
 
     private fun Connection.getIkkeJournalforteSoknader(fattetBefore: OffsetDateTime): List<PSoknad> =
@@ -227,7 +227,7 @@ class SoknadRepository(
             it.executeQuery().toList { toPSoknad() }
         }
 
-    private fun Connection.getSoknaderMedIkkeDistribuerteVedtak(fattetBefore: OffsetDateTime): List<PSoknad> =
+    private fun Connection.getSoknaderMedIkkeDistribuerteBehandlingsutfall(fattetBefore: OffsetDateTime): List<PSoknad> =
         prepareStatement(GET_IKKE_DISTRIBUERTE_SOKNADER).use {
             it.setObject(1, fattetBefore)
             it.executeQuery().toList { toPSoknad() }
@@ -238,16 +238,16 @@ class SoknadRepository(
             it.executeQuery().toList { toPSoknad() }
         }
 
-    private fun Connection.getSoknaderMedUnpublishedVedtak(): List<PSoknad> =
-        prepareStatement(GET_SOKNADER_MED_UNPUBLISHED_VEDTAK).use {
+    private fun Connection.getSoknaderMedUnpublishedBehandlingsutfall(): List<PSoknad> =
+        prepareStatement(GET_SOKNADER_MED_UNPUBLISHED_BEHANDLINGSUTFALL).use {
             it.executeQuery().toList { toPSoknad() }
         }
 
-    private fun Connection.getVedtakPerioder(vedtakIds: List<Int>): List<PVedtakPeriode> {
-        if (vedtakIds.isEmpty()) return emptyList()
+    private fun Connection.getBehandlingsutfallPerioder(behandlingsutfallIds: List<Int>): List<PBehandlingsutfallPeriode> {
+        if (behandlingsutfallIds.isEmpty()) return emptyList()
         return prepareStatement(GET_VEDTAK_PERIODER).use {
-            it.setArray(1, createArrayOf("integer", vedtakIds.toTypedArray()))
-            it.executeQuery().toList { toPVedtakPeriode() }
+            it.setArray(1, createArrayOf("integer", behandlingsutfallIds.toTypedArray()))
+            it.executeQuery().toList { toPBehandlingsutfallPeriode() }
         }
     }
 
@@ -278,37 +278,37 @@ class SoknadRepository(
         }
     }
 
-    private fun Connection.lagreVedtak(
+    private fun Connection.lagreBehandlingsutfall(
         soknadId: UUID,
-        vedtak: Vedtak,
+        behandlingsutfall: Behandlingsutfall,
     ) {
         val documentJson =
             PGobject().apply {
                 type = "jsonb"
-                value = vedtak.document.serializeToJson()
+                value = behandlingsutfall.document.serializeToJson()
             }
-        val pVedtak =
-            prepareStatement(CREATE_VEDTAK).use {
-                it.setObject(1, vedtak.vedtakId)
-                it.setString(2, vedtak.utfall.dbValue())
-                it.setString(3, vedtak.fattetAv.value)
-                it.setObject(4, vedtak.fattetTidspunkt)
+        val pBehandlingsutfall =
+            prepareStatement(CREATE_BEHANDLINGSUTFALL).use {
+                it.setObject(1, behandlingsutfall.behandlingsutfallId)
+                it.setString(2, behandlingsutfall.utfall.dbValue())
+                it.setString(3, behandlingsutfall.fattetAv.value)
+                it.setObject(4, behandlingsutfall.fattetTidspunkt)
                 it.setObject(5, documentJson)
-                it.setString(6, vedtak.begrunnelse)
+                it.setString(6, behandlingsutfall.begrunnelse)
                 it.setObject(7, soknadId)
-                it.executeQuery().toList { toPVedtak() }.singleOrNull()
+                it.executeQuery().toList { toPBehandlingsutfall() }.singleOrNull()
                     ?: throw IllegalArgumentException("Fant ikke søknad med id $soknadId")
             }
-        createVedtakPerioder(pVedtak.id, vedtak.innvilgedePerioder)
+        createBehandlingsutfallPerioder(pBehandlingsutfall.id, behandlingsutfall.innvilgedePerioder)
     }
 
-    private fun Connection.createVedtakPerioder(
-        vedtakId: Int,
-        vedtakPerioder: List<Periode>,
+    private fun Connection.createBehandlingsutfallPerioder(
+        behandlingsutfallId: Int,
+        behandlingsutfallPerioder: List<Periode>,
     ) {
-        vedtakPerioder.forEach { periode ->
+        behandlingsutfallPerioder.forEach { periode ->
             prepareStatement(CREATE_VEDTAK_PERIODE).use {
-                it.setInt(1, vedtakId)
+                it.setInt(1, behandlingsutfallId)
                 it.setDate(2, Date.valueOf(periode.fom))
                 it.setDate(3, Date.valueOf(periode.tom))
                 it.executeUpdate()
@@ -337,24 +337,24 @@ class SoknadRepository(
                 SELECT * FROM soknad_periode WHERE soknad_id = ANY(?) ORDER BY fom ASC
             """
 
-        private const val GET_VEDTAK =
+        private const val GET_BEHANDLINGSUTFALL =
             """
-                SELECT * FROM vedtak WHERE soknad_id = ANY(?)
+                SELECT * FROM behandlingsutfall WHERE soknad_id = ANY(?)
             """
 
         private const val GET_IKKE_JOURNALFORTE_SOKNADER =
             """
                 SELECT DISTINCT s.* FROM soknad s
-                    INNER JOIN vedtak v ON v.soknad_id = s.id
-                WHERE v.journalpost_id IS NULL AND v.fattet_tidspunkt < ?
+                    INNER JOIN behandlingsutfall b ON b.soknad_id = s.id
+                WHERE b.journalpost_id IS NULL AND b.fattet_tidspunkt < ?
             """
 
         private const val GET_IKKE_DISTRIBUERTE_SOKNADER =
             """
                 SELECT DISTINCT s.* FROM soknad s
-                    INNER JOIN vedtak v ON v.soknad_id = s.id
-                WHERE v.journalpost_id IS NOT NULL AND v.distribuert_tidspunkt IS NULL
-                    AND v.fattet_tidspunkt < ?
+                    INNER JOIN behandlingsutfall b ON b.soknad_id = s.id
+                WHERE b.journalpost_id IS NOT NULL AND b.distribuert_tidspunkt IS NULL
+                    AND b.fattet_tidspunkt < ?
             """
 
         private const val GET_UNPUBLISHED_SOKNADER =
@@ -362,23 +362,23 @@ class SoknadRepository(
                 SELECT * FROM soknad WHERE soknad_published_at IS NULL
             """
 
-        private const val GET_SOKNADER_MED_UNPUBLISHED_VEDTAK =
+        private const val GET_SOKNADER_MED_UNPUBLISHED_BEHANDLINGSUTFALL =
             """
                 SELECT DISTINCT s.* FROM soknad s
-                    INNER JOIN vedtak v ON v.soknad_id = s.id
-                WHERE v.vedtak_published_at IS NULL AND s.soknad_published_at IS NOT NULL
+                    INNER JOIN behandlingsutfall b ON b.soknad_id = s.id
+                WHERE b.behandlingsutfall_published_at IS NULL AND s.soknad_published_at IS NOT NULL
             """
 
-        private const val SET_VEDTAK_JOURNALFORT =
+        private const val SET_BEHANDLINGSUTFALL_JOURNALFORT =
             """
-                UPDATE vedtak
+                UPDATE behandlingsutfall
                 SET journalpost_id = ?, journalfort_tidspunkt = ?
                 WHERE uuid = ?
             """
 
-        private const val SET_VEDTAK_DISTRIBUERT =
+        private const val SET_BEHANDLINGSUTFALL_DISTRIBUERT =
             """
-                UPDATE vedtak
+                UPDATE behandlingsutfall
                 SET distribuert_tidspunkt = ?
                 WHERE uuid = ?
             """
@@ -390,16 +390,16 @@ class SoknadRepository(
                 WHERE uuid = ?
             """
 
-        private const val SET_VEDTAK_PUBLISHED_AT =
+        private const val SET_BEHANDLINGSUTFALL_PUBLISHED_AT =
             """
-                UPDATE vedtak
-                SET vedtak_published_at = ?
+                UPDATE behandlingsutfall
+                SET behandlingsutfall_published_at = ?
                 WHERE uuid = ?
             """
 
         private const val GET_VEDTAK_PERIODER =
             """
-                SELECT * FROM vedtak_periode WHERE vedtak_id = ANY(?) ORDER BY fom ASC
+                SELECT * FROM VEDTAK_PERIODE WHERE behandlingsutfall_id = ANY(?) ORDER BY fom ASC
             """
 
         private const val CREATE_SOKNAD =
@@ -424,9 +424,9 @@ class SoknadRepository(
                 ) VALUES (?, ?, ?)
             """
 
-        private const val CREATE_VEDTAK =
+        private const val CREATE_BEHANDLINGSUTFALL =
             """
-                INSERT INTO vedtak (
+                INSERT INTO behandlingsutfall (
                     uuid,
                     soknad_id,
                     utfall,
@@ -443,8 +443,8 @@ class SoknadRepository(
 
         private const val CREATE_VEDTAK_PERIODE =
             """
-                INSERT INTO vedtak_periode (
-                    vedtak_id,
+                INSERT INTO VEDTAK_PERIODE (
+                    behandlingsutfall_id,
                     fom,
                     tom
                 ) VALUES (?, ?, ?)
@@ -470,16 +470,16 @@ internal fun ResultSet.toPSoknadPeriode(): PSoknadPeriode =
         tom = getObject("tom", LocalDate::class.java),
     )
 
-internal fun ResultSet.toPVedtakPeriode(): PVedtakPeriode =
-    PVedtakPeriode(
+internal fun ResultSet.toPBehandlingsutfallPeriode(): PBehandlingsutfallPeriode =
+    PBehandlingsutfallPeriode(
         id = getInt("id"),
-        vedtakId = getInt("vedtak_id"),
+        behandlingsutfallId = getInt("behandlingsutfall_id"),
         fom = getObject("fom", LocalDate::class.java),
         tom = getObject("tom", LocalDate::class.java),
     )
 
-internal fun ResultSet.toPVedtak(): PVedtak =
-    PVedtak(
+internal fun ResultSet.toPBehandlingsutfall(): PBehandlingsutfall =
+    PBehandlingsutfall(
         id = getInt("id"),
         uuid = getObject("uuid", UUID::class.java),
         createdAt = getObject("created_at", OffsetDateTime::class.java),

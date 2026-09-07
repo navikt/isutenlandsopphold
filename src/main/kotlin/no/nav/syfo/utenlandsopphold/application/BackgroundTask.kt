@@ -33,7 +33,7 @@ fun launchBackgroundTask(
 
 /**
  * Starter en enkeltstående (one-shot), fire-and-forget bakgrunnsoppgave, f.eks. et umiddelbart
- * forsøk på journalføring rett etter at et vedtak er fattet via API-et.
+ * forsøk på journalføring rett etter at et behandlingsutfall er registrert via API-et.
  */
 @OptIn(DelicateCoroutinesApi::class)
 fun launchAsyncTask(action: suspend CoroutineScope.() -> Unit): Job =
