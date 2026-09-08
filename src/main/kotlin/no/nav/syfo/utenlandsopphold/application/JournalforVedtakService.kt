@@ -75,6 +75,7 @@ class JournalforVedtakService(
                     personident = soknad.personident,
                     pdf = pdf,
                     eksternReferanseId = vedtak.vedtakId.toString(),
+                    dokumenttype = vedtak.utfall.tilJournalforingDokumenttype(),
                 ).getOrThrow()
 
         val journalfortTidspunkt = OffsetDateTime.now()
@@ -173,4 +174,10 @@ private fun Utfall.tilDistribusjonstype(): Distribusjonstype =
     when (this) {
         Utfall.Henlagt -> Distribusjonstype.VIKTIG
         Utfall.Innvilget, is Utfall.DelvisInnvilget, Utfall.Avslag -> Distribusjonstype.VEDTAK
+    }
+
+private fun Utfall.tilJournalforingDokumenttype(): JournalforingDokumenttype =
+    when (this) {
+        Utfall.Henlagt -> JournalforingDokumenttype.HENLEGGELSE
+        Utfall.Innvilget, is Utfall.DelvisInnvilget, Utfall.Avslag -> JournalforingDokumenttype.VEDTAK
     }

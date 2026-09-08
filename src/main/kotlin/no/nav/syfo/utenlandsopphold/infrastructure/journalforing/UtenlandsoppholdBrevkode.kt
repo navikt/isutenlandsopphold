@@ -9,4 +9,5 @@ enum class UtenlandsoppholdBrevkode(
     override val value: String,
 ) : Brevkode {
     VEDTAK("OPPF_VEDTAK_UTENLANDSOPPHOLD"),
+    HENLEGGELSE("OPPF_HENLEGGELSE_UTENLANDSOPPHOLD"),
 }

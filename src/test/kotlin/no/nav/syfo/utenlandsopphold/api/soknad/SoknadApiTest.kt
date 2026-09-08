@@ -28,6 +28,7 @@ import no.nav.syfo.utenlandsopphold.application.IPdfClient
 import no.nav.syfo.utenlandsopphold.application.IPdlClient
 import no.nav.syfo.utenlandsopphold.application.ISoknadRepository
 import no.nav.syfo.utenlandsopphold.application.JournalforVedtakService
+import no.nav.syfo.utenlandsopphold.application.JournalforingDokumenttype
 import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.application.Transaction
 import no.nav.syfo.utenlandsopphold.application.TransactionManager
@@ -702,7 +703,7 @@ class SoknadApiTest {
             val distribusjonServiceMock = mockk<IDistribusjonService>()
             coEvery { pdlClientMock.getNavn(personident) } returns "Ola Nordmann"
             coEvery { pdfClientMock.createVedtakPdf(personident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
-            coEvery { journalforingServiceMock.journalfor(personident, any(), any()) } returns
+            coEvery { journalforingServiceMock.journalfor(personident, any(), any(), any()) } returns
                 Result.success(JournalpostId("999"))
             coEvery { distribusjonServiceMock.distribuer(any(), any()) } returns Result.success("bestilling-1")
             every { repository.setVedtakJournalfort(any(), any(), any()) } returns Unit
@@ -727,7 +728,9 @@ class SoknadApiTest {
 
             assertEquals(HttpStatusCode.OK, response.status)
             // Journalføring og distribusjon skjer i en fire-and-forget bakgrunnsoppgave, derfor timeout her.
-            coVerify(timeout = 2000) { journalforingServiceMock.journalfor(personident, any(), any()) }
+            coVerify(timeout = 2000) {
+                journalforingServiceMock.journalfor(personident, any(), any(), JournalforingDokumenttype.VEDTAK)
+            }
             coVerify(timeout = 2000) { distribusjonServiceMock.distribuer(JournalpostId("999"), Distribusjonstype.VEDTAK) }
         }
 
