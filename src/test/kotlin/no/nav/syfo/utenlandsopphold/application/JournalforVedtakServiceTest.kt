@@ -9,6 +9,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.test.runTest
+import no.nav.syfo.common.distribusjon.dto.Distribusjonstype
 import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.domain.Periode
@@ -63,12 +64,15 @@ class JournalforVedtakServiceTest {
             every { repositoryMock.setVedtakJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
             coEvery { pdfClientMock.createVedtakPdf(testPersonident, any(), Utfall.Innvilget, any()) } returns byteArrayOf(1, 2, 3)
-            coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any()) } returns Result.success(JournalpostId("999"))
+            coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any()) } returns
+                Result.success(JournalpostId("999"))
 
             service.journalforVedtak()
 
             coVerify(exactly = 1) { pdfClientMock.createVedtakPdf(testPersonident, any(), Utfall.Innvilget, any()) }
-            coVerify(exactly = 1) { journalforingServiceMock.journalfor(testPersonident, any(), any()) }
+            coVerify(exactly = 1) {
+                journalforingServiceMock.journalfor(testPersonident, any(), any(), JournalforingDokumenttype.VEDTAK)
+            }
             verify(exactly = 1) {
                 repositoryMock.setVedtakJournalfort(soknad.vedtak!!.vedtakId, JournalpostId("999"), any())
             }
@@ -87,12 +91,15 @@ class JournalforVedtakServiceTest {
             every { repositoryMock.setVedtakJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
             coEvery { pdfClientMock.createVedtakPdf(testPersonident, any(), delvisInnvilget, any()) } returns byteArrayOf(1, 2, 3)
-            coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any()) } returns Result.success(JournalpostId("999"))
+            coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any()) } returns
+                Result.success(JournalpostId("999"))
 
             service.journalforVedtak()
 
             coVerify(exactly = 1) { pdfClientMock.createVedtakPdf(testPersonident, any(), delvisInnvilget, any()) }
-            coVerify(exactly = 1) { journalforingServiceMock.journalfor(testPersonident, any(), any()) }
+            coVerify(exactly = 1) {
+                journalforingServiceMock.journalfor(testPersonident, any(), any(), JournalforingDokumenttype.VEDTAK)
+            }
             verify(exactly = 1) {
                 repositoryMock.setVedtakJournalfort(soknad.vedtak!!.vedtakId, JournalpostId("999"), any())
             }
@@ -107,12 +114,42 @@ class JournalforVedtakServiceTest {
             every { repositoryMock.setVedtakJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
             coEvery { pdfClientMock.createVedtakPdf(testPersonident, any(), Utfall.Avslag, any()) } returns byteArrayOf(1, 2, 3)
-            coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any()) } returns Result.success(JournalpostId("999"))
+            coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any()) } returns
+                Result.success(JournalpostId("999"))
 
             service.journalforVedtak()
 
             coVerify(exactly = 1) { pdfClientMock.createVedtakPdf(testPersonident, any(), Utfall.Avslag, any()) }
-            coVerify(exactly = 1) { journalforingServiceMock.journalfor(testPersonident, any(), any()) }
+            coVerify(exactly = 1) {
+                journalforingServiceMock.journalfor(testPersonident, any(), any(), JournalforingDokumenttype.VEDTAK)
+            }
+            verify(exactly = 1) {
+                repositoryMock.setVedtakJournalfort(soknad.vedtak!!.vedtakId, JournalpostId("999"), any())
+            }
+        }
+
+    @Test
+    fun `journalfører henleggelse med dokumenttype HENLEGGELSE`() =
+        runTest {
+            val soknad = soknadMedVedtak(utfall = Utfall.Henlagt)
+
+            every { repositoryMock.getIkkeJournalforteSoknader(any()) } returns listOf(soknad)
+            every { repositoryMock.setVedtakJournalfort(any(), any(), any()) } just Runs
+            coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
+            coEvery { pdfClientMock.createVedtakPdf(testPersonident, any(), Utfall.Henlagt, any()) } returns byteArrayOf(1, 2, 3)
+            coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any()) } returns
+                Result.success(JournalpostId("999"))
+
+            service.journalforVedtak()
+
+            coVerify(exactly = 1) {
+                journalforingServiceMock.journalfor(
+                    testPersonident,
+                    any(),
+                    any(),
+                    JournalforingDokumenttype.HENLEGGELSE,
+                )
+            }
             verify(exactly = 1) {
                 repositoryMock.setVedtakJournalfort(soknad.vedtak!!.vedtakId, JournalpostId("999"), any())
             }
@@ -128,7 +165,7 @@ class JournalforVedtakServiceTest {
             every { repositoryMock.setVedtakJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
             coEvery { pdfClientMock.createVedtakPdf(testPersonident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
-            coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any()) } returnsMany
+            coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any()) } returnsMany
                 listOf(
                     Result.failure(RuntimeException("dokarkiv er nede")),
                     Result.success(JournalpostId("999")),
@@ -150,7 +187,8 @@ class JournalforVedtakServiceTest {
             every { repositoryMock.setVedtakJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
             coEvery { pdfClientMock.createVedtakPdf(testPersonident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
-            coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any()) } returns Result.success(JournalpostId("999"))
+            coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any()) } returns
+                Result.success(JournalpostId("999"))
 
             service.journalforVedtak()
 
@@ -166,11 +204,14 @@ class JournalforVedtakServiceTest {
             every { repositoryMock.setVedtakJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
             coEvery { pdfClientMock.createVedtakPdf(testPersonident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
-            coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any()) } returns Result.success(JournalpostId("999"))
+            coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any()) } returns
+                Result.success(JournalpostId("999"))
 
             service.journalforVedtak(soknad)
 
-            coVerify(exactly = 1) { journalforingServiceMock.journalfor(testPersonident, any(), any()) }
+            coVerify(exactly = 1) {
+                journalforingServiceMock.journalfor(testPersonident, any(), any(), JournalforingDokumenttype.VEDTAK)
+            }
             verify(exactly = 1) {
                 repositoryMock.setVedtakJournalfort(soknad.vedtak!!.vedtakId, JournalpostId("999"), any())
             }
@@ -185,12 +226,48 @@ class JournalforVedtakServiceTest {
 
             every { repositoryMock.getSoknaderMedIkkeDistribuerteVedtak(any()) } returns listOf(soknad)
             every { repositoryMock.setVedtakDistribuert(any(), any()) } just Runs
-            coEvery { distribusjonServiceMock.distribuer(any()) } returns Result.success("bestilling-1")
+            coEvery { distribusjonServiceMock.distribuer(any(), any()) } returns Result.success("bestilling-1")
 
             service.distribuerVedtak()
 
-            coVerify(exactly = 1) { distribusjonServiceMock.distribuer(any()) }
+            coVerify(exactly = 1) { distribusjonServiceMock.distribuer(any(), any()) }
             verify(exactly = 1) { repositoryMock.setVedtakDistribuert(soknad.vedtak!!.vedtakId, any()) }
+        }
+
+    @Test
+    fun `distribuerer vedtak om innvilgelse med distribusjonstype VEDTAK`() =
+        runTest {
+            val soknad =
+                soknadMedVedtak(utfall = Utfall.Innvilget)
+                    .journalforVedtak(JournalpostId("999"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
+
+            every { repositoryMock.getSoknaderMedIkkeDistribuerteVedtak(any()) } returns listOf(soknad)
+            every { repositoryMock.setVedtakDistribuert(any(), any()) } just Runs
+            coEvery { distribusjonServiceMock.distribuer(any(), any()) } returns Result.success("bestilling-1")
+
+            service.distribuerVedtak()
+
+            coVerify(exactly = 1) {
+                distribusjonServiceMock.distribuer(JournalpostId("999"), Distribusjonstype.VEDTAK)
+            }
+        }
+
+    @Test
+    fun `distribuerer henlagt vedtak med distribusjonstype VIKTIG`() =
+        runTest {
+            val soknad =
+                soknadMedVedtak(utfall = Utfall.Henlagt)
+                    .journalforVedtak(JournalpostId("999"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
+
+            every { repositoryMock.getSoknaderMedIkkeDistribuerteVedtak(any()) } returns listOf(soknad)
+            every { repositoryMock.setVedtakDistribuert(any(), any()) } just Runs
+            coEvery { distribusjonServiceMock.distribuer(any(), any()) } returns Result.success("bestilling-1")
+
+            service.distribuerVedtak()
+
+            coVerify(exactly = 1) {
+                distribusjonServiceMock.distribuer(JournalpostId("999"), Distribusjonstype.VIKTIG)
+            }
         }
 
     @Test
@@ -203,7 +280,7 @@ class JournalforVedtakServiceTest {
 
             every { repositoryMock.getSoknaderMedIkkeDistribuerteVedtak(any()) } returns listOf(soknadSomFeiler, soknadSomLykkes)
             every { repositoryMock.setVedtakDistribuert(any(), any()) } just Runs
-            coEvery { distribusjonServiceMock.distribuer(any()) } returnsMany
+            coEvery { distribusjonServiceMock.distribuer(any(), any()) } returnsMany
                 listOf(
                     Result.failure(RuntimeException("dokdistfordeling er nede")),
                     Result.success("bestilling-1"),

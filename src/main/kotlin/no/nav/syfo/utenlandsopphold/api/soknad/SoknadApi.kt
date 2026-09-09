@@ -35,7 +35,7 @@ fun Route.registerSoknadApi(
             val request = call.receive<SoknadVedtakPostDTO>()
             require(request.document.isNotEmpty()) { "document kan ikke være tomt" }
             when (request.utfall) {
-                "AVSLAG", "DELVIS_INNVILGET" ->
+                "AVSLAG", "DELVIS_INNVILGET", "HENLAGT" ->
                     require(!request.begrunnelse.isNullOrBlank()) {
                         "begrunnelse er påkrevd og kan ikke være blank for utfall ${request.utfall}"
                     }

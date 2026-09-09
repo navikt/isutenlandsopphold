@@ -61,6 +61,7 @@ enum class VedtakRecordUtfall {
     AVSLAG,
     DELVIS_INNVILGET,
     INNVILGET,
+    HENLAGT,
 }
 
 data class VedtakRecordPeriode(
@@ -73,4 +74,5 @@ private fun Utfall.toVedtakRecordUtfall(): VedtakRecordUtfall =
         is Utfall.Avslag -> VedtakRecordUtfall.AVSLAG
         is Utfall.DelvisInnvilget -> VedtakRecordUtfall.DELVIS_INNVILGET
         is Utfall.Innvilget -> VedtakRecordUtfall.INNVILGET
+        is Utfall.Henlagt -> VedtakRecordUtfall.HENLAGT
     }

@@ -7,6 +7,7 @@ import no.nav.syfo.utenlandsopphold.domain.Utfall
 import no.nav.syfo.utenlandsopphold.domain.vedtakDocument
 import no.nav.syfo.utenlandsopphold.infrastructure.mock.PDF_AVSLAG_BYTES
 import no.nav.syfo.utenlandsopphold.infrastructure.mock.PDF_DELVIS_INNVILGET_BYTES
+import no.nav.syfo.utenlandsopphold.infrastructure.mock.PDF_HENLAGT_BYTES
 import no.nav.syfo.utenlandsopphold.infrastructure.mock.PDF_INNVILGET_BYTES
 import no.nav.syfo.utenlandsopphold.infrastructure.mock.mockPdfClient
 import java.time.LocalDate
@@ -62,5 +63,19 @@ class PdfClientTest {
                 )
 
             assertTrue(PDF_AVSLAG_BYTES.contentEquals(pdf))
+        }
+
+    @Test
+    fun `henter henlagt-pdf ved henleggelse`() =
+        runTest {
+            val pdf =
+                pdfClient.createVedtakPdf(
+                    mottakerFodselsnummer = testPersonident,
+                    mottakerNavn = "Ola Nordmann",
+                    utfall = Utfall.Henlagt,
+                    documentComponents = vedtakDocument,
+                )
+
+            assertTrue(PDF_HENLAGT_BYTES.contentEquals(pdf))
         }
 }

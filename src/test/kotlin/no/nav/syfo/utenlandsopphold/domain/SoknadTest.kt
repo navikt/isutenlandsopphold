@@ -172,6 +172,37 @@ class SoknadTest {
     }
 
     @Test
+    fun `fattVedtak om henleggelse gir henlagt status uten innvilgede perioder`() {
+        val resultat =
+            lagSoknad().fattVedtak(
+                utfall = Utfall.Henlagt,
+                fattetAv = veileder,
+                now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
+                document = vedtakDocument,
+                begrunnelse = "Søker har trukket søknaden",
+            )
+
+        assertEquals(SoknadStatus.HENLAGT, resultat.status)
+        val vedtak = assertNotNull(resultat.vedtak)
+        assertEquals(Utfall.Henlagt, vedtak.utfall)
+        assertEquals(emptyList(), vedtak.innvilgedePerioder)
+        assertEquals("Søker har trukket søknaden", vedtak.begrunnelse)
+    }
+
+    @Test
+    fun `fattVedtak om henleggelse uten begrunnelse kaster feil`() {
+        assertFailsWith<IllegalArgumentException> {
+            lagSoknad().fattVedtak(
+                utfall = Utfall.Henlagt,
+                fattetAv = veileder,
+                now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
+                document = vedtakDocument,
+                begrunnelse = null,
+            )
+        }
+    }
+
+    @Test
     fun `fattVedtak om innvilgelse med begrunnelse kaster feil`() {
         assertFailsWith<IllegalArgumentException> {
             lagSoknad().fattVedtak(

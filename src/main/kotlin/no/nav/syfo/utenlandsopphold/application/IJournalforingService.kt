@@ -11,5 +11,11 @@ interface IJournalforingService {
         personident: Personident,
         pdf: ByteArray,
         eksternReferanseId: String,
+        dokumenttype: JournalforingDokumenttype,
     ): Result<JournalpostId>
+}
+
+enum class JournalforingDokumenttype {
+    VEDTAK,
+    HENLEGGELSE,
 }

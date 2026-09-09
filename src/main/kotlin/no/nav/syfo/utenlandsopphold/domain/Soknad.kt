@@ -11,6 +11,7 @@ enum class SoknadStatus {
     INNVILGET,
     DELVIS_INNVILGET,
     AVSLAG,
+    HENLAGT,
 }
 
 data class Soknad(
@@ -30,6 +31,7 @@ data class Soknad(
                         Utfall.Innvilget -> SoknadStatus.INNVILGET
                         is Utfall.DelvisInnvilget -> SoknadStatus.DELVIS_INNVILGET
                         Utfall.Avslag -> SoknadStatus.AVSLAG
+                        Utfall.Henlagt -> SoknadStatus.HENLAGT
                     }
             }
 
@@ -68,6 +70,7 @@ data class Soknad(
                     utfall.innvilgedePerioder
                 }
                 Utfall.Avslag -> emptyList()
+                Utfall.Henlagt -> emptyList()
             }
 
         return copy(

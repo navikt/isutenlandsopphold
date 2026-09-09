@@ -10,6 +10,7 @@ import no.nav.syfo.common.journalforing.dto.JournalpostKanal
 import no.nav.syfo.common.journalforing.dto.JournalpostType
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.application.IJournalforingService
+import no.nav.syfo.utenlandsopphold.application.JournalforingDokumenttype
 import org.slf4j.LoggerFactory
 
 /**
@@ -25,13 +26,15 @@ class JournalforingService(
         personident: Personident,
         pdf: ByteArray,
         eksternReferanseId: String,
+        dokumenttype: JournalforingDokumenttype,
     ): Result<JournalpostId> =
         runCatching {
+            val dokumentmetadata = dokumenttype.tilDokumentmetadata()
             val journalpostRequest =
                 createJournalpostRequest(
                     bruker = Bruker(id = personident.value, idType = BrukerIdType.PERSONIDENT.value),
-                    brevkode = UtenlandsoppholdBrevkode.VEDTAK,
-                    tittel = "Vedtak om utenlandsopphold",
+                    brevkode = dokumentmetadata.brevkode,
+                    tittel = dokumentmetadata.tittel,
                     pdf = pdf,
                     eksternReferanseId = eksternReferanseId,
                     journalpostType = JournalpostType.UTGAAENDE,
@@ -58,3 +61,22 @@ class JournalforingService(
         private val log = LoggerFactory.getLogger(JournalforingService::class.java)
     }
 }
+
+private data class Dokumentmetadata(
+    val brevkode: UtenlandsoppholdBrevkode,
+    val tittel: String,
+)
+
+private fun JournalforingDokumenttype.tilDokumentmetadata(): Dokumentmetadata =
+    when (this) {
+        JournalforingDokumenttype.VEDTAK ->
+            Dokumentmetadata(
+                brevkode = UtenlandsoppholdBrevkode.VEDTAK,
+                tittel = "Vedtak om utenlandsopphold",
+            )
+        JournalforingDokumenttype.HENLEGGELSE ->
+            Dokumentmetadata(
+                brevkode = UtenlandsoppholdBrevkode.HENLEGGELSE,
+                tittel = "Henleggelse av søknad om utenlandsopphold",
+            )
+    }
