@@ -248,6 +248,7 @@ class SoknadRepository(
 
     private fun Connection.getBehandlingPerioder(behandlingIds: List<Int>): List<PBehandlingPeriode> {
         if (behandlingIds.isEmpty()) return emptyList()
+
         return prepareStatement(GET_BEHANDLING_PERIODER).use {
             it.setArray(1, createArrayOf("integer", behandlingIds.toTypedArray()))
             it.executeQuery().toList { toPBehandlingPeriode() }
@@ -256,6 +257,7 @@ class SoknadRepository(
 
     private fun Connection.getBrev(behandlingIds: List<Int>): List<PBrev> {
         if (behandlingIds.isEmpty()) return emptyList()
+
         return prepareStatement(GET_BREV).use {
             it.setArray(1, createArrayOf("integer", behandlingIds.toTypedArray()))
             it.executeQuery().toList { toPBrev() }

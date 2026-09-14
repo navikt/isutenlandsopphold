@@ -42,7 +42,12 @@ class BehandlingOgBrevMigrationTest {
         migrateTo("6.05")
 
         val innvilgetUuid = insertVedtakForNySoknad(utfall = "INNVILGET", journalpostId = null)
-        val delvisUuid = insertVedtakForNySoknad(utfall = "DELVIS_INNVILGET", journalpostId = "111")
+        val delvisUuid =
+            insertVedtakForNySoknad(
+                utfall = "DELVIS_INNVILGET",
+                journalpostId = "111",
+                publishedAt = OffsetDateTime.parse("2026-01-12T09:00:00Z"),
+            )
         val avslagUuid =
             insertVedtakForNySoknad(
                 utfall = "AVSLAG",
@@ -61,6 +66,55 @@ class BehandlingOgBrevMigrationTest {
         assertBrev(behandlingUuid = delvisUuid, brevtype = "VEDTAK_DELVIS_INNVILGET", journalpostId = "111", distribuert = false)
         assertBrev(behandlingUuid = avslagUuid, brevtype = "VEDTAK_AVSLAG", journalpostId = "222", distribuert = true)
         assertBrev(behandlingUuid = henlagtUuid, brevtype = "HENLEGGELSE", journalpostId = null, distribuert = false)
+
+        assertBehandling(behandlingUuid = innvilgetUuid, begrunnelse = null, publishedAt = null)
+        assertBehandling(
+            behandlingUuid = delvisUuid,
+            begrunnelse = "Begrunnelse",
+            publishedAt = OffsetDateTime.parse("2026-01-12T09:00:00Z"),
+        )
+    }
+
+    /**
+     * Behandlingen beholder feltene sine gjennom omdøpingen, inkludert publiseringstidspunktet
+     * som styrer om den skal publiseres på Kafka på nytt. Verifiserer også at periodene
+     * fortsatt peker på riktig behandling etter at fremmednøkkelen ble døpt om.
+     */
+    private fun assertBehandling(
+        behandlingUuid: UUID,
+        begrunnelse: String?,
+        publishedAt: OffsetDateTime?,
+    ) {
+        pg.postgresDatabase.connection.use { connection ->
+            connection
+                .prepareStatement(
+                    """
+                    SELECT behandling.behandlet_av,
+                           behandling.behandlet_tidspunkt,
+                           behandling.begrunnelse,
+                           behandling.behandling_published_at,
+                           (SELECT COUNT(*) FROM VEDTAK_PERIODE p WHERE p.behandling_id = behandling.id) AS perioder
+                    FROM BEHANDLING behandling
+                    WHERE behandling.uuid = ?
+                    """,
+                ).use { statement ->
+                    statement.setObject(1, behandlingUuid)
+                    statement.executeQuery().use { rs ->
+                        assertEquals(true, rs.next(), "Fant ingen behandling $behandlingUuid")
+                        assertEquals("Z990000", rs.getString("behandlet_av"))
+                        assertEquals(
+                            OffsetDateTime.parse("2026-01-10T12:00:00Z").toInstant(),
+                            rs.getObject("behandlet_tidspunkt", OffsetDateTime::class.java).toInstant(),
+                        )
+                        assertEquals(begrunnelse, rs.getString("begrunnelse"))
+                        assertEquals(
+                            publishedAt?.toInstant(),
+                            rs.getObject("behandling_published_at", OffsetDateTime::class.java)?.toInstant(),
+                        )
+                        assertEquals(1, rs.getInt("perioder"))
+                    }
+                }
+        }
     }
 
     /**
@@ -76,17 +130,20 @@ class BehandlingOgBrevMigrationTest {
             connection
                 .prepareStatement(
                     """
-                    SELECT brev.uuid, brev.brevtype, brev.journalpost_id, brev.journalfort_tidspunkt, brev.distribuert_tidspunkt
+                    SELECT brev.uuid, brev.brevtype, brev.journalpost_id, brev.journalfort_tidspunkt, brev.distribuert_tidspunkt,
+                           brev.document = ?::jsonb AS dokument_bevart
                     FROM BREV brev
                              JOIN BEHANDLING behandling ON behandling.id = brev.behandling_id
                     WHERE behandling.uuid = ?
                     """,
                 ).use { statement ->
-                    statement.setObject(1, behandlingUuid)
+                    statement.setString(1, DOCUMENT_JSON)
+                    statement.setObject(2, behandlingUuid)
                     statement.executeQuery().use { rs ->
                         assertEquals(true, rs.next(), "Fant ingen brev for behandling $behandlingUuid")
                         assertEquals(behandlingUuid, rs.getObject("uuid", UUID::class.java))
                         assertEquals(brevtype, rs.getString("brevtype"))
+                        assertEquals(true, rs.getBoolean("dokument_bevart"), "Dokumentet ble ikke bevart")
                         assertEquals(journalpostId, rs.getString("journalpost_id"))
                         if (journalpostId == null) {
                             assertNull(rs.getObject("journalfort_tidspunkt"))
@@ -113,6 +170,7 @@ class BehandlingOgBrevMigrationTest {
         utfall: String,
         journalpostId: String?,
         distribuertTidspunkt: OffsetDateTime? = null,
+        publishedAt: OffsetDateTime? = null,
     ): UUID {
         val vedtakUuid = UUID.randomUUID()
 
@@ -150,9 +208,9 @@ class BehandlingOgBrevMigrationTest {
                         """
                         INSERT INTO VEDTAK (
                             uuid, soknad_id, utfall, fattet_av, fattet_tidspunkt, begrunnelse, document,
-                            journalpost_id, journalfort_tidspunkt, distribuert_tidspunkt
+                            journalpost_id, journalfort_tidspunkt, distribuert_tidspunkt, vedtak_published_at
                         )
-                        VALUES (?, ?, ?, 'Z990000', ?, ?, ?::jsonb, ?, ?, ?)
+                        VALUES (?, ?, ?, 'Z990000', ?, ?, ?::jsonb, ?, ?, ?, ?)
                         RETURNING id
                         """,
                     ).use { statement ->
@@ -165,6 +223,7 @@ class BehandlingOgBrevMigrationTest {
                         statement.setString(7, journalpostId)
                         statement.setObject(8, journalpostId?.let { OffsetDateTime.parse("2026-01-11T12:00:00Z") })
                         statement.setObject(9, distribuertTidspunkt)
+                        statement.setObject(10, publishedAt)
                         statement.executeQuery().use { rs ->
                             rs.next()
                             rs.getInt(1)
