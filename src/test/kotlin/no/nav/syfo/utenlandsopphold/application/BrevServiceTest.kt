@@ -12,18 +12,19 @@ import kotlinx.coroutines.test.runTest
 import no.nav.syfo.common.distribusjon.dto.Distribusjonstype
 import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.common.types.ident.Personident
+import no.nav.syfo.utenlandsopphold.domain.Brevtype
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.brevDocument
 import no.nav.syfo.utenlandsopphold.domain.lagSoknad
-import no.nav.syfo.utenlandsopphold.domain.vedtakDocument
 import no.nav.syfo.utenlandsopphold.domain.veileder
 import org.junit.jupiter.api.BeforeEach
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import kotlin.test.Test
 
-class JournalforVedtakServiceTest {
+class BrevServiceTest {
     private val testPersonident = Personident("11111111111")
 
     private val repositoryMock = mockk<ISoknadRepository>()
@@ -33,7 +34,7 @@ class JournalforVedtakServiceTest {
     private val distribusjonServiceMock = mockk<IDistribusjonService>()
 
     private val service =
-        JournalforVedtakService(
+        BrevService(
             soknadRepository = repositoryMock,
             personInfoClient = pdlClientMock,
             pdfClient = pdfClientMock,
@@ -46,101 +47,102 @@ class JournalforVedtakServiceTest {
         clearMocks(repositoryMock, pdlClientMock, pdfClientMock, journalforingServiceMock, distribusjonServiceMock)
     }
 
-    private fun soknadMedVedtak(utfall: Utfall = Utfall.Innvilget): Soknad =
-        lagSoknad().fattVedtak(
+    private fun behandletSoknad(utfall: Utfall = Utfall.Innvilget): Soknad =
+        lagSoknad().behandle(
             utfall = utfall,
-            fattetAv = veileder,
+            behandletAv = veileder,
             now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
-            document = vedtakDocument,
+            document = brevDocument,
             begrunnelse = if (utfall == Utfall.Innvilget) null else "begrunnelse",
         )
 
     @Test
-    fun `journalfører og oppdaterer ikke-journalførte vedtak ved innvilgelse`() =
+    fun `journalfører og oppdaterer ikke-journalførte brev ved innvilgelse`() =
         runTest {
-            val soknad = soknadMedVedtak(utfall = Utfall.Innvilget)
+            val soknad = behandletSoknad(utfall = Utfall.Innvilget)
 
             every { repositoryMock.getIkkeJournalforteSoknader(any()) } returns listOf(soknad)
-            every { repositoryMock.setVedtakJournalfort(any(), any(), any()) } just Runs
+            every { repositoryMock.setBrevJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
-            coEvery { pdfClientMock.createVedtakPdf(testPersonident, any(), Utfall.Innvilget, any()) } returns byteArrayOf(1, 2, 3)
+            coEvery { pdfClientMock.createBrevPdf(testPersonident, any(), Brevtype.VEDTAK_INNVILGET, any()) } returns byteArrayOf(1, 2, 3)
             coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any()) } returns
                 Result.success(JournalpostId("999"))
 
-            service.journalforVedtak()
+            service.journalforBrev()
 
-            coVerify(exactly = 1) { pdfClientMock.createVedtakPdf(testPersonident, any(), Utfall.Innvilget, any()) }
+            coVerify(exactly = 1) { pdfClientMock.createBrevPdf(testPersonident, any(), Brevtype.VEDTAK_INNVILGET, any()) }
             coVerify(exactly = 1) {
                 journalforingServiceMock.journalfor(testPersonident, any(), any(), JournalforingDokumenttype.VEDTAK)
             }
             verify(exactly = 1) {
-                repositoryMock.setVedtakJournalfort(soknad.vedtak!!.vedtakId, JournalpostId("999"), any())
+                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev.brevId, JournalpostId("999"), any())
             }
         }
 
     @Test
-    fun `journalfører og oppdaterer ikke-journalførte vedtak ved delvis innvilgelse`() =
+    fun `journalfører og oppdaterer ikke-journalførte brev ved delvis innvilgelse`() =
         runTest {
             val delvisInnvilget =
                 Utfall.DelvisInnvilget(
                     innvilgedePerioder = listOf(Periode(fom = LocalDate.of(2026, 1, 5), tom = LocalDate.of(2026, 1, 7))),
                 )
-            val soknad = soknadMedVedtak(utfall = delvisInnvilget)
+            val soknad = behandletSoknad(utfall = delvisInnvilget)
 
             every { repositoryMock.getIkkeJournalforteSoknader(any()) } returns listOf(soknad)
-            every { repositoryMock.setVedtakJournalfort(any(), any(), any()) } just Runs
+            every { repositoryMock.setBrevJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
-            coEvery { pdfClientMock.createVedtakPdf(testPersonident, any(), delvisInnvilget, any()) } returns byteArrayOf(1, 2, 3)
+            coEvery { pdfClientMock.createBrevPdf(testPersonident, any(), Brevtype.VEDTAK_DELVIS_INNVILGET, any()) } returns
+                byteArrayOf(1, 2, 3)
             coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any()) } returns
                 Result.success(JournalpostId("999"))
 
-            service.journalforVedtak()
+            service.journalforBrev()
 
-            coVerify(exactly = 1) { pdfClientMock.createVedtakPdf(testPersonident, any(), delvisInnvilget, any()) }
+            coVerify(exactly = 1) { pdfClientMock.createBrevPdf(testPersonident, any(), Brevtype.VEDTAK_DELVIS_INNVILGET, any()) }
             coVerify(exactly = 1) {
                 journalforingServiceMock.journalfor(testPersonident, any(), any(), JournalforingDokumenttype.VEDTAK)
             }
             verify(exactly = 1) {
-                repositoryMock.setVedtakJournalfort(soknad.vedtak!!.vedtakId, JournalpostId("999"), any())
+                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev.brevId, JournalpostId("999"), any())
             }
         }
 
     @Test
-    fun `journalfører og oppdaterer ikke-journalførte vedtak ved avslag`() =
+    fun `journalfører og oppdaterer ikke-journalførte brev ved avslag`() =
         runTest {
-            val soknad = soknadMedVedtak(utfall = Utfall.Avslag)
+            val soknad = behandletSoknad(utfall = Utfall.Avslag)
 
             every { repositoryMock.getIkkeJournalforteSoknader(any()) } returns listOf(soknad)
-            every { repositoryMock.setVedtakJournalfort(any(), any(), any()) } just Runs
+            every { repositoryMock.setBrevJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
-            coEvery { pdfClientMock.createVedtakPdf(testPersonident, any(), Utfall.Avslag, any()) } returns byteArrayOf(1, 2, 3)
+            coEvery { pdfClientMock.createBrevPdf(testPersonident, any(), Brevtype.VEDTAK_AVSLAG, any()) } returns byteArrayOf(1, 2, 3)
             coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any()) } returns
                 Result.success(JournalpostId("999"))
 
-            service.journalforVedtak()
+            service.journalforBrev()
 
-            coVerify(exactly = 1) { pdfClientMock.createVedtakPdf(testPersonident, any(), Utfall.Avslag, any()) }
+            coVerify(exactly = 1) { pdfClientMock.createBrevPdf(testPersonident, any(), Brevtype.VEDTAK_AVSLAG, any()) }
             coVerify(exactly = 1) {
                 journalforingServiceMock.journalfor(testPersonident, any(), any(), JournalforingDokumenttype.VEDTAK)
             }
             verify(exactly = 1) {
-                repositoryMock.setVedtakJournalfort(soknad.vedtak!!.vedtakId, JournalpostId("999"), any())
+                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev.brevId, JournalpostId("999"), any())
             }
         }
 
     @Test
     fun `journalfører henleggelse med dokumenttype HENLEGGELSE`() =
         runTest {
-            val soknad = soknadMedVedtak(utfall = Utfall.Henlagt)
+            val soknad = behandletSoknad(utfall = Utfall.Henlagt)
 
             every { repositoryMock.getIkkeJournalforteSoknader(any()) } returns listOf(soknad)
-            every { repositoryMock.setVedtakJournalfort(any(), any(), any()) } just Runs
+            every { repositoryMock.setBrevJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
-            coEvery { pdfClientMock.createVedtakPdf(testPersonident, any(), Utfall.Henlagt, any()) } returns byteArrayOf(1, 2, 3)
+            coEvery { pdfClientMock.createBrevPdf(testPersonident, any(), Brevtype.HENLEGGELSE, any()) } returns byteArrayOf(1, 2, 3)
             coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any()) } returns
                 Result.success(JournalpostId("999"))
 
-            service.journalforVedtak()
+            service.journalforBrev()
 
             coVerify(exactly = 1) {
                 journalforingServiceMock.journalfor(
@@ -151,101 +153,101 @@ class JournalforVedtakServiceTest {
                 )
             }
             verify(exactly = 1) {
-                repositoryMock.setVedtakJournalfort(soknad.vedtak!!.vedtakId, JournalpostId("999"), any())
+                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev.brevId, JournalpostId("999"), any())
             }
         }
 
     @Test
-    fun `feil for ett vedtak stopper ikke journalføring av de andre`() =
+    fun `feil for ett brev stopper ikke journalføring av de andre`() =
         runTest {
-            val soknadSomFeiler = soknadMedVedtak()
-            val soknadSomLykkes = soknadMedVedtak()
+            val soknadSomFeiler = behandletSoknad()
+            val soknadSomLykkes = behandletSoknad()
 
             every { repositoryMock.getIkkeJournalforteSoknader(any()) } returns listOf(soknadSomFeiler, soknadSomLykkes)
-            every { repositoryMock.setVedtakJournalfort(any(), any(), any()) } just Runs
+            every { repositoryMock.setBrevJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
-            coEvery { pdfClientMock.createVedtakPdf(testPersonident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
+            coEvery { pdfClientMock.createBrevPdf(testPersonident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
             coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any()) } returnsMany
                 listOf(
                     Result.failure(RuntimeException("dokarkiv er nede")),
                     Result.success(JournalpostId("999")),
                 )
 
-            service.journalforVedtak()
+            service.journalforBrev()
 
-            verify(exactly = 1) { repositoryMock.setVedtakJournalfort(soknadSomLykkes.vedtak!!.vedtakId, any(), any()) }
-            verify(exactly = 0) { repositoryMock.setVedtakJournalfort(soknadSomFeiler.vedtak!!.vedtakId, any(), any()) }
+            verify(exactly = 1) { repositoryMock.setBrevJournalfort(soknadSomLykkes.behandling!!.brev.brevId, any(), any()) }
+            verify(exactly = 0) { repositoryMock.setBrevJournalfort(soknadSomFeiler.behandling!!.brev.brevId, any(), any()) }
         }
 
     @Test
-    fun `søknad uten vedtak journalføres ikke, men stopper ikke andre`() =
+    fun `ubehandlet søknad journalføres ikke, men stopper ikke andre`() =
         runTest {
-            val soknadUtenVedtak = lagSoknad()
-            val soknadMedVedtak = soknadMedVedtak()
+            val ubehandletSoknad = lagSoknad()
+            val behandletSoknad = behandletSoknad()
 
-            every { repositoryMock.getIkkeJournalforteSoknader(any()) } returns listOf(soknadUtenVedtak, soknadMedVedtak)
-            every { repositoryMock.setVedtakJournalfort(any(), any(), any()) } just Runs
+            every { repositoryMock.getIkkeJournalforteSoknader(any()) } returns listOf(ubehandletSoknad, behandletSoknad)
+            every { repositoryMock.setBrevJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
-            coEvery { pdfClientMock.createVedtakPdf(testPersonident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
+            coEvery { pdfClientMock.createBrevPdf(testPersonident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
             coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any()) } returns
                 Result.success(JournalpostId("999"))
 
-            service.journalforVedtak()
+            service.journalforBrev()
 
-            verify(exactly = 1) { repositoryMock.setVedtakJournalfort(soknadMedVedtak.vedtak!!.vedtakId, any(), any()) }
-            verify(exactly = 1) { repositoryMock.setVedtakJournalfort(any(), any(), any()) }
+            verify(exactly = 1) { repositoryMock.setBrevJournalfort(behandletSoknad.behandling!!.brev.brevId, any(), any()) }
+            verify(exactly = 1) { repositoryMock.setBrevJournalfort(any(), any(), any()) }
         }
 
     @Test
-    fun `journalfører enkelt vedtak direkte, uten å gå via getIkkeJournalforteSoknader`() =
+    fun `journalfører enkelt brev direkte, uten å gå via getIkkeJournalforteSoknader`() =
         runTest {
-            val soknad = soknadMedVedtak()
+            val soknad = behandletSoknad()
 
-            every { repositoryMock.setVedtakJournalfort(any(), any(), any()) } just Runs
+            every { repositoryMock.setBrevJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
-            coEvery { pdfClientMock.createVedtakPdf(testPersonident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
+            coEvery { pdfClientMock.createBrevPdf(testPersonident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
             coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any()) } returns
                 Result.success(JournalpostId("999"))
 
-            service.journalforVedtak(soknad)
+            service.journalforBrev(soknad)
 
             coVerify(exactly = 1) {
                 journalforingServiceMock.journalfor(testPersonident, any(), any(), JournalforingDokumenttype.VEDTAK)
             }
             verify(exactly = 1) {
-                repositoryMock.setVedtakJournalfort(soknad.vedtak!!.vedtakId, JournalpostId("999"), any())
+                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev.brevId, JournalpostId("999"), any())
             }
             verify(exactly = 0) { repositoryMock.getIkkeJournalforteSoknader(any()) }
         }
 
     @Test
-    fun `distribuerer og oppdaterer journalfort, ikke-distribuert vedtak`() =
+    fun `distribuerer og oppdaterer journalført, ikke-distribuert brev`() =
         runTest {
             val soknad =
-                soknadMedVedtak().journalforVedtak(JournalpostId("999"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
+                behandletSoknad().journalforBrev(JournalpostId("999"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
 
-            every { repositoryMock.getSoknaderMedIkkeDistribuerteVedtak(any()) } returns listOf(soknad)
-            every { repositoryMock.setVedtakDistribuert(any(), any()) } just Runs
+            every { repositoryMock.getSoknaderMedIkkeDistribuerteBrev(any()) } returns listOf(soknad)
+            every { repositoryMock.setBrevDistribuert(any(), any()) } just Runs
             coEvery { distribusjonServiceMock.distribuer(any(), any()) } returns Result.success("bestilling-1")
 
-            service.distribuerVedtak()
+            service.distribuerBrev()
 
             coVerify(exactly = 1) { distribusjonServiceMock.distribuer(any(), any()) }
-            verify(exactly = 1) { repositoryMock.setVedtakDistribuert(soknad.vedtak!!.vedtakId, any()) }
+            verify(exactly = 1) { repositoryMock.setBrevDistribuert(soknad.behandling!!.brev.brevId, any()) }
         }
 
     @Test
-    fun `distribuerer vedtak om innvilgelse med distribusjonstype VEDTAK`() =
+    fun `distribuerer vedtaksbrev med distribusjonstype VEDTAK`() =
         runTest {
             val soknad =
-                soknadMedVedtak(utfall = Utfall.Innvilget)
-                    .journalforVedtak(JournalpostId("999"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
+                behandletSoknad(utfall = Utfall.Innvilget)
+                    .journalforBrev(JournalpostId("999"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
 
-            every { repositoryMock.getSoknaderMedIkkeDistribuerteVedtak(any()) } returns listOf(soknad)
-            every { repositoryMock.setVedtakDistribuert(any(), any()) } just Runs
+            every { repositoryMock.getSoknaderMedIkkeDistribuerteBrev(any()) } returns listOf(soknad)
+            every { repositoryMock.setBrevDistribuert(any(), any()) } just Runs
             coEvery { distribusjonServiceMock.distribuer(any(), any()) } returns Result.success("bestilling-1")
 
-            service.distribuerVedtak()
+            service.distribuerBrev()
 
             coVerify(exactly = 1) {
                 distribusjonServiceMock.distribuer(JournalpostId("999"), Distribusjonstype.VEDTAK)
@@ -253,17 +255,17 @@ class JournalforVedtakServiceTest {
         }
 
     @Test
-    fun `distribuerer henlagt vedtak med distribusjonstype VIKTIG`() =
+    fun `distribuerer henleggelsesbrev med distribusjonstype VIKTIG`() =
         runTest {
             val soknad =
-                soknadMedVedtak(utfall = Utfall.Henlagt)
-                    .journalforVedtak(JournalpostId("999"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
+                behandletSoknad(utfall = Utfall.Henlagt)
+                    .journalforBrev(JournalpostId("999"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
 
-            every { repositoryMock.getSoknaderMedIkkeDistribuerteVedtak(any()) } returns listOf(soknad)
-            every { repositoryMock.setVedtakDistribuert(any(), any()) } just Runs
+            every { repositoryMock.getSoknaderMedIkkeDistribuerteBrev(any()) } returns listOf(soknad)
+            every { repositoryMock.setBrevDistribuert(any(), any()) } just Runs
             coEvery { distribusjonServiceMock.distribuer(any(), any()) } returns Result.success("bestilling-1")
 
-            service.distribuerVedtak()
+            service.distribuerBrev()
 
             coVerify(exactly = 1) {
                 distribusjonServiceMock.distribuer(JournalpostId("999"), Distribusjonstype.VIKTIG)
@@ -271,24 +273,24 @@ class JournalforVedtakServiceTest {
         }
 
     @Test
-    fun `feil for ett vedtak stopper ikke distribusjon av de andre`() =
+    fun `feil for ett brev stopper ikke distribusjon av de andre`() =
         runTest {
             val soknadSomFeiler =
-                soknadMedVedtak().journalforVedtak(JournalpostId("111"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
+                behandletSoknad().journalforBrev(JournalpostId("111"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
             val soknadSomLykkes =
-                soknadMedVedtak().journalforVedtak(JournalpostId("222"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
+                behandletSoknad().journalforBrev(JournalpostId("222"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
 
-            every { repositoryMock.getSoknaderMedIkkeDistribuerteVedtak(any()) } returns listOf(soknadSomFeiler, soknadSomLykkes)
-            every { repositoryMock.setVedtakDistribuert(any(), any()) } just Runs
+            every { repositoryMock.getSoknaderMedIkkeDistribuerteBrev(any()) } returns listOf(soknadSomFeiler, soknadSomLykkes)
+            every { repositoryMock.setBrevDistribuert(any(), any()) } just Runs
             coEvery { distribusjonServiceMock.distribuer(any(), any()) } returnsMany
                 listOf(
                     Result.failure(RuntimeException("dokdistfordeling er nede")),
                     Result.success("bestilling-1"),
                 )
 
-            service.distribuerVedtak()
+            service.distribuerBrev()
 
-            verify(exactly = 1) { repositoryMock.setVedtakDistribuert(soknadSomLykkes.vedtak!!.vedtakId, any()) }
-            verify(exactly = 0) { repositoryMock.setVedtakDistribuert(soknadSomFeiler.vedtak!!.vedtakId, any()) }
+            verify(exactly = 1) { repositoryMock.setBrevDistribuert(soknadSomLykkes.behandling!!.brev.brevId, any()) }
+            verify(exactly = 0) { repositoryMock.setBrevDistribuert(soknadSomFeiler.behandling!!.brev.brevId, any()) }
         }
 }

@@ -1,11 +1,11 @@
 package no.nav.syfo.utenlandsopphold.api.soknad
 
+import no.nav.syfo.utenlandsopphold.domain.Behandling
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.SoknadStatus
 import no.nav.syfo.utenlandsopphold.domain.Utfall
-import no.nav.syfo.utenlandsopphold.domain.Vedtak
 import no.nav.syfo.utenlandsopphold.util.toLocalDateTimeOslo
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -44,6 +44,10 @@ data class PeriodeDTO(
     val tom: LocalDate,
 )
 
+/**
+ * v1-kontrakten mot frontend. Feltnavnene (`vedtak`, `fattetAv`, `fattetTidspunkt`) er
+ * beholdt uendret selv om domenet nå heter [Behandling] — v2-APIet innfører de nye navnene.
+ */
 data class VedtakDTO(
     val utfall: String,
     val innvilgedePerioder: List<PeriodeDTO>,
@@ -74,12 +78,12 @@ fun Soknad.toDTO(): SoknadDTO =
         status = status.toDTO(),
         innsendtTidspunkt = innsendtTidspunkt.toLocalDateTimeOslo(),
         soktePerioder = soktePerioder.map { it.toDTO() },
-        vedtak = vedtak?.toDTO(),
+        vedtak = behandling?.toDTO(),
     )
 
 private fun Periode.toDTO(): PeriodeDTO = PeriodeDTO(fom = fom, tom = tom)
 
-private fun Vedtak.toDTO(): VedtakDTO =
+private fun Behandling.toDTO(): VedtakDTO =
     VedtakDTO(
         utfall =
             when (utfall) {
@@ -89,8 +93,8 @@ private fun Vedtak.toDTO(): VedtakDTO =
                 Utfall.Henlagt -> "HENLAGT"
             },
         innvilgedePerioder = innvilgedePerioder.map { it.toDTO() },
-        fattetAv = fattetAv.value,
-        fattetTidspunkt = fattetTidspunkt.toLocalDateTimeOslo(),
+        fattetAv = behandletAv.value,
+        fattetTidspunkt = behandletTidspunkt.toLocalDateTimeOslo(),
         begrunnelse = begrunnelse,
     )
 

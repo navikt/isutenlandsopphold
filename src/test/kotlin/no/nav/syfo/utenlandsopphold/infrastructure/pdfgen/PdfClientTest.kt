@@ -2,15 +2,13 @@ package no.nav.syfo.utenlandsopphold.infrastructure.pdfgen
 
 import kotlinx.coroutines.test.runTest
 import no.nav.syfo.common.types.ident.Personident
-import no.nav.syfo.utenlandsopphold.domain.Periode
-import no.nav.syfo.utenlandsopphold.domain.Utfall
-import no.nav.syfo.utenlandsopphold.domain.vedtakDocument
+import no.nav.syfo.utenlandsopphold.domain.Brevtype
+import no.nav.syfo.utenlandsopphold.domain.brevDocument
 import no.nav.syfo.utenlandsopphold.infrastructure.mock.PDF_AVSLAG_BYTES
 import no.nav.syfo.utenlandsopphold.infrastructure.mock.PDF_DELVIS_INNVILGET_BYTES
 import no.nav.syfo.utenlandsopphold.infrastructure.mock.PDF_HENLAGT_BYTES
 import no.nav.syfo.utenlandsopphold.infrastructure.mock.PDF_INNVILGET_BYTES
 import no.nav.syfo.utenlandsopphold.infrastructure.mock.mockPdfClient
-import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -22,11 +20,11 @@ class PdfClientTest {
     fun `henter innvilget-pdf ved innvilgelse`() =
         runTest {
             val pdf =
-                pdfClient.createVedtakPdf(
+                pdfClient.createBrevPdf(
                     mottakerFodselsnummer = testPersonident,
                     mottakerNavn = "Ola Nordmann",
-                    utfall = Utfall.Innvilget,
-                    documentComponents = vedtakDocument,
+                    brevtype = Brevtype.VEDTAK_INNVILGET,
+                    documentComponents = brevDocument,
                 )
 
             assertTrue(PDF_INNVILGET_BYTES.contentEquals(pdf))
@@ -35,17 +33,12 @@ class PdfClientTest {
     @Test
     fun `henter delvis-innvilget-pdf ved delvis innvilgelse`() =
         runTest {
-            val delvisInnvilget =
-                Utfall.DelvisInnvilget(
-                    innvilgedePerioder = listOf(Periode(fom = LocalDate.of(2026, 1, 1), tom = LocalDate.of(2026, 1, 5))),
-                )
-
             val pdf =
-                pdfClient.createVedtakPdf(
+                pdfClient.createBrevPdf(
                     mottakerFodselsnummer = testPersonident,
                     mottakerNavn = "Ola Nordmann",
-                    utfall = delvisInnvilget,
-                    documentComponents = vedtakDocument,
+                    brevtype = Brevtype.VEDTAK_DELVIS_INNVILGET,
+                    documentComponents = brevDocument,
                 )
 
             assertTrue(PDF_DELVIS_INNVILGET_BYTES.contentEquals(pdf))
@@ -55,11 +48,11 @@ class PdfClientTest {
     fun `henter avslag-pdf ved avslag`() =
         runTest {
             val pdf =
-                pdfClient.createVedtakPdf(
+                pdfClient.createBrevPdf(
                     mottakerFodselsnummer = testPersonident,
                     mottakerNavn = "Ola Nordmann",
-                    utfall = Utfall.Avslag,
-                    documentComponents = vedtakDocument,
+                    brevtype = Brevtype.VEDTAK_AVSLAG,
+                    documentComponents = brevDocument,
                 )
 
             assertTrue(PDF_AVSLAG_BYTES.contentEquals(pdf))
@@ -69,11 +62,11 @@ class PdfClientTest {
     fun `henter henlagt-pdf ved henleggelse`() =
         runTest {
             val pdf =
-                pdfClient.createVedtakPdf(
+                pdfClient.createBrevPdf(
                     mottakerFodselsnummer = testPersonident,
                     mottakerNavn = "Ola Nordmann",
-                    utfall = Utfall.Henlagt,
-                    documentComponents = vedtakDocument,
+                    brevtype = Brevtype.HENLEGGELSE,
+                    documentComponents = brevDocument,
                 )
 
             assertTrue(PDF_HENLAGT_BYTES.contentEquals(pdf))
