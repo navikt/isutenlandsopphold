@@ -65,6 +65,20 @@ SELECT behandling.uuid,
        behandling.created_at
 FROM BEHANDLING behandling;
 
+DO $$
+    DECLARE avvik BIGINT;
+    BEGIN
+        SELECT count(*) INTO avvik
+        FROM BEHANDLING b JOIN BREV br ON br.behandling_id = b.id
+        WHERE b.document              IS DISTINCT FROM br.document
+           OR b.journalpost_id        IS DISTINCT FROM br.journalpost_id
+           OR b.journalfort_tidspunkt IS DISTINCT FROM br.journalfort_tidspunkt
+           OR b.distribuert_tidspunkt IS DISTINCT FROM br.distribuert_tidspunkt;
+        IF avvik > 0 OR (SELECT count(*) FROM BEHANDLING) <> (SELECT count(*) FROM BREV) THEN
+            RAISE EXCEPTION 'Avbryter: % brev avviker fra behandlingen', avvik;
+        END IF;
+    END $$;
+
 ALTER TABLE BEHANDLING
     DROP COLUMN document,
     DROP COLUMN journalpost_id,
