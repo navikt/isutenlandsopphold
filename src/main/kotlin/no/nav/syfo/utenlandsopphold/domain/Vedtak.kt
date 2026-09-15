@@ -6,13 +6,15 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 sealed interface Utfall {
-    data object Innvilget : Utfall
+    sealed interface Vedtak : Utfall
+
+    data object Innvilget : Vedtak
 
     data class DelvisInnvilget(
         val innvilgedePerioder: List<Periode>,
-    ) : Utfall
+    ) : Vedtak
 
-    data object Avslag : Utfall
+    data object Avslag : Vedtak
 
     data object Henlagt : Utfall
 
@@ -37,77 +39,68 @@ sealed interface Utfall {
     }
 }
 
-data class Vedtak(
+/**
+ * Brevet et gitt utfall skal gi. Alle dagens utfall sender brev; når brevløse utfall
+ * (som «ikke aktuell») innføres, blir returtypen nullable.
+ */
+fun Utfall.brevtype(): Brevtype =
+    when (this) {
+        Utfall.Innvilget -> Brevtype.VEDTAK_INNVILGET
+        is Utfall.DelvisInnvilget -> Brevtype.VEDTAK_DELVIS_INNVILGET
+        Utfall.Avslag -> Brevtype.VEDTAK_AVSLAG
+        Utfall.Henlagt -> Brevtype.HENLEGGELSE
+    }
+
+/**
+ * Et ferdig registrert resultat av å behandle en søknad — ikke en kladd eller en
+ * arbeidsflyt med mellomtilstander.
+ *
+ * En behandling er ikke det samme som et vedtak: en henleggelse er også en behandling,
+ * men ikke et vedtak om retten til sykepenger under utenlandsopphold.
+ */
+data class Behandling(
     val utfall: Utfall,
-    val fattetAv: Navident,
-    val fattetTidspunkt: OffsetDateTime,
+    val behandletAv: Navident,
+    val behandletTidspunkt: OffsetDateTime,
     val innvilgedePerioder: List<Periode>,
-    val vedtakId: UUID = UUID.randomUUID(),
-    val document: List<DocumentComponent>,
+    val brev: Brev,
+    val behandlingId: UUID = UUID.randomUUID(),
     val begrunnelse: String? = null,
-    val journalpostId: JournalpostId? = null,
-    val journalfortTidspunkt: OffsetDateTime? = null,
-    val distribuertTidspunkt: OffsetDateTime? = null,
 ) {
     init {
         when (utfall) {
             Utfall.Innvilget -> {
-                require(innvilgedePerioder.isNotEmpty()) { "Innvilget vedtak må ha innvilgede perioder" }
-                require(begrunnelse == null) { "Innvilget vedtak skal ikke ha begrunnelse" }
+                require(innvilgedePerioder.isNotEmpty()) { "Innvilget behandling må ha innvilgede perioder" }
+                require(begrunnelse == null) { "Innvilget behandling skal ikke ha begrunnelse" }
             }
             is Utfall.DelvisInnvilget -> {
-                require(utfall.innvilgedePerioder.isNotEmpty()) { "Delvis innvilget vedtak må ha innvilgede perioder" }
-                require(utfall.innvilgedePerioder == innvilgedePerioder) {
-                    "Innvilgede perioder på utfall og vedtak må være like"
+                require(utfall.innvilgedePerioder.isNotEmpty()) {
+                    "Delvis innvilget behandling må ha innvilgede perioder"
                 }
-                require(!begrunnelse.isNullOrBlank()) { "Delvis innvilget vedtak må ha begrunnelse" }
+                require(utfall.innvilgedePerioder == innvilgedePerioder) {
+                    "Innvilgede perioder på utfall og behandling må være like"
+                }
+                require(!begrunnelse.isNullOrBlank()) { "Delvis innvilget behandling må ha begrunnelse" }
             }
             Utfall.Avslag -> {
-                require(innvilgedePerioder.isEmpty()) { "Avslått vedtak skal ikke ha innvilgede perioder" }
-                require(!begrunnelse.isNullOrBlank()) { "Avslått vedtak må ha begrunnelse" }
+                require(innvilgedePerioder.isEmpty()) { "Avslått behandling skal ikke ha innvilgede perioder" }
+                require(!begrunnelse.isNullOrBlank()) { "Avslått behandling må ha begrunnelse" }
             }
             Utfall.Henlagt -> {
-                require(innvilgedePerioder.isEmpty()) { "Henlagt vedtak skal ikke ha innvilgede perioder" }
-                require(!begrunnelse.isNullOrBlank()) { "Henlagt vedtak må ha begrunnelse" }
+                require(innvilgedePerioder.isEmpty()) { "Henlagt behandling skal ikke ha innvilgede perioder" }
+                require(!begrunnelse.isNullOrBlank()) { "Henlagt behandling må ha begrunnelse" }
             }
         }
+
+        require(brev.brevtype == utfall.brevtype()) {
+            "Behandling $behandlingId med utfall $utfall må ha brev av type ${utfall.brevtype()}, men har ${brev.brevtype}"
+        }
     }
 
-    val erJournalfort: Boolean
-        get() = journalpostId != null
-
-    val erDistribuert: Boolean
-        get() = distribuertTidspunkt != null
-
-    /**
-     * Rød sone: dette er en kjerne-invariant for journalføring. Et vedtak skal aldri
-     * journalføres mer enn én gang (idempotens) — kall denne kun etter en vellykket
-     * arkivering i dokarkiv, aldri på forhånd.
-     */
-    fun journalfor(
+    fun journalforBrev(
         journalpostId: JournalpostId,
         tidspunkt: OffsetDateTime,
-    ): Vedtak {
-        check(!erJournalfort) {
-            "Vedtak $vedtakId er allerede journalført med journalpostId ${this.journalpostId}"
-        }
+    ): Behandling = copy(brev = brev.journalfor(journalpostId, tidspunkt))
 
-        return copy(journalpostId = journalpostId, journalfortTidspunkt = tidspunkt)
-    }
-
-    /**
-     * Rød sone: kjerne-invariant for distribusjon. Et vedtak kan kun distribueres etter at
-     * det er journalført, og skal aldri distribueres mer enn én gang (idempotens) — kall
-     * denne kun etter en vellykket bestilling i dokdistfordeling, aldri på forhånd.
-     */
-    fun distribuer(tidspunkt: OffsetDateTime): Vedtak {
-        check(erJournalfort) {
-            "Vedtak $vedtakId må være journalført før det kan distribueres"
-        }
-        check(!erDistribuert) {
-            "Vedtak $vedtakId er allerede distribuert (distribuertTidspunkt=$distribuertTidspunkt)"
-        }
-
-        return copy(distribuertTidspunkt = tidspunkt)
-    }
+    fun distribuerBrev(tidspunkt: OffsetDateTime): Behandling = copy(brev = brev.distribuer(tidspunkt))
 }
