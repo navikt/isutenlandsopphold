@@ -42,9 +42,8 @@ data class Brev(
         get() = distribuertTidspunkt != null
 
     /**
-     * Rød sone: dette er en kjerne-invariant for journalføring. Et brev skal aldri
-     * journalføres mer enn én gang (idempotens) — kall denne kun etter en vellykket
-     * arkivering i dokarkiv, aldri på forhånd.
+     * Et brev skal aldri journalføres mer enn én gang (idempotens) — kall denne kun etter
+     * en vellykket arkivering i dokarkiv.
      */
     fun journalfor(
         journalpostId: JournalpostId,
@@ -58,9 +57,9 @@ data class Brev(
     }
 
     /**
-     * Rød sone: kjerne-invariant for distribusjon. Et brev kan kun distribueres etter at
-     * det er journalført, og skal aldri distribueres mer enn én gang (idempotens) — kall
-     * denne kun etter en vellykket bestilling i dokdistfordeling, aldri på forhånd.
+     * Et brev kan kun distribueres etter at det er journalført, og skal aldri distribueres
+     * mer enn én gang (idempotens) — kall denne kun etter en vellykket bestilling i
+     * dokdistfordeling.
      */
     fun distribuer(tidspunkt: OffsetDateTime): Brev {
         check(erJournalfort) {

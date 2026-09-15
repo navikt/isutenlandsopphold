@@ -16,7 +16,7 @@ import kotlin.time.toJavaDuration
  * oppdaterer brevet med journalpost-id og journalføringstidspunkt.
  *
  * Domenet ([Soknad.journalforBrev]) håndhever invarianten om at et brev kun kan
- * journalføres én gang — feiler denne tjenesten på ett brev stopper det ikke
+ * journalføres én gang — feiler denne servicen på ett brev stopper det ikke
  * journalføring av de øvrige.
  *
  * @param freshBehandlingGracePeriod Brukes av [journalforBrev] (den periodiske cronjobben) til å
@@ -80,8 +80,6 @@ class BrevService(
 
         val journalfortTidspunkt = OffsetDateTime.now()
 
-        // Bygger den oppdaterte søknaden gjennom aggregatroten for å håndheve
-        // idempotens-invarianten før vi lar den slå gjennom i databasen.
         val journalfortSoknad = soknad.journalforBrev(journalpostId, journalfortTidspunkt)
         val journalfortBrev = checkNotNull(journalfortSoknad.behandling?.brev)
 

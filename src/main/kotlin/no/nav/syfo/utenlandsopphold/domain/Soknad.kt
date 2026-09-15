@@ -94,11 +94,6 @@ data class Soknad(
         )
     }
 
-    /**
-     * Aggregatroten (Soknad) styrer invarianten om at journalføring kun kan skje
-     * på en søknad som faktisk er behandlet. Selve idempotens-sjekken (kan ikke
-     * journalføres to ganger) håndheves av [Brev.journalfor].
-     */
     fun journalforBrev(
         journalpostId: JournalpostId,
         now: OffsetDateTime,
@@ -111,11 +106,6 @@ data class Soknad(
         return copy(behandling = gjeldendeBehandling.journalforBrev(journalpostId, now))
     }
 
-    /**
-     * Aggregatroten (Soknad) styrer invarianten om at distribusjon kun kan skje
-     * på en søknad som faktisk er behandlet. Selve idempotens- og rekkefølge-sjekken
-     * (må være journalført, kan ikke distribueres to ganger) håndheves av [Brev.distribuer].
-     */
     fun distribuerBrev(now: OffsetDateTime): Soknad {
         val gjeldendeBehandling =
             checkNotNull(behandling) {
