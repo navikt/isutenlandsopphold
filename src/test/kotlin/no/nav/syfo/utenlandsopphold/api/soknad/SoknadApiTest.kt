@@ -37,6 +37,7 @@ import no.nav.syfo.utenlandsopphold.domain.Brev
 import no.nav.syfo.utenlandsopphold.domain.Brevtype
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponentType
+import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellGrunn
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.Utfall
@@ -51,6 +52,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 const val SOKNADER_QUERY_PATH = "/api/v1/soknader/query"
@@ -772,6 +774,53 @@ class SoknadApiTest {
                 }
 
             assertEquals(HttpStatusCode.Conflict, response.status)
+        }
+
+    @Test
+    fun `query viser søknad merket ikke aktuell, selv om v1 ikke kan merke den`() =
+        testApplication {
+            val ikkeAktuellSoknad =
+                Soknad(
+                    id = UUID.randomUUID(),
+                    eksternId = UUID.randomUUID(),
+                    personident = UserConstants.PERSON_VEILEDERE_HAR_TILGANG_TIL,
+                    soktePerioder = listOf(Periode(fom = LocalDate.of(2026, 4, 1), tom = LocalDate.of(2026, 4, 10))),
+                    innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
+                ).merkIkkeAktuell(
+                    grunn = IkkeAktuellGrunn.DUPLIKAT,
+                    behandletAv = Navident(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG),
+                    now = OffsetDateTime.parse("2026-03-02T09:00:00Z"),
+                )
+            stubHentSoknader(listOf(ikkeAktuellSoknad))
+            val client = setupApiAndClient()
+
+            val response =
+                client.post(SOKNADER_QUERY_PATH) {
+                    bearerAuth(generateJWT())
+                    contentType(ContentType.Application.Json)
+                    setBody(SoknaderQueryDTO(personident = UserConstants.PERSON_VEILEDERE_HAR_TILGANG_TIL.value))
+                }
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            val soknadDTO = response.body<SoknaderResponseDTO>().soknader.single()
+            assertEquals(SoknadStatusDTO.IKKE_AKTUELL, soknadDTO.status)
+            assertEquals("IKKE_AKTUELL", assertNotNull(soknadDTO.vedtak).utfall)
+        }
+
+    @Test
+    fun `vedtak med utfall IKKE_AKTUELL gir 400, det finnes kun i v2`() =
+        testApplication {
+            stubHentSoknadOgLagreBehandling(ubruktSoknad)
+            val client = setupApiAndClient()
+
+            val response =
+                client.post(SOKNAD_VEDTAK_PATH.format(UUID.randomUUID())) {
+                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
+                    contentType(ContentType.Application.Json)
+                    setBody(validSoknadVedtakPostDTO().copy(utfall = "IKKE_AKTUELL"))
+                }
+
+            assertEquals(HttpStatusCode.BadRequest, response.status)
         }
 }
 

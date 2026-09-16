@@ -56,7 +56,7 @@ data class VedtakDTO(
     val begrunnelse: String?,
 )
 
-enum class SoknadStatusDTO { MOTTATT, INNVILGET, DELVIS_INNVILGET, AVSLAG, HENLAGT }
+enum class SoknadStatusDTO { MOTTATT, INNVILGET, DELVIS_INNVILGET, AVSLAG, HENLAGT, IKKE_AKTUELL }
 
 fun SoknadStatus.toDTO(): SoknadStatusDTO =
     when (this) {
@@ -65,6 +65,7 @@ fun SoknadStatus.toDTO(): SoknadStatusDTO =
         SoknadStatus.DELVIS_INNVILGET -> SoknadStatusDTO.DELVIS_INNVILGET
         SoknadStatus.AVSLAG -> SoknadStatusDTO.AVSLAG
         SoknadStatus.HENLAGT -> SoknadStatusDTO.HENLAGT
+        SoknadStatus.IKKE_AKTUELL -> SoknadStatusDTO.IKKE_AKTUELL
     }
 
 fun List<Soknad>.toResponseDTO(): SoknaderResponseDTO = SoknaderResponseDTO(soknader = map { it.toDTO() })
@@ -91,6 +92,7 @@ private fun Behandling.toDTO(): VedtakDTO =
                 is Utfall.DelvisInnvilget -> "DELVIS_INNVILGET"
                 Utfall.Avslag -> "AVSLAG"
                 Utfall.Henlagt -> "HENLAGT"
+                is Utfall.IkkeAktuell -> "IKKE_AKTUELL"
             },
         innvilgedePerioder = innvilgedePerioder.map { it.toDTO() },
         fattetAv = behandletAv.value,

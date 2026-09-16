@@ -302,12 +302,13 @@ class SoknadRepository(
                 it.setString(3, behandling.behandletAv.value)
                 it.setObject(4, behandling.behandletTidspunkt)
                 it.setString(5, behandling.begrunnelse)
-                it.setObject(6, soknadId)
+                it.setString(6, behandling.utfall.ikkeAktuellGrunnDbValue())
+                it.setObject(7, soknadId)
                 it.executeQuery().toList { toPBehandling() }.singleOrNull()
                     ?: throw IllegalArgumentException("Fant ikke søknad med id $soknadId")
             }
         createBehandlingPerioder(pBehandling.id, behandling.innvilgedePerioder)
-        createBrev(pBehandling.id, behandling.brev)
+        behandling.brev?.let { createBrev(pBehandling.id, it) }
     }
 
     private fun Connection.createBehandlingPerioder(
@@ -468,9 +469,10 @@ class SoknadRepository(
                     utfall,
                     behandlet_av,
                     behandlet_tidspunkt,
-                    begrunnelse
+                    begrunnelse,
+                    ikke_aktuell_grunn
                 )
-                SELECT ?, s.id, ?, ?, ?, ?
+                SELECT ?, s.id, ?, ?, ?, ?, ?
                 FROM soknad s
                 WHERE s.uuid = ?
                 RETURNING *
@@ -536,6 +538,7 @@ internal fun ResultSet.toPBehandling(): PBehandling =
         behandletAv = getString("behandlet_av"),
         behandletTidspunkt = getObject("behandlet_tidspunkt", OffsetDateTime::class.java),
         begrunnelse = getString("begrunnelse"),
+        ikkeAktuellGrunn = getString("ikke_aktuell_grunn"),
     )
 
 internal fun ResultSet.toPBrev(): PBrev =

@@ -37,10 +37,14 @@ internal fun lagBehandling(
         when (utfall) {
             Utfall.Innvilget -> listOf(Periode(fom = LocalDate.of(2026, 1, 5), tom = LocalDate.of(2026, 1, 9)))
             is Utfall.DelvisInnvilget -> utfall.innvilgedePerioder
-            Utfall.Avslag, Utfall.Henlagt -> emptyList()
+            Utfall.Avslag, Utfall.Henlagt, is Utfall.IkkeAktuell -> emptyList()
         },
-    begrunnelse: String? = if (utfall == Utfall.Innvilget) null else "Begrunnelse",
-    brev: Brev = lagBrev(brevtype = utfall.brevtype()),
+    begrunnelse: String? =
+        when (utfall) {
+            Utfall.Innvilget, is Utfall.IkkeAktuell -> null
+            else -> "Begrunnelse"
+        },
+    brev: Brev? = utfall.brevtype()?.let { lagBrev(brevtype = it) },
 ): Behandling =
     Behandling(
         utfall = utfall,

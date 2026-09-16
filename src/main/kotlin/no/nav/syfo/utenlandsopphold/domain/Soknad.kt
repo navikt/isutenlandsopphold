@@ -12,6 +12,7 @@ enum class SoknadStatus {
     DELVIS_INNVILGET,
     AVSLAG,
     HENLAGT,
+    IKKE_AKTUELL,
 }
 
 data class Soknad(
@@ -32,6 +33,7 @@ data class Soknad(
                         is Utfall.DelvisInnvilget -> SoknadStatus.DELVIS_INNVILGET
                         Utfall.Avslag -> SoknadStatus.AVSLAG
                         Utfall.Henlagt -> SoknadStatus.HENLAGT
+                        is Utfall.IkkeAktuell -> SoknadStatus.IKKE_AKTUELL
                     }
             }
 
@@ -51,6 +53,44 @@ data class Soknad(
         now: OffsetDateTime,
         document: List<DocumentComponent>,
         begrunnelse: String?,
+    ): Soknad {
+        val brevtype =
+            requireNotNull(utfall.brevtype()) {
+                "Utfall $utfall gir ikke brev og kan ikke behandles med dokumentinnhold"
+            }
+
+        return registrerBehandling(
+            utfall = utfall,
+            behandletAv = behandletAv,
+            now = now,
+            begrunnelse = begrunnelse,
+            brev = Brev(brevtype = brevtype, document = document),
+        )
+    }
+
+    /**
+     * Markerer at søknaden ikke skal realitetsbehandles her. Det sendes ikke brev til
+     * bruker, så det finnes heller ingenting å journalføre eller distribuere.
+     */
+    fun merkIkkeAktuell(
+        grunn: IkkeAktuellGrunn,
+        behandletAv: Navident,
+        now: OffsetDateTime,
+    ): Soknad =
+        registrerBehandling(
+            utfall = Utfall.IkkeAktuell(grunn),
+            behandletAv = behandletAv,
+            now = now,
+            begrunnelse = null,
+            brev = null,
+        )
+
+    private fun registrerBehandling(
+        utfall: Utfall,
+        behandletAv: Navident,
+        now: OffsetDateTime,
+        begrunnelse: String?,
+        brev: Brev?,
     ): Soknad {
         check(status == SoknadStatus.MOTTATT) {
             "En søknad kan kun behandles når den er MOTTATT, men status er $status"
@@ -75,6 +115,7 @@ data class Soknad(
                 }
                 Utfall.Avslag -> emptyList()
                 Utfall.Henlagt -> emptyList()
+                is Utfall.IkkeAktuell -> emptyList()
             }
 
         return copy(
@@ -85,11 +126,7 @@ data class Soknad(
                     behandletTidspunkt = now,
                     innvilgedePerioder = innvilgedePerioder,
                     begrunnelse = begrunnelse,
-                    brev =
-                        Brev(
-                            brevtype = utfall.brevtype(),
-                            document = document,
-                        ),
+                    brev = brev,
                 ),
         )
     }

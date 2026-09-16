@@ -142,12 +142,52 @@ class BehandlingTest {
     @Test
     fun `innvilgelse, delvis innvilgelse og avslag er realitetsbehandling, henleggelse er det ikke`() {
         val delvisInnvilget = Utfall.DelvisInnvilget(listOf(innvilgetPeriode))
-        val alleUtfall: List<Utfall> = listOf(Utfall.Innvilget, delvisInnvilget, Utfall.Avslag, Utfall.Henlagt)
+        val ikkeAktuell = Utfall.IkkeAktuell(IkkeAktuellGrunn.DUPLIKAT)
+        val alleUtfall: List<Utfall> =
+            listOf(Utfall.Innvilget, delvisInnvilget, Utfall.Avslag, Utfall.Henlagt, ikkeAktuell)
 
         val (realitetsbehandlinger, ovrige) = alleUtfall.partition { it is Utfall.Vedtak }
 
         assertEquals(listOf(Utfall.Innvilget, delvisInnvilget, Utfall.Avslag), realitetsbehandlinger)
-        assertEquals(listOf(Utfall.Henlagt), ovrige)
+        assertEquals(listOf(Utfall.Henlagt, ikkeAktuell), ovrige)
+    }
+
+    @Test
+    fun `behandling merket ikke aktuell er gyldig uten brev`() {
+        val behandling = lagBehandling(utfall = Utfall.IkkeAktuell(IkkeAktuellGrunn.DUPLIKAT))
+
+        assertEquals(null, behandling.brev)
+        assertEquals(IkkeAktuellGrunn.DUPLIKAT, (behandling.utfall as Utfall.IkkeAktuell).grunn)
+    }
+
+    @Test
+    fun `behandling merket ikke aktuell med brev kaster`() {
+        assertFailsWith<IllegalArgumentException> {
+            lagBehandling(
+                utfall = Utfall.IkkeAktuell(IkkeAktuellGrunn.ANNET),
+                brev = lagBrev(brevtype = Brevtype.HENLEGGELSE),
+            )
+        }
+    }
+
+    @Test
+    fun `behandling med utfall som skal ha brev kaster uten brev`() {
+        assertFailsWith<IllegalArgumentException> {
+            lagBehandling(utfall = Utfall.Henlagt, begrunnelse = "Begrunnelse", brev = null)
+        }
+    }
+
+    @Test
+    fun `behandling merket ikke aktuell skal ikke ha begrunnelse eller innvilgede perioder`() {
+        assertFailsWith<IllegalArgumentException> {
+            lagBehandling(utfall = Utfall.IkkeAktuell(IkkeAktuellGrunn.DUPLIKAT), begrunnelse = "Begrunnelse")
+        }
+        assertFailsWith<IllegalArgumentException> {
+            lagBehandling(
+                utfall = Utfall.IkkeAktuell(IkkeAktuellGrunn.DUPLIKAT),
+                innvilgedePerioder = listOf(innvilgetPeriode),
+            )
+        }
     }
 
     @Test
@@ -156,5 +196,25 @@ class BehandlingTest {
         assertEquals(Brevtype.VEDTAK_DELVIS_INNVILGET, Utfall.DelvisInnvilget(listOf(innvilgetPeriode)).brevtype())
         assertEquals(Brevtype.VEDTAK_AVSLAG, Utfall.Avslag.brevtype())
         assertEquals(Brevtype.HENLEGGELSE, Utfall.Henlagt.brevtype())
+        assertEquals(null, Utfall.IkkeAktuell(IkkeAktuellGrunn.ANNET).brevtype())
+    }
+
+    @Test
+    fun `Vedtak from godtar de tre vedtaksutfallene, men ikke henleggelse`() {
+        assertEquals(Utfall.Innvilget, Utfall.Vedtak.from("INNVILGET", emptyList()))
+        assertEquals(
+            Utfall.DelvisInnvilget(listOf(innvilgetPeriode)),
+            Utfall.Vedtak.from("DELVIS_INNVILGET", listOf(innvilgetPeriode)),
+        )
+        assertEquals(Utfall.Avslag, Utfall.Vedtak.from("AVSLAG", emptyList()))
+
+        assertFailsWith<IllegalArgumentException> { Utfall.Vedtak.from("HENLAGT", emptyList()) }
+    }
+
+    @Test
+    fun `Utfall from godtar henleggelse, men ikke ikke-aktuell`() {
+        assertEquals(Utfall.Henlagt, Utfall.from("HENLAGT", emptyList()))
+
+        assertFailsWith<IllegalArgumentException> { Utfall.from("IKKE_AKTUELL", emptyList()) }
     }
 }

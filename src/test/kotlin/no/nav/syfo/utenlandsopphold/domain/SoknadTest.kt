@@ -259,7 +259,7 @@ class SoknadTest {
 
         val journalfort = innvilget.journalforBrev(journalpostId, journalfortTidspunkt)
 
-        val brev = assertNotNull(journalfort.behandling).brev
+        val brev = assertNotNull(assertNotNull(journalfort.behandling).brev)
         assertEquals(journalpostId, brev.journalpostId)
         assertEquals(journalfortTidspunkt, brev.journalfortTidspunkt)
     }
@@ -282,7 +282,7 @@ class SoknadTest {
                 begrunnelse = "Søker har trukket søknaden",
             )
 
-        val brev = assertNotNull(henlagt.behandling).brev
+        val brev = assertNotNull(assertNotNull(henlagt.behandling).brev)
         assertEquals(Brevtype.HENLEGGELSE, brev.brevtype)
         assertEquals(brevDocument, brev.document)
     }
@@ -291,6 +291,70 @@ class SoknadTest {
     fun `distribuerBrev på ubehandlet søknad kaster feil`() {
         assertFailsWith<IllegalStateException> {
             lagSoknad().distribuerBrev(OffsetDateTime.parse("2026-01-11T08:00:00Z"))
+        }
+    }
+
+    @Test
+    fun `merkIkkeAktuell gir status ikke aktuell med grunn, uten brev`() {
+        val now = OffsetDateTime.parse("2026-01-10T12:00:00Z")
+
+        val resultat =
+            lagSoknad().merkIkkeAktuell(
+                grunn = IkkeAktuellGrunn.BEHANDLET_I_INFOTRYGD,
+                behandletAv = veileder,
+                now = now,
+            )
+
+        assertEquals(SoknadStatus.IKKE_AKTUELL, resultat.status)
+        val behandling = assertNotNull(resultat.behandling)
+        assertEquals(Utfall.IkkeAktuell(IkkeAktuellGrunn.BEHANDLET_I_INFOTRYGD), behandling.utfall)
+        assertEquals(veileder, behandling.behandletAv)
+        assertEquals(now, behandling.behandletTidspunkt)
+        assertEquals(emptyList(), behandling.innvilgedePerioder)
+        assertEquals(null, behandling.begrunnelse)
+        assertEquals(null, behandling.brev)
+    }
+
+    @Test
+    fun `merkIkkeAktuell på allerede behandlet søknad kaster feil`() {
+        val behandletSoknad = lagSoknad(behandling = lagBehandling(utfall = Utfall.Innvilget))
+
+        assertFailsWith<IllegalStateException> {
+            behandletSoknad.merkIkkeAktuell(
+                grunn = IkkeAktuellGrunn.DUPLIKAT,
+                behandletAv = veileder,
+                now = OffsetDateTime.parse("2026-01-11T08:00:00Z"),
+            )
+        }
+    }
+
+    @Test
+    fun `behandle med utfall ikke aktuell kaster, siden det ikke gir brev`() {
+        assertFailsWith<IllegalArgumentException> {
+            lagSoknad().behandle(
+                utfall = Utfall.IkkeAktuell(IkkeAktuellGrunn.ANNET),
+                behandletAv = veileder,
+                now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
+                document = brevDocument,
+                begrunnelse = null,
+            )
+        }
+    }
+
+    @Test
+    fun `søknad merket ikke aktuell kan ikke journalføres eller distribueres`() {
+        val ikkeAktuell =
+            lagSoknad().merkIkkeAktuell(
+                grunn = IkkeAktuellGrunn.ANNET,
+                behandletAv = veileder,
+                now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
+            )
+
+        assertFailsWith<IllegalStateException> {
+            ikkeAktuell.journalforBrev(JournalpostId("123"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
+        }
+        assertFailsWith<IllegalStateException> {
+            ikkeAktuell.distribuerBrev(OffsetDateTime.parse("2026-01-11T08:00:00Z"))
         }
     }
 }

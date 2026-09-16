@@ -3,6 +3,7 @@ package no.nav.syfo.utenlandsopphold.application
 import no.nav.syfo.common.types.ident.Navident
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
+import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellGrunn
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.Utfall
 import org.slf4j.LoggerFactory
@@ -28,30 +29,52 @@ class SoknadService(
         begrunnelse: String?,
     ): Soknad {
         val lagretSoknad =
-            transactionManager.inTransaction { transaction ->
-                val soknad =
-                    soknadRepository.hentSoknadForUpdate(
-                        transaction = transaction,
-                        soknadId = soknadId,
-                    ) ?: throw IllegalArgumentException("Søknad med id $soknadId finnes ikke")
-
-                val behandletSoknad =
-                    soknad.behandle(
-                        utfall = utfall,
-                        behandletAv = behandletAv,
-                        now = OffsetDateTime.now(),
-                        document = document,
-                        begrunnelse = begrunnelse,
-                    )
-
-                soknadRepository.lagreBehandling(
-                    transaction = transaction,
-                    behandletSoknad = behandletSoknad,
+            lagreBehandling(soknadId) { soknad ->
+                soknad.behandle(
+                    utfall = utfall,
+                    behandletAv = behandletAv,
+                    now = OffsetDateTime.now(),
+                    document = document,
+                    begrunnelse = begrunnelse,
                 )
             }
         journalforOgDistribuerAsync(lagretSoknad)
         return lagretSoknad
     }
+
+    /**
+     * Markerer at søknaden ikke skal realitetsbehandles her. Det sendes ikke brev, så
+     * det er ingenting å journalføre eller distribuere.
+     */
+    fun merkIkkeAktuell(
+        soknadId: UUID,
+        behandletAv: Navident,
+        grunn: IkkeAktuellGrunn,
+    ): Soknad =
+        lagreBehandling(soknadId) { soknad ->
+            soknad.merkIkkeAktuell(
+                grunn = grunn,
+                behandletAv = behandletAv,
+                now = OffsetDateTime.now(),
+            )
+        }
+
+    private fun lagreBehandling(
+        soknadId: UUID,
+        behandle: (Soknad) -> Soknad,
+    ): Soknad =
+        transactionManager.inTransaction { transaction ->
+            val soknad =
+                soknadRepository.hentSoknadForUpdate(
+                    transaction = transaction,
+                    soknadId = soknadId,
+                ) ?: throw IllegalArgumentException("Søknad med id $soknadId finnes ikke")
+
+            soknadRepository.lagreBehandling(
+                transaction = transaction,
+                behandletSoknad = behandle(soknad),
+            )
+        }
 
     private fun journalforOgDistribuerAsync(behandletSoknad: Soknad) {
         launchAsyncTask {

@@ -9,6 +9,7 @@ import no.nav.syfo.utenlandsopphold.domain.Behandling
 import no.nav.syfo.utenlandsopphold.domain.Brev
 import no.nav.syfo.utenlandsopphold.domain.Brevtype
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
+import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellGrunn
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.Utfall
@@ -39,10 +40,7 @@ data class PSoknad(
             behandling =
                 behandling?.toBehandling(
                     innvilgedePerioder = behandlingPerioder.map { it.toPeriode() },
-                    brev =
-                        checkNotNull(brev) {
-                            "Behandling ${behandling.uuid} mangler brev"
-                        },
+                    brev = brev,
                 ),
         )
 }
@@ -74,19 +72,20 @@ data class PBehandling(
     val behandletAv: String,
     val behandletTidspunkt: OffsetDateTime,
     val begrunnelse: String?,
+    val ikkeAktuellGrunn: String?,
 ) {
     fun toBehandling(
         innvilgedePerioder: List<Periode>,
-        brev: PBrev,
+        brev: PBrev?,
     ): Behandling =
         Behandling(
             behandlingId = uuid,
-            utfall = utfall.toUtfall(innvilgedePerioder),
+            utfall = utfall.toUtfall(innvilgedePerioder, ikkeAktuellGrunn),
             behandletAv = Navident(behandletAv),
             behandletTidspunkt = behandletTidspunkt,
             innvilgedePerioder = innvilgedePerioder,
             begrunnelse = begrunnelse,
-            brev = brev.toBrev(),
+            brev = brev?.toBrev(),
         )
 }
 
@@ -124,16 +123,37 @@ fun Utfall.dbValue(): String =
         is Utfall.DelvisInnvilget -> "DELVIS_INNVILGET"
         Utfall.Avslag -> "AVSLAG"
         Utfall.Henlagt -> "HENLAGT"
+        is Utfall.IkkeAktuell -> "IKKE_AKTUELL"
     }
 
-private fun String.toUtfall(innvilgedePerioder: List<Periode>): Utfall =
+fun Utfall.ikkeAktuellGrunnDbValue(): String? =
+    when (this) {
+        is Utfall.IkkeAktuell -> grunn.name
+        else -> null
+    }
+
+private fun String.toUtfall(
+    innvilgedePerioder: List<Periode>,
+    ikkeAktuellGrunn: String?,
+): Utfall =
     when (this) {
         "INNVILGET" -> Utfall.Innvilget
         "DELVIS_INNVILGET" -> Utfall.DelvisInnvilget(innvilgedePerioder)
         "AVSLAG" -> Utfall.Avslag
         "HENLAGT" -> Utfall.Henlagt
+        "IKKE_AKTUELL" ->
+            Utfall.IkkeAktuell(
+                grunn =
+                    checkNotNull(ikkeAktuellGrunn) {
+                        "Behandling med utfall IKKE_AKTUELL mangler ikke_aktuell_grunn i databasen"
+                    }.toIkkeAktuellGrunn(),
+            )
         else -> throw IllegalStateException("Ukjent utfall lagret i database: $this")
     }
+
+private fun String.toIkkeAktuellGrunn(): IkkeAktuellGrunn =
+    IkkeAktuellGrunn.entries.firstOrNull { it.name == this }
+        ?: throw IllegalStateException("Ukjent ikke_aktuell_grunn lagret i database: $this")
 
 fun Brevtype.dbValue(): String = name
 

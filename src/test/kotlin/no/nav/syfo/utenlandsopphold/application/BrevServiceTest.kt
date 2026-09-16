@@ -75,7 +75,7 @@ class BrevServiceTest {
                 journalforingServiceMock.journalfor(testPersonident, any(), any(), JournalforingDokumenttype.VEDTAK)
             }
             verify(exactly = 1) {
-                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev.brevId, JournalpostId("999"), any())
+                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev!!.brevId, JournalpostId("999"), any())
             }
         }
 
@@ -103,7 +103,7 @@ class BrevServiceTest {
                 journalforingServiceMock.journalfor(testPersonident, any(), any(), JournalforingDokumenttype.VEDTAK)
             }
             verify(exactly = 1) {
-                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev.brevId, JournalpostId("999"), any())
+                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev!!.brevId, JournalpostId("999"), any())
             }
         }
 
@@ -126,7 +126,7 @@ class BrevServiceTest {
                 journalforingServiceMock.journalfor(testPersonident, any(), any(), JournalforingDokumenttype.VEDTAK)
             }
             verify(exactly = 1) {
-                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev.brevId, JournalpostId("999"), any())
+                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev!!.brevId, JournalpostId("999"), any())
             }
         }
 
@@ -153,7 +153,7 @@ class BrevServiceTest {
                 )
             }
             verify(exactly = 1) {
-                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev.brevId, JournalpostId("999"), any())
+                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev!!.brevId, JournalpostId("999"), any())
             }
         }
 
@@ -175,8 +175,8 @@ class BrevServiceTest {
 
             service.journalforBrev()
 
-            verify(exactly = 1) { repositoryMock.setBrevJournalfort(soknadSomLykkes.behandling!!.brev.brevId, any(), any()) }
-            verify(exactly = 0) { repositoryMock.setBrevJournalfort(soknadSomFeiler.behandling!!.brev.brevId, any(), any()) }
+            verify(exactly = 1) { repositoryMock.setBrevJournalfort(soknadSomLykkes.behandling!!.brev!!.brevId, any(), any()) }
+            verify(exactly = 0) { repositoryMock.setBrevJournalfort(soknadSomFeiler.behandling!!.brev!!.brevId, any(), any()) }
         }
 
     @Test
@@ -194,7 +194,7 @@ class BrevServiceTest {
 
             service.journalforBrev()
 
-            verify(exactly = 1) { repositoryMock.setBrevJournalfort(behandletSoknad.behandling!!.brev.brevId, any(), any()) }
+            verify(exactly = 1) { repositoryMock.setBrevJournalfort(behandletSoknad.behandling!!.brev!!.brevId, any(), any()) }
             verify(exactly = 1) { repositoryMock.setBrevJournalfort(any(), any(), any()) }
         }
 
@@ -215,7 +215,7 @@ class BrevServiceTest {
                 journalforingServiceMock.journalfor(testPersonident, any(), any(), JournalforingDokumenttype.VEDTAK)
             }
             verify(exactly = 1) {
-                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev.brevId, JournalpostId("999"), any())
+                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev!!.brevId, JournalpostId("999"), any())
             }
             verify(exactly = 0) { repositoryMock.getIkkeJournalforteSoknader(any()) }
         }
@@ -233,7 +233,7 @@ class BrevServiceTest {
             service.distribuerBrev()
 
             coVerify(exactly = 1) { distribusjonServiceMock.distribuer(any(), any()) }
-            verify(exactly = 1) { repositoryMock.setBrevDistribuert(soknad.behandling!!.brev.brevId, any()) }
+            verify(exactly = 1) { repositoryMock.setBrevDistribuert(soknad.behandling!!.brev!!.brevId, any()) }
         }
 
     @Test
@@ -290,7 +290,7 @@ class BrevServiceTest {
 
             service.distribuerBrev()
 
-            verify(exactly = 1) { repositoryMock.setBrevDistribuert(soknadSomLykkes.behandling!!.brev.brevId, any()) }
-            verify(exactly = 0) { repositoryMock.setBrevDistribuert(soknadSomFeiler.behandling!!.brev.brevId, any()) }
+            verify(exactly = 1) { repositoryMock.setBrevDistribuert(soknadSomLykkes.behandling!!.brev!!.brevId, any()) }
+            verify(exactly = 0) { repositoryMock.setBrevDistribuert(soknadSomFeiler.behandling!!.brev!!.brevId, any()) }
         }
 }

@@ -38,6 +38,7 @@ data class SoknadstatusRecord(
                         createdAt = behandling.behandletTidspunkt,
                         veilederident = behandling.behandletAv.value,
                         utfall = behandling.utfall.toBehandlingRecordUtfall(),
+                        ikkeAktuellGrunn = (behandling.utfall as? Utfall.IkkeAktuell)?.grunn?.name,
                         innvilgedePerioder = behandling.innvilgedePerioder.map { BehandlingRecordPeriode(it.fom, it.tom) },
                     ),
             )
@@ -56,6 +57,7 @@ data class BehandlingRecord(
     val veilederident: String,
     val utfall: BehandlingRecordUtfall,
     val innvilgedePerioder: List<BehandlingRecordPeriode>,
+    val ikkeAktuellGrunn: String? = null,
 )
 
 enum class BehandlingRecordUtfall {
@@ -63,6 +65,7 @@ enum class BehandlingRecordUtfall {
     DELVIS_INNVILGET,
     INNVILGET,
     HENLAGT,
+    IKKE_AKTUELL,
 }
 
 data class BehandlingRecordPeriode(
@@ -76,4 +79,5 @@ private fun Utfall.toBehandlingRecordUtfall(): BehandlingRecordUtfall =
         is Utfall.DelvisInnvilget -> BehandlingRecordUtfall.DELVIS_INNVILGET
         is Utfall.Innvilget -> BehandlingRecordUtfall.INNVILGET
         is Utfall.Henlagt -> BehandlingRecordUtfall.HENLAGT
+        is Utfall.IkkeAktuell -> BehandlingRecordUtfall.IKKE_AKTUELL
     }

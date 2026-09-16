@@ -3,6 +3,7 @@ package no.nav.syfo.utenlandsopphold.infrastructure.kafka.soknadstatus
 import com.fasterxml.jackson.databind.JsonNode
 import no.nav.syfo.common.types.ident.Navident
 import no.nav.syfo.common.util.configuredJacksonMapper
+import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellGrunn
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Utfall
 import no.nav.syfo.utenlandsopphold.domain.lagBehandling
@@ -81,6 +82,30 @@ class SoknadstatusRecordTest {
 
         assertTrue(json["behandling"]["begrunnelse"] == null)
         assertTrue(json["behandling"]["brev"] == null)
+    }
+
+    @Test
+    fun `ikke aktuell publiseres med utfall IKKE_AKTUELL og grunn`() {
+        val soknad =
+            lagSoknad(
+                behandling = lagBehandling(utfall = Utfall.IkkeAktuell(IkkeAktuellGrunn.BEHANDLET_I_INFOTRYGD)),
+            )
+
+        val json = serialize(SoknadstatusRecord.fromBehandletSoknad(soknad))
+
+        assertEquals("BEHANDLET", json["status"].asText())
+        assertEquals("IKKE_AKTUELL", json["behandling"]["utfall"].asText())
+        assertEquals("BEHANDLET_I_INFOTRYGD", json["behandling"]["ikkeAktuellGrunn"].asText())
+        assertEquals(0, json["behandling"]["innvilgedePerioder"].size())
+    }
+
+    @Test
+    fun `andre utfall publiseres uten grunn`() {
+        val soknad = lagSoknad(behandling = lagBehandling(utfall = Utfall.Henlagt, begrunnelse = "Trukket"))
+
+        val grunn = serialize(SoknadstatusRecord.fromBehandletSoknad(soknad))["behandling"]["ikkeAktuellGrunn"]
+
+        assertTrue(grunn == null || grunn.isNull, "ikkeAktuellGrunn skal ikke ha verdi for andre utfall enn ikke aktuell")
     }
 
     @Test
