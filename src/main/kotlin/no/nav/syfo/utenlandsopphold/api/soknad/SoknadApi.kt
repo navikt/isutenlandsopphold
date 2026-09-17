@@ -51,14 +51,28 @@ fun Route.registerSoknadApi(
                         innvilgedePerioder = request.innvilgedePerioder.map { it.toDomain() },
                     )
 
-                val behandletSoknad =
-                    soknadService.behandleSoknad(
-                        soknadId = soknadId,
-                        utfall = utfall,
-                        behandletAv = authorizedUser.navident,
-                        document = request.document,
-                        begrunnelse = request.begrunnelse,
-                    )
+                val behandletSoknad = when (utfall) {
+                    is Utfall.Vedtak -> {
+                        soknadService.fattVedtak(
+                            soknadId = soknadId,
+                            utfall = utfall,
+                            behandletAv = authorizedUser.navident,
+                            document = request.document,
+                            begrunnelse = request.begrunnelse,
+                        )
+                    }
+                    is Utfall.Henlagt -> {
+                        soknadService.henlegg(
+                            soknadId = soknadId,
+                            behandletAv = authorizedUser.navident,
+                            document = request.document,
+                            begrunnelse = request.begrunnelse,
+                        )
+                    }
+                    else -> {
+                        throw BadRequestException("Ugyldig utfall: ${request.utfall}")
+                    }
+                }
 
                 call.respond(behandletSoknad.toResponseDTO())
             }

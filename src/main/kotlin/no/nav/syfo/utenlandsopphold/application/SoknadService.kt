@@ -21,17 +21,36 @@ class SoknadService(
 
     fun mottaSoknad(soknad: Soknad): LagreMottattSoknadResultat = soknadRepository.lagreMottattSoknad(soknad)
 
-    fun behandleSoknad(
+    fun fattVedtak(
         soknadId: UUID,
         behandletAv: Navident,
-        utfall: Utfall,
+        utfall: Utfall.Vedtak,
         document: List<DocumentComponent>,
         begrunnelse: String?,
     ): Soknad {
         val lagretSoknad =
-            lagreBehandling(soknadId) { soknad ->
-                soknad.behandle(
+            behandleOgLagreSoknad(soknadId) { soknad ->
+                soknad.fattVedtak(
                     utfall = utfall,
+                    behandletAv = behandletAv,
+                    now = OffsetDateTime.now(),
+                    document = document,
+                    begrunnelse = begrunnelse,
+                )
+            }
+        journalforOgDistribuerAsync(lagretSoknad)
+        return lagretSoknad
+    }
+
+    fun henlegg(
+        soknadId: UUID,
+        behandletAv: Navident,
+        document: List<DocumentComponent>,
+        begrunnelse: String?,
+    ): Soknad {
+        val lagretSoknad =
+            behandleOgLagreSoknad(soknadId) { soknad ->
+                soknad.henlegg(
                     behandletAv = behandletAv,
                     now = OffsetDateTime.now(),
                     document = document,
@@ -51,7 +70,7 @@ class SoknadService(
         behandletAv: Navident,
         grunn: IkkeAktuellGrunn,
     ): Soknad =
-        lagreBehandling(soknadId) { soknad ->
+        behandleOgLagreSoknad(soknadId) { soknad ->
             soknad.merkIkkeAktuell(
                 grunn = grunn,
                 behandletAv = behandletAv,
@@ -59,7 +78,7 @@ class SoknadService(
             )
         }
 
-    private fun lagreBehandling(
+    private fun behandleOgLagreSoknad(
         soknadId: UUID,
         behandle: (Soknad) -> Soknad,
     ): Soknad =
@@ -70,9 +89,11 @@ class SoknadService(
                     soknadId = soknadId,
                 ) ?: throw IllegalArgumentException("Søknad med id $soknadId finnes ikke")
 
+            val behandletSoknad = behandle(soknad)
+
             soknadRepository.lagreBehandling(
                 transaction = transaction,
-                behandletSoknad = behandle(soknad),
+                behandletSoknad = behandletSoknad,
             )
         }
 

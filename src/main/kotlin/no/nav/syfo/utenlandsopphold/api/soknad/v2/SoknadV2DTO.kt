@@ -1,5 +1,7 @@
 package no.nav.syfo.utenlandsopphold.api.soknad.v2
 
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonTypeInfo
 import no.nav.syfo.utenlandsopphold.domain.Behandling
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellGrunn
@@ -59,18 +61,63 @@ data class PeriodeV2DTO(
     val tom: LocalDate,
 )
 
-data class BehandlingV2DTO(
-    val utfall: UtfallV2DTO,
-    val innvilgedePerioder: List<PeriodeV2DTO>,
-    val behandletAv: String,
-    val behandletTidspunkt: LocalDateTime,
-    val begrunnelse: String?,
-    val ikkeAktuellGrunn: IkkeAktuellGrunnV2DTO?,
+/**
+ * Behandlingen slik den ser ut for frontend. Hver variant har bare feltene som gjelder
+ * for sitt utfall, slik at kontrakten slipper å love felt som nesten alltid er null.
+ *
+ * `utfall` i JSON skiller variantene. Avslag og henleggelse har ellers helt lik form, så
+ * uten det feltet ville de vært umulige å skille fra hverandre. Verdiene er skrevet ut i
+ * [JsonSubTypes] slik at de står uavhengig av hva klassene heter i Kotlin.
+ */
+@JsonTypeInfo(
+    use = JsonTypeInfo.Id.NAME,
+    include = JsonTypeInfo.As.PROPERTY,
+    property = "utfall",
 )
+@JsonSubTypes(
+    JsonSubTypes.Type(value = InnvilgetBehandlingV2DTO::class, name = "INNVILGET"),
+    JsonSubTypes.Type(value = DelvisInnvilgetBehandlingV2DTO::class, name = "DELVIS_INNVILGET"),
+    JsonSubTypes.Type(value = AvslagBehandlingV2DTO::class, name = "AVSLAG"),
+    JsonSubTypes.Type(value = HenlagtBehandlingV2DTO::class, name = "HENLAGT"),
+    JsonSubTypes.Type(value = IkkeAktuellBehandlingV2DTO::class, name = "IKKE_AKTUELL"),
+)
+sealed interface BehandlingV2DTO {
+    val behandletAv: String
+    val behandletTidspunkt: LocalDateTime
+}
+
+data class InnvilgetBehandlingV2DTO(
+    override val behandletAv: String,
+    override val behandletTidspunkt: LocalDateTime,
+    val innvilgedePerioder: List<PeriodeV2DTO>,
+) : BehandlingV2DTO
+
+data class DelvisInnvilgetBehandlingV2DTO(
+    override val behandletAv: String,
+    override val behandletTidspunkt: LocalDateTime,
+    val innvilgedePerioder: List<PeriodeV2DTO>,
+    val begrunnelse: String,
+) : BehandlingV2DTO
+
+data class AvslagBehandlingV2DTO(
+    override val behandletAv: String,
+    override val behandletTidspunkt: LocalDateTime,
+    val begrunnelse: String,
+) : BehandlingV2DTO
+
+data class HenlagtBehandlingV2DTO(
+    override val behandletAv: String,
+    override val behandletTidspunkt: LocalDateTime,
+    val begrunnelse: String,
+) : BehandlingV2DTO
+
+data class IkkeAktuellBehandlingV2DTO(
+    override val behandletAv: String,
+    override val behandletTidspunkt: LocalDateTime,
+    val ikkeAktuellGrunn: IkkeAktuellGrunnV2DTO,
+) : BehandlingV2DTO
 
 enum class SoknadStatusV2DTO { MOTTATT, INNVILGET, DELVIS_INNVILGET, AVSLAG, HENLAGT, IKKE_AKTUELL }
-
-enum class UtfallV2DTO { INNVILGET, DELVIS_INNVILGET, AVSLAG, HENLAGT, IKKE_AKTUELL }
 
 enum class IkkeAktuellGrunnV2DTO { BEHANDLET_I_INFOTRYGD, DUPLIKAT, ANNET }
 
@@ -98,15 +145,6 @@ private fun SoknadStatus.toV2DTO(): SoknadStatusV2DTO =
         SoknadStatus.IKKE_AKTUELL -> SoknadStatusV2DTO.IKKE_AKTUELL
     }
 
-private fun Utfall.toV2DTO(): UtfallV2DTO =
-    when (this) {
-        Utfall.Innvilget -> UtfallV2DTO.INNVILGET
-        is Utfall.DelvisInnvilget -> UtfallV2DTO.DELVIS_INNVILGET
-        Utfall.Avslag -> UtfallV2DTO.AVSLAG
-        Utfall.Henlagt -> UtfallV2DTO.HENLAGT
-        is Utfall.IkkeAktuell -> UtfallV2DTO.IKKE_AKTUELL
-    }
-
 fun List<Soknad>.toResponseV2DTO(): SoknaderResponseV2DTO = SoknaderResponseV2DTO(soknader = map { it.toV2DTO() })
 
 fun Soknad.toResponseV2DTO(): SoknadResponseV2DTO = SoknadResponseV2DTO(soknad = toV2DTO())
@@ -124,13 +162,45 @@ fun Soknad.toV2DTO(): SoknadV2DTO =
 private fun Periode.toV2DTO(): PeriodeV2DTO = PeriodeV2DTO(fom = fom, tom = tom)
 
 private fun Behandling.toV2DTO(): BehandlingV2DTO =
-    BehandlingV2DTO(
-        utfall = utfall.toV2DTO(),
-        innvilgedePerioder = innvilgedePerioder.map { it.toV2DTO() },
-        behandletAv = behandletAv.value,
-        behandletTidspunkt = behandletTidspunkt.toLocalDateTimeOslo(),
-        begrunnelse = begrunnelse,
-        ikkeAktuellGrunn = (utfall as? Utfall.IkkeAktuell)?.grunn?.toV2DTO(),
-    )
+    when (val utfall = utfall) {
+        Utfall.Innvilget ->
+            InnvilgetBehandlingV2DTO(
+                behandletAv = behandletAv.value,
+                behandletTidspunkt = behandletTidspunkt.toLocalDateTimeOslo(),
+                innvilgedePerioder = innvilgedePerioder.map { it.toV2DTO() },
+            )
+        is Utfall.DelvisInnvilget ->
+            DelvisInnvilgetBehandlingV2DTO(
+                behandletAv = behandletAv.value,
+                behandletTidspunkt = behandletTidspunkt.toLocalDateTimeOslo(),
+                innvilgedePerioder = innvilgedePerioder.map { it.toV2DTO() },
+                begrunnelse = paakrevdBegrunnelse(),
+            )
+        Utfall.Avslag ->
+            AvslagBehandlingV2DTO(
+                behandletAv = behandletAv.value,
+                behandletTidspunkt = behandletTidspunkt.toLocalDateTimeOslo(),
+                begrunnelse = paakrevdBegrunnelse(),
+            )
+        Utfall.Henlagt ->
+            HenlagtBehandlingV2DTO(
+                behandletAv = behandletAv.value,
+                behandletTidspunkt = behandletTidspunkt.toLocalDateTimeOslo(),
+                begrunnelse = paakrevdBegrunnelse(),
+            )
+        is Utfall.IkkeAktuell ->
+            IkkeAktuellBehandlingV2DTO(
+                behandletAv = behandletAv.value,
+                behandletTidspunkt = behandletTidspunkt.toLocalDateTimeOslo(),
+                ikkeAktuellGrunn = utfall.grunn.toV2DTO(),
+            )
+    }
+
+/**
+ * [Behandling] krever begrunnelse for disse utfallene, men feltet er nullable fordi de
+ * øvrige utfallene ikke skal ha noen. Her bekreftes garantien slik at DTO-en slipper.
+ */
+private fun Behandling.paakrevdBegrunnelse(): String =
+    checkNotNull(begrunnelse) { "Behandling $behandlingId med utfall $utfall skal ha begrunnelse" }
 
 fun PeriodeV2DTO.toDomain(): Periode = Periode(fom = fom, tom = tom)

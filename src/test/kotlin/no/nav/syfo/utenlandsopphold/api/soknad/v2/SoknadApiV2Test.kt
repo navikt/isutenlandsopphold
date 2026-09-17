@@ -1,9 +1,11 @@
 package no.nav.syfo.utenlandsopphold.api.soknad.v2
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.testing.*
@@ -39,6 +41,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
@@ -145,16 +148,56 @@ class SoknadApiV2Test {
 
             assertEquals(HttpStatusCode.OK, response.status)
             val behandling =
-                assertNotNull(
+                assertIs<AvslagBehandlingV2DTO>(
                     response
                         .body<SoknaderResponseV2DTO>()
                         .soknader
                         .single()
                         .behandling,
                 )
-            assertEquals(UtfallV2DTO.AVSLAG, behandling.utfall)
             assertEquals(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG, behandling.behandletAv)
-            assertNull(behandling.ikkeAktuellGrunn)
+        }
+
+    @Test
+    fun `JSON-en for behandling har utfall som skillefelt og bare feltene som gjelder utfallet`() =
+        testApplication {
+            val behandletSoknad =
+                soknad.behandle(
+                    utfall = Utfall.Avslag,
+                    behandletAv = Navident(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG),
+                    now = OffsetDateTime.parse("2026-03-02T09:00:00Z"),
+                    document = document,
+                    begrunnelse = "Oppholdet er ikke forenlig med aktivitetsplikten",
+                )
+            every {
+                repository.hentSoknader(UserConstants.PERSON_VEILEDERE_HAR_TILGANG_TIL)
+            } returns listOf(behandletSoknad)
+            val client = setupApiAndClient()
+
+            val response =
+                client.post(SOKNADER_QUERY_PATH) {
+                    bearerAuth(generateJWT())
+                    contentType(ContentType.Application.Json)
+                    setBody(
+                        SoknaderQueryV2DTO(
+                            personident = UserConstants.PERSON_VEILEDERE_HAR_TILGANG_TIL.value,
+                        ),
+                    )
+                }
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            val behandling =
+                jacksonObjectMapper()
+                    .readTree(response.bodyAsText())
+                    .path("soknader")
+                    .single()
+                    .path("behandling")
+
+            assertEquals("AVSLAG", behandling.path("utfall").asText())
+            assertEquals(
+                setOf("utfall", "behandletAv", "behandletTidspunkt", "begrunnelse"),
+                behandling.fieldNames().asSequence().toSet(),
+            )
         }
 
     @Test
@@ -182,12 +225,10 @@ class SoknadApiV2Test {
                 Navident(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG),
                 behandling.behandletAv,
             )
-            assertEquals(
-                UtfallV2DTO.INNVILGET,
+            assertIs<InnvilgetBehandlingV2DTO>(
                 response
                     .body<SoknadResponseV2DTO>()
-                    .soknad.behandling
-                    ?.utfall,
+                    .soknad.behandling,
             )
         }
 
@@ -254,8 +295,8 @@ class SoknadApiV2Test {
             assertEquals(Utfall.IkkeAktuell(IkkeAktuellGrunn.BEHANDLET_I_INFOTRYGD), behandling.utfall)
             assertNull(behandling.brev)
 
-            val behandlingDTO = assertNotNull(response.body<SoknadResponseV2DTO>().soknad.behandling)
-            assertEquals(UtfallV2DTO.IKKE_AKTUELL, behandlingDTO.utfall)
+            val behandlingDTO =
+                assertIs<IkkeAktuellBehandlingV2DTO>(response.body<SoknadResponseV2DTO>().soknad.behandling)
             assertEquals(IkkeAktuellGrunnV2DTO.BEHANDLET_I_INFOTRYGD, behandlingDTO.ikkeAktuellGrunn)
             assertEquals(SoknadStatusV2DTO.IKKE_AKTUELL, response.body<SoknadResponseV2DTO>().soknad.status)
         }
@@ -364,7 +405,7 @@ class SoknadApiV2Test {
     fun `ikke-aktuell på allerede behandlet søknad gir 409`() =
         testApplication {
             val behandletSoknad =
-                soknad.behandle(
+                soknad.fattVedtak(
                     utfall = Utfall.Innvilget,
                     behandletAv = Navident(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG),
                     now = OffsetDateTime.parse("2026-03-02T09:00:00Z"),

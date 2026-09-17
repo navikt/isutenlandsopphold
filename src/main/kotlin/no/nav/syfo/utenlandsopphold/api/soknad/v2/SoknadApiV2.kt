@@ -47,7 +47,7 @@ fun Route.registerSoknadApiV2(
                 requiresWriteAccess = true,
             ) { authorizedUser, _, _ ->
                 val behandletSoknad =
-                    soknadService.behandleSoknad(
+                    soknadService.fattVedtak(
                         soknadId = soknad.id,
                         utfall =
                             Utfall.Vedtak.from(
@@ -74,9 +74,8 @@ fun Route.registerSoknadApiV2(
                 requiresWriteAccess = true,
             ) { authorizedUser, _, _ ->
                 val behandletSoknad =
-                    soknadService.behandleSoknad(
+                    soknadService.henlegg(
                         soknadId = soknad.id,
-                        utfall = Utfall.Henlagt,
                         behandletAv = authorizedUser.navident,
                         document = request.document,
                         begrunnelse = request.begrunnelse,
