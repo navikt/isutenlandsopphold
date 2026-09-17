@@ -257,9 +257,9 @@ class SoknadTest {
         val journalpostId = JournalpostId("123")
         val journalfortTidspunkt = OffsetDateTime.parse("2026-01-11T08:00:00Z")
 
-        val journalfort = innvilget.journalforBrev(journalpostId, journalfortTidspunkt)
+        val journalfort = innvilget.journalforDokument(journalpostId, journalfortTidspunkt)
 
-        val brev = assertNotNull(journalfort.behandling).brev
+        val brev = assertNotNull(journalfort.behandling).dokument
         assertEquals(journalpostId, brev.journalpostId)
         assertEquals(journalfortTidspunkt, brev.journalfortTidspunkt)
     }
@@ -267,7 +267,7 @@ class SoknadTest {
     @Test
     fun `journalforBrev på ubehandlet søknad kaster feil`() {
         assertFailsWith<IllegalStateException> {
-            lagSoknad().journalforBrev(JournalpostId("123"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
+            lagSoknad().journalforDokument(JournalpostId("123"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
         }
     }
 
@@ -282,7 +282,7 @@ class SoknadTest {
                 begrunnelse = "Søker har trukket søknaden",
             )
 
-        val brev = assertNotNull(henlagt.behandling).brev
+        val brev = assertNotNull(henlagt.behandling).dokument
         assertEquals(Brevtype.HENLEGGELSE, brev.brevtype)
         assertEquals(brevDocument, brev.document)
     }
@@ -290,7 +290,7 @@ class SoknadTest {
     @Test
     fun `distribuerBrev på ubehandlet søknad kaster feil`() {
         assertFailsWith<IllegalStateException> {
-            lagSoknad().distribuerBrev(OffsetDateTime.parse("2026-01-11T08:00:00Z"))
+            lagSoknad().distribuerDokument(OffsetDateTime.parse("2026-01-11T08:00:00Z"))
         }
     }
 }

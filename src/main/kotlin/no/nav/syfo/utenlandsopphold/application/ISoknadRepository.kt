@@ -40,7 +40,7 @@ interface ISoknadRepository {
      * `journalfort_tidspunkt` på raden. Kalles etter vellykket arkivering i dokarkiv.
      */
     fun setBrevJournalfort(
-        brevId: UUID,
+        dokumentId: UUID,
         journalpostId: JournalpostId,
         journalfortTidspunkt: OffsetDateTime,
     )
@@ -54,14 +54,14 @@ interface ISoknadRepository {
      * API-laget (som forsøker distribusjon umiddelbart etter journalføring) rom til å distribuere
      * selv, uten at cronjobben forsøker det samme brevet samtidig.
      */
-    fun getSoknaderMedIkkeDistribuerteBrev(behandletBefore: OffsetDateTime): List<Soknad>
+    fun getSoknaderMedIkkeDistribuerteDokumenter(behandletBefore: OffsetDateTime): List<Soknad>
 
     /**
      * Markerer at et brev er distribuert ved å sette `distribuert_tidspunkt` på raden.
      * Kalles etter vellykket bestilling i dokdistfordeling.
      */
     fun setBrevDistribuert(
-        brevId: UUID,
+        dokumentId: UUID,
         distribuertTidspunkt: OffsetDateTime,
     )
 

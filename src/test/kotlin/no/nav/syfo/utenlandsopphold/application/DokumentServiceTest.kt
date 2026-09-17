@@ -24,7 +24,7 @@ import java.time.LocalDate
 import java.time.OffsetDateTime
 import kotlin.test.Test
 
-class BrevServiceTest {
+class DokumentServiceTest {
     private val testPersonident = Personident("11111111111")
 
     private val repositoryMock = mockk<ISoknadRepository>()
@@ -34,7 +34,7 @@ class BrevServiceTest {
     private val distribusjonServiceMock = mockk<IDistribusjonService>()
 
     private val service =
-        BrevService(
+        DokumentService(
             soknadRepository = repositoryMock,
             personInfoClient = pdlClientMock,
             pdfClient = pdfClientMock,
@@ -64,18 +64,18 @@ class BrevServiceTest {
             every { repositoryMock.getIkkeJournalforteSoknader(any()) } returns listOf(soknad)
             every { repositoryMock.setBrevJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
-            coEvery { pdfClientMock.createBrevPdf(testPersonident, any(), Brevtype.VEDTAK_INNVILGET, any()) } returns byteArrayOf(1, 2, 3)
+            coEvery { pdfClientMock.createDokumentPdf(testPersonident, any(), Brevtype.VEDTAK_INNVILGET, any()) } returns byteArrayOf(1, 2, 3)
             coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any()) } returns
                 Result.success(JournalpostId("999"))
 
-            service.journalforBrev()
+            service.journalforDokument()
 
-            coVerify(exactly = 1) { pdfClientMock.createBrevPdf(testPersonident, any(), Brevtype.VEDTAK_INNVILGET, any()) }
+            coVerify(exactly = 1) { pdfClientMock.createDokumentPdf(testPersonident, any(), Brevtype.VEDTAK_INNVILGET, any()) }
             coVerify(exactly = 1) {
                 journalforingServiceMock.journalfor(testPersonident, any(), any(), JournalforingDokumenttype.VEDTAK)
             }
             verify(exactly = 1) {
-                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev.brevId, JournalpostId("999"), any())
+                repositoryMock.setBrevJournalfort(soknad.behandling!!.dokument.brevId, JournalpostId("999"), any())
             }
         }
 
@@ -91,19 +91,19 @@ class BrevServiceTest {
             every { repositoryMock.getIkkeJournalforteSoknader(any()) } returns listOf(soknad)
             every { repositoryMock.setBrevJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
-            coEvery { pdfClientMock.createBrevPdf(testPersonident, any(), Brevtype.VEDTAK_DELVIS_INNVILGET, any()) } returns
+            coEvery { pdfClientMock.createDokumentPdf(testPersonident, any(), Brevtype.VEDTAK_DELVIS_INNVILGET, any()) } returns
                 byteArrayOf(1, 2, 3)
             coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any()) } returns
                 Result.success(JournalpostId("999"))
 
-            service.journalforBrev()
+            service.journalforDokument()
 
-            coVerify(exactly = 1) { pdfClientMock.createBrevPdf(testPersonident, any(), Brevtype.VEDTAK_DELVIS_INNVILGET, any()) }
+            coVerify(exactly = 1) { pdfClientMock.createDokumentPdf(testPersonident, any(), Brevtype.VEDTAK_DELVIS_INNVILGET, any()) }
             coVerify(exactly = 1) {
                 journalforingServiceMock.journalfor(testPersonident, any(), any(), JournalforingDokumenttype.VEDTAK)
             }
             verify(exactly = 1) {
-                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev.brevId, JournalpostId("999"), any())
+                repositoryMock.setBrevJournalfort(soknad.behandling!!.dokument.brevId, JournalpostId("999"), any())
             }
         }
 
@@ -115,18 +115,18 @@ class BrevServiceTest {
             every { repositoryMock.getIkkeJournalforteSoknader(any()) } returns listOf(soknad)
             every { repositoryMock.setBrevJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
-            coEvery { pdfClientMock.createBrevPdf(testPersonident, any(), Brevtype.VEDTAK_AVSLAG, any()) } returns byteArrayOf(1, 2, 3)
+            coEvery { pdfClientMock.createDokumentPdf(testPersonident, any(), Brevtype.VEDTAK_AVSLAG, any()) } returns byteArrayOf(1, 2, 3)
             coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any()) } returns
                 Result.success(JournalpostId("999"))
 
-            service.journalforBrev()
+            service.journalforDokument()
 
-            coVerify(exactly = 1) { pdfClientMock.createBrevPdf(testPersonident, any(), Brevtype.VEDTAK_AVSLAG, any()) }
+            coVerify(exactly = 1) { pdfClientMock.createDokumentPdf(testPersonident, any(), Brevtype.VEDTAK_AVSLAG, any()) }
             coVerify(exactly = 1) {
                 journalforingServiceMock.journalfor(testPersonident, any(), any(), JournalforingDokumenttype.VEDTAK)
             }
             verify(exactly = 1) {
-                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev.brevId, JournalpostId("999"), any())
+                repositoryMock.setBrevJournalfort(soknad.behandling!!.dokument.brevId, JournalpostId("999"), any())
             }
         }
 
@@ -138,11 +138,11 @@ class BrevServiceTest {
             every { repositoryMock.getIkkeJournalforteSoknader(any()) } returns listOf(soknad)
             every { repositoryMock.setBrevJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
-            coEvery { pdfClientMock.createBrevPdf(testPersonident, any(), Brevtype.HENLEGGELSE, any()) } returns byteArrayOf(1, 2, 3)
+            coEvery { pdfClientMock.createDokumentPdf(testPersonident, any(), Brevtype.HENLEGGELSE, any()) } returns byteArrayOf(1, 2, 3)
             coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any()) } returns
                 Result.success(JournalpostId("999"))
 
-            service.journalforBrev()
+            service.journalforDokument()
 
             coVerify(exactly = 1) {
                 journalforingServiceMock.journalfor(
@@ -153,7 +153,7 @@ class BrevServiceTest {
                 )
             }
             verify(exactly = 1) {
-                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev.brevId, JournalpostId("999"), any())
+                repositoryMock.setBrevJournalfort(soknad.behandling!!.dokument.brevId, JournalpostId("999"), any())
             }
         }
 
@@ -166,17 +166,17 @@ class BrevServiceTest {
             every { repositoryMock.getIkkeJournalforteSoknader(any()) } returns listOf(soknadSomFeiler, soknadSomLykkes)
             every { repositoryMock.setBrevJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
-            coEvery { pdfClientMock.createBrevPdf(testPersonident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
+            coEvery { pdfClientMock.createDokumentPdf(testPersonident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
             coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any()) } returnsMany
                 listOf(
                     Result.failure(RuntimeException("dokarkiv er nede")),
                     Result.success(JournalpostId("999")),
                 )
 
-            service.journalforBrev()
+            service.journalforDokument()
 
-            verify(exactly = 1) { repositoryMock.setBrevJournalfort(soknadSomLykkes.behandling!!.brev.brevId, any(), any()) }
-            verify(exactly = 0) { repositoryMock.setBrevJournalfort(soknadSomFeiler.behandling!!.brev.brevId, any(), any()) }
+            verify(exactly = 1) { repositoryMock.setBrevJournalfort(soknadSomLykkes.behandling!!.dokument.brevId, any(), any()) }
+            verify(exactly = 0) { repositoryMock.setBrevJournalfort(soknadSomFeiler.behandling!!.dokument.brevId, any(), any()) }
         }
 
     @Test
@@ -188,13 +188,13 @@ class BrevServiceTest {
             every { repositoryMock.getIkkeJournalforteSoknader(any()) } returns listOf(ubehandletSoknad, behandletSoknad)
             every { repositoryMock.setBrevJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
-            coEvery { pdfClientMock.createBrevPdf(testPersonident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
+            coEvery { pdfClientMock.createDokumentPdf(testPersonident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
             coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any()) } returns
                 Result.success(JournalpostId("999"))
 
-            service.journalforBrev()
+            service.journalforDokument()
 
-            verify(exactly = 1) { repositoryMock.setBrevJournalfort(behandletSoknad.behandling!!.brev.brevId, any(), any()) }
+            verify(exactly = 1) { repositoryMock.setBrevJournalfort(behandletSoknad.behandling!!.dokument.brevId, any(), any()) }
             verify(exactly = 1) { repositoryMock.setBrevJournalfort(any(), any(), any()) }
         }
 
@@ -205,17 +205,17 @@ class BrevServiceTest {
 
             every { repositoryMock.setBrevJournalfort(any(), any(), any()) } just Runs
             coEvery { pdlClientMock.getNavn(testPersonident) } returns "Ola Nordmann"
-            coEvery { pdfClientMock.createBrevPdf(testPersonident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
+            coEvery { pdfClientMock.createDokumentPdf(testPersonident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
             coEvery { journalforingServiceMock.journalfor(testPersonident, any(), any(), any()) } returns
                 Result.success(JournalpostId("999"))
 
-            service.journalforBrev(soknad)
+            service.journalforDokument(soknad)
 
             coVerify(exactly = 1) {
                 journalforingServiceMock.journalfor(testPersonident, any(), any(), JournalforingDokumenttype.VEDTAK)
             }
             verify(exactly = 1) {
-                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev.brevId, JournalpostId("999"), any())
+                repositoryMock.setBrevJournalfort(soknad.behandling!!.dokument.brevId, JournalpostId("999"), any())
             }
             verify(exactly = 0) { repositoryMock.getIkkeJournalforteSoknader(any()) }
         }
@@ -224,16 +224,16 @@ class BrevServiceTest {
     fun `distribuerer og oppdaterer journalført, ikke-distribuert brev`() =
         runTest {
             val soknad =
-                behandletSoknad().journalforBrev(JournalpostId("999"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
+                behandletSoknad().journalforDokument(JournalpostId("999"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
 
-            every { repositoryMock.getSoknaderMedIkkeDistribuerteBrev(any()) } returns listOf(soknad)
+            every { repositoryMock.getSoknaderMedIkkeDistribuerteDokumenter(any()) } returns listOf(soknad)
             every { repositoryMock.setBrevDistribuert(any(), any()) } just Runs
             coEvery { distribusjonServiceMock.distribuer(any(), any()) } returns Result.success("bestilling-1")
 
-            service.distribuerBrev()
+            service.distribuerDokument()
 
             coVerify(exactly = 1) { distribusjonServiceMock.distribuer(any(), any()) }
-            verify(exactly = 1) { repositoryMock.setBrevDistribuert(soknad.behandling!!.brev.brevId, any()) }
+            verify(exactly = 1) { repositoryMock.setBrevDistribuert(soknad.behandling!!.dokument.brevId, any()) }
         }
 
     @Test
@@ -241,13 +241,13 @@ class BrevServiceTest {
         runTest {
             val soknad =
                 behandletSoknad(utfall = Utfall.Innvilget)
-                    .journalforBrev(JournalpostId("999"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
+                    .journalforDokument(JournalpostId("999"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
 
-            every { repositoryMock.getSoknaderMedIkkeDistribuerteBrev(any()) } returns listOf(soknad)
+            every { repositoryMock.getSoknaderMedIkkeDistribuerteDokumenter(any()) } returns listOf(soknad)
             every { repositoryMock.setBrevDistribuert(any(), any()) } just Runs
             coEvery { distribusjonServiceMock.distribuer(any(), any()) } returns Result.success("bestilling-1")
 
-            service.distribuerBrev()
+            service.distribuerDokument()
 
             coVerify(exactly = 1) {
                 distribusjonServiceMock.distribuer(JournalpostId("999"), Distribusjonstype.VEDTAK)
@@ -259,13 +259,13 @@ class BrevServiceTest {
         runTest {
             val soknad =
                 behandletSoknad(utfall = Utfall.Henlagt)
-                    .journalforBrev(JournalpostId("999"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
+                    .journalforDokument(JournalpostId("999"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
 
-            every { repositoryMock.getSoknaderMedIkkeDistribuerteBrev(any()) } returns listOf(soknad)
+            every { repositoryMock.getSoknaderMedIkkeDistribuerteDokumenter(any()) } returns listOf(soknad)
             every { repositoryMock.setBrevDistribuert(any(), any()) } just Runs
             coEvery { distribusjonServiceMock.distribuer(any(), any()) } returns Result.success("bestilling-1")
 
-            service.distribuerBrev()
+            service.distribuerDokument()
 
             coVerify(exactly = 1) {
                 distribusjonServiceMock.distribuer(JournalpostId("999"), Distribusjonstype.VIKTIG)
@@ -276,11 +276,11 @@ class BrevServiceTest {
     fun `feil for ett brev stopper ikke distribusjon av de andre`() =
         runTest {
             val soknadSomFeiler =
-                behandletSoknad().journalforBrev(JournalpostId("111"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
+                behandletSoknad().journalforDokument(JournalpostId("111"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
             val soknadSomLykkes =
-                behandletSoknad().journalforBrev(JournalpostId("222"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
+                behandletSoknad().journalforDokument(JournalpostId("222"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
 
-            every { repositoryMock.getSoknaderMedIkkeDistribuerteBrev(any()) } returns listOf(soknadSomFeiler, soknadSomLykkes)
+            every { repositoryMock.getSoknaderMedIkkeDistribuerteDokumenter(any()) } returns listOf(soknadSomFeiler, soknadSomLykkes)
             every { repositoryMock.setBrevDistribuert(any(), any()) } just Runs
             coEvery { distribusjonServiceMock.distribuer(any(), any()) } returnsMany
                 listOf(
@@ -288,9 +288,9 @@ class BrevServiceTest {
                     Result.success("bestilling-1"),
                 )
 
-            service.distribuerBrev()
+            service.distribuerDokument()
 
-            verify(exactly = 1) { repositoryMock.setBrevDistribuert(soknadSomLykkes.behandling!!.brev.brevId, any()) }
-            verify(exactly = 0) { repositoryMock.setBrevDistribuert(soknadSomFeiler.behandling!!.brev.brevId, any()) }
+            verify(exactly = 1) { repositoryMock.setBrevDistribuert(soknadSomLykkes.behandling!!.dokument.brevId, any()) }
+            verify(exactly = 0) { repositoryMock.setBrevDistribuert(soknadSomFeiler.behandling!!.dokument.brevId, any()) }
         }
 }

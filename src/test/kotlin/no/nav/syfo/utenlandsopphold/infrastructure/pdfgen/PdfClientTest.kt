@@ -20,10 +20,10 @@ class PdfClientTest {
     fun `henter innvilget-pdf ved innvilgelse`() =
         runTest {
             val pdf =
-                pdfClient.createBrevPdf(
+                pdfClient.createDokumentPdf(
                     mottakerFodselsnummer = testPersonident,
                     mottakerNavn = "Ola Nordmann",
-                    brevtype = Brevtype.VEDTAK_INNVILGET,
+                    dokumenttype = Brevtype.VEDTAK_INNVILGET,
                     documentComponents = brevDocument,
                 )
 
@@ -34,10 +34,10 @@ class PdfClientTest {
     fun `henter delvis-innvilget-pdf ved delvis innvilgelse`() =
         runTest {
             val pdf =
-                pdfClient.createBrevPdf(
+                pdfClient.createDokumentPdf(
                     mottakerFodselsnummer = testPersonident,
                     mottakerNavn = "Ola Nordmann",
-                    brevtype = Brevtype.VEDTAK_DELVIS_INNVILGET,
+                    dokumenttype = Brevtype.VEDTAK_DELVIS_INNVILGET,
                     documentComponents = brevDocument,
                 )
 
@@ -48,10 +48,10 @@ class PdfClientTest {
     fun `henter avslag-pdf ved avslag`() =
         runTest {
             val pdf =
-                pdfClient.createBrevPdf(
+                pdfClient.createDokumentPdf(
                     mottakerFodselsnummer = testPersonident,
                     mottakerNavn = "Ola Nordmann",
-                    brevtype = Brevtype.VEDTAK_AVSLAG,
+                    dokumenttype = Brevtype.VEDTAK_AVSLAG,
                     documentComponents = brevDocument,
                 )
 
@@ -62,10 +62,10 @@ class PdfClientTest {
     fun `henter henlagt-pdf ved henleggelse`() =
         runTest {
             val pdf =
-                pdfClient.createBrevPdf(
+                pdfClient.createDokumentPdf(
                     mottakerFodselsnummer = testPersonident,
                     mottakerNavn = "Ola Nordmann",
-                    brevtype = Brevtype.HENLEGGELSE,
+                    dokumenttype = Brevtype.HENLEGGELSE,
                     documentComponents = brevDocument,
                 )
 

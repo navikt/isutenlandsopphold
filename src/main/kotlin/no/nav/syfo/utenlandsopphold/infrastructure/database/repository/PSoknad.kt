@@ -6,8 +6,8 @@ import no.nav.syfo.common.types.ident.Navident
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.common.util.configuredJacksonMapper
 import no.nav.syfo.utenlandsopphold.domain.Behandling
-import no.nav.syfo.utenlandsopphold.domain.Brev
-import no.nav.syfo.utenlandsopphold.domain.Brevtype
+import no.nav.syfo.utenlandsopphold.domain.Dokument
+import no.nav.syfo.utenlandsopphold.domain.Dokumenttype
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
@@ -28,7 +28,7 @@ data class PSoknad(
         soktePerioder: List<PSoknadPeriode>,
         behandling: PBehandling?,
         behandlingPerioder: List<PBehandlingPeriode>,
-        brev: PBrev?,
+        dokument: PDokument?,
     ): Soknad =
         Soknad(
             id = uuid,
@@ -39,9 +39,9 @@ data class PSoknad(
             behandling =
                 behandling?.toBehandling(
                     innvilgedePerioder = behandlingPerioder.map { it.toPeriode() },
-                    brev =
-                        checkNotNull(brev) {
-                            "Behandling ${behandling.uuid} mangler brev"
+                    dokument =
+                        checkNotNull(dokument) {
+                            "Behandling ${behandling.uuid} mangler dokument"
                         },
                 ),
         )
@@ -77,7 +77,7 @@ data class PBehandling(
 ) {
     fun toBehandling(
         innvilgedePerioder: List<Periode>,
-        brev: PBrev,
+        dokument: PDokument,
     ): Behandling =
         Behandling(
             behandlingId = uuid,
@@ -86,26 +86,26 @@ data class PBehandling(
             behandletTidspunkt = behandletTidspunkt,
             innvilgedePerioder = innvilgedePerioder,
             begrunnelse = begrunnelse,
-            brev = brev.toBrev(),
+            dokument = dokument.toDokument(),
         )
 }
 
-data class PBrev(
+data class PDokument(
     val id: Int,
     val uuid: UUID,
     val createdAt: OffsetDateTime,
     val behandlingId: Int,
-    val brevtype: String,
-    val document: String,
+    val dokumenttype: String,
+    val innhold: String,
     val journalpostId: String?,
     val journalfortTidspunkt: OffsetDateTime?,
     val distribuertTidspunkt: OffsetDateTime?,
 ) {
-    fun toBrev(): Brev =
-        Brev(
+    fun toDokument(): Dokument =
+        Dokument(
+            brevtype = dokumenttype.toDokumenttype(),
+            document = innhold.toDocumentComponents(),
             brevId = uuid,
-            brevtype = brevtype.toBrevtype(),
-            document = document.toDocumentComponents(),
             journalpostId = journalpostId?.let { JournalpostId(it) },
             journalfortTidspunkt = journalfortTidspunkt,
             distribuertTidspunkt = distribuertTidspunkt,
@@ -135,8 +135,8 @@ private fun String.toUtfall(innvilgedePerioder: List<Periode>): Utfall =
         else -> throw IllegalStateException("Ukjent utfall lagret i database: $this")
     }
 
-fun Brevtype.dbValue(): String = name
+fun Dokumenttype.dbValue(): String = name
 
-private fun String.toBrevtype(): Brevtype =
-    Brevtype.entries.firstOrNull { it.name == this }
-        ?: throw IllegalStateException("Ukjent brevtype lagret i database: $this")
+private fun String.toDokumenttype(): Dokumenttype =
+    Dokumenttype.entries.firstOrNull { it.name == this }
+        ?: throw IllegalStateException("Ukjent dokumenttype lagret i database: $this")

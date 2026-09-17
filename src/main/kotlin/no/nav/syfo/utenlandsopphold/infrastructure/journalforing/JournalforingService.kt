@@ -14,7 +14,7 @@ import no.nav.syfo.utenlandsopphold.application.JournalforingDokumenttype
 import org.slf4j.LoggerFactory
 
 /**
- * Journalfører PDF-en for et brev i dokarkiv (Joark). `dokarkivClient` og
+ * Journalfører PDF-en for et dokument i dokarkiv (Joark). `dokarkivClient` og
  * `isJournalforingRetryEnabled` (true i prod, false i dev-gcp) kobles inn fra
  * infrastructure/clients/ClientsModule.kt basert på Environment.
  */

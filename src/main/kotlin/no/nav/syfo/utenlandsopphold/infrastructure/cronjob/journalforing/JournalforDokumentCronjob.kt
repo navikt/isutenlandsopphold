@@ -1,6 +1,6 @@
 package no.nav.syfo.utenlandsopphold.infrastructure.cronjob.journalforing
 
-import no.nav.syfo.utenlandsopphold.application.BrevService
+import no.nav.syfo.utenlandsopphold.application.DokumentService
 import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.Cronjob
 
 /**
@@ -8,13 +8,13 @@ import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.Cronjob
  *
  * Journalføring og distribusjon slås sammen i én cronjob (i motsetning til f.eks. journalføring
  * og publisering som separate jobber), fordi distribusjon alltid forutsetter en vellykket
- * journalføring av samme brev, se [no.nav.syfo.utenlandsopphold.domain.Brev.distribuer].
+ * journalføring av samme dokument, se [no.nav.syfo.utenlandsopphold.domain.Dokument.distribuer].
  * Selve leder-valget og planlegging av kjøringer håndteres generisk av [CronjobRunner].
  */
-class JournalforBrevCronjob(
-    private val brevService: BrevService,
+class JournalforDokumentCronjob(
+    private val dokumentService: DokumentService,
     override val initialDelayMinutes: Long,
     override val intervalDelayMinutes: Long,
 ) : Cronjob {
-    override suspend fun run() = brevService.journalforBrev() + brevService.distribuerBrev()
+    override suspend fun run() = dokumentService.journalforDokument() + dokumentService.distribuerDokument()
 }

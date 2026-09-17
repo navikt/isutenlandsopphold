@@ -15,7 +15,7 @@ val PDF_AVSLAG_BYTES = "pdf-avslag".toByteArray()
 val PDF_HENLAGT_BYTES = "pdf-henlagt".toByteArray()
 
 /**
- * Mock-handler for ispdfgen. Ruter på path slik at ulike brevtyper (innvilget, delvis
+ * Mock-handler for ispdfgen. Ruter på path slik at ulike dokumenttyper (innvilget, delvis
  * innvilget, avslag, henlagt) gir hver sin PDF, i tråd med [PdfClient] sin utfall-baserte URL-velging.
  */
 fun MockRequestHandleScope.mockPdfgenRequestHandler(request: HttpRequestData): HttpResponseData {

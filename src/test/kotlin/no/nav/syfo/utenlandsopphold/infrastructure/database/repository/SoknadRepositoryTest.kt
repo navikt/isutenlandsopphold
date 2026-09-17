@@ -147,7 +147,7 @@ class SoknadRepositoryTest {
         assertEquals(behandling.behandletAv, oppdatertSoknad.behandling?.behandletAv)
         assertEquals(behandling.behandletTidspunkt, oppdatertSoknad.behandling?.behandletTidspunkt)
         assertEquals(soktePerioder, oppdatertSoknad.behandling?.innvilgedePerioder)
-        assertEquals(behandling.brev.document, oppdatertSoknad.behandling?.brev?.document)
+        assertEquals(behandling.dokument.document, oppdatertSoknad.behandling?.dokument?.document)
     }
 
     @Test
@@ -189,8 +189,8 @@ class SoknadRepositoryTest {
         // skal ikke ha lagt igjen et foreldreløst brev.
         val hentetPaNytt = repository.hentSoknader(personident).single()
         assertEquals(forsteBehandling.behandlingId, hentetPaNytt.behandling?.behandlingId)
-        assertEquals(forsteBehandling.brev.brevId, hentetPaNytt.behandling?.brev?.brevId)
-        assertEquals(1, countRows("BREV"))
+        assertEquals(forsteBehandling.dokument.brevId, hentetPaNytt.behandling?.dokument?.brevId)
+        assertEquals(1, countRows("DOKUMENT"))
         assertEquals(1, countRows("BEHANDLING"))
     }
 
@@ -329,7 +329,7 @@ class SoknadRepositoryTest {
             ikkeJournalforte
                 .single()
                 .behandling
-                ?.brev
+                ?.dokument
                 ?.erJournalfort,
         )
     }
@@ -357,13 +357,13 @@ class SoknadRepositoryTest {
 
         val behandling = soknad.behandling
         assertEquals(opprettet.behandlingUuid, behandling?.behandlingId)
-        assertEquals(opprettet.brevUuid, behandling?.brev?.brevId)
-        assertEquals(Brevtype.VEDTAK_INNVILGET, behandling?.brev?.brevtype)
-        assertEquals(1, behandling?.brev?.document?.size)
+        assertEquals(opprettet.brevUuid, behandling?.dokument?.brevId)
+        assertEquals(Brevtype.VEDTAK_INNVILGET, behandling?.dokument?.brevtype)
+        assertEquals(1, behandling?.dokument?.document?.size)
         assertEquals(
             "Tittel",
             behandling
-                ?.brev
+                ?.dokument
                 ?.document
                 ?.first()
                 ?.title,
@@ -383,10 +383,10 @@ class SoknadRepositoryTest {
         assertTrue(repository.getIkkeJournalforteSoknader(behandletBefore = etterAlleTestBehandlinger).isEmpty())
         val brev =
             repository
-                .getSoknaderMedIkkeDistribuerteBrev(behandletBefore = etterAlleTestBehandlinger)
+                .getSoknaderMedIkkeDistribuerteDokumenter(behandletBefore = etterAlleTestBehandlinger)
                 .single()
                 .behandling
-                ?.brev
+                ?.dokument
         assertEquals(journalpostId, brev?.journalpostId)
         // Databasen returnerer tidspunktet i UTC, så sammenlign øyeblikk og ikke offset.
         assertEquals(journalfortTidspunkt.toInstant(), brev?.journalfortTidspunkt?.toInstant())
@@ -398,10 +398,10 @@ class SoknadRepositoryTest {
         opprettBehandletSoknad(journalpostId = "111", distribuertTidspunkt = null)
         opprettBehandletSoknad(journalpostId = "222", distribuertTidspunkt = OffsetDateTime.now())
 
-        val ikkeDistribuerte = repository.getSoknaderMedIkkeDistribuerteBrev(behandletBefore = etterAlleTestBehandlinger)
+        val ikkeDistribuerte = repository.getSoknaderMedIkkeDistribuerteDokumenter(behandletBefore = etterAlleTestBehandlinger)
 
         assertEquals(1, ikkeDistribuerte.size)
-        val brev = ikkeDistribuerte.single().behandling?.brev
+        val brev = ikkeDistribuerte.single().behandling?.dokument
         assertEquals(true, brev?.erJournalfort)
         assertEquals(false, brev?.erDistribuert)
     }
@@ -416,8 +416,8 @@ class SoknadRepositoryTest {
 
         val foerBehandletTidspunkt = OffsetDateTime.parse("2026-04-01T00:00:00Z")
 
-        assertTrue(repository.getSoknaderMedIkkeDistribuerteBrev(behandletBefore = foerBehandletTidspunkt).isEmpty())
-        assertEquals(1, repository.getSoknaderMedIkkeDistribuerteBrev(behandletBefore = etterAlleTestBehandlinger).size)
+        assertTrue(repository.getSoknaderMedIkkeDistribuerteDokumenter(behandletBefore = foerBehandletTidspunkt).isEmpty())
+        assertEquals(1, repository.getSoknaderMedIkkeDistribuerteDokumenter(behandletBefore = etterAlleTestBehandlinger).size)
     }
 
     @Test
@@ -427,7 +427,7 @@ class SoknadRepositoryTest {
 
         repository.setBrevDistribuert(opprettet.brevUuid, distribuertTidspunkt)
 
-        assertTrue(repository.getSoknaderMedIkkeDistribuerteBrev(behandletBefore = etterAlleTestBehandlinger).isEmpty())
+        assertTrue(repository.getSoknaderMedIkkeDistribuerteDokumenter(behandletBefore = etterAlleTestBehandlinger).isEmpty())
     }
 
     @Test
@@ -576,11 +576,11 @@ class SoknadRepositoryTest {
             connection
                 .prepareStatement(
                     """
-                    INSERT INTO BREV (
+                    INSERT INTO DOKUMENT (
                         uuid,
                         behandling_id,
-                        brevtype,
-                        document,
+                        dokumenttype,
+                        innhold,
                         journalpost_id,
                         journalfort_tidspunkt,
                         distribuert_tidspunkt
@@ -630,7 +630,7 @@ class SoknadRepositoryTest {
             behandletTidspunkt = OffsetDateTime.parse("2026-03-05T10:00:00Z"),
             innvilgedePerioder = innvilgedePerioder,
             begrunnelse = begrunnelse,
-            brev =
+            dokument =
                 Brev(
                     brevtype = utfall.brevtype(),
                     document =

@@ -6,9 +6,12 @@ import no.nav.syfo.utenlandsopphold.application.ISoknadRepository
 import no.nav.syfo.utenlandsopphold.application.LagreMottattSoknadResultat
 import no.nav.syfo.utenlandsopphold.application.Transaction
 import no.nav.syfo.utenlandsopphold.domain.Behandling
-import no.nav.syfo.utenlandsopphold.domain.Brev
+import no.nav.syfo.utenlandsopphold.domain.Dokument
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
+import no.nav.syfo.utenlandsopphold.domain.dokumentId
+import no.nav.syfo.utenlandsopphold.domain.dokumenttype
+import no.nav.syfo.utenlandsopphold.domain.innhold
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
 import no.nav.syfo.utenlandsopphold.infrastructure.database.jdbcConnection
 import no.nav.syfo.utenlandsopphold.infrastructure.database.toList
@@ -89,34 +92,34 @@ class SoknadRepository(
         }
 
     override fun setBrevJournalfort(
-        brevId: UUID,
+        dokumentId: UUID,
         journalpostId: JournalpostId,
         journalfortTidspunkt: OffsetDateTime,
     ) {
         withConnection { connection ->
-            connection.prepareStatement(SET_BREV_JOURNALFORT).use {
+            connection.prepareStatement(SET_DOKUMENT_JOURNALFORT).use {
                 it.setString(1, journalpostId.value)
                 it.setObject(2, journalfortTidspunkt)
-                it.setObject(3, brevId)
+                it.setObject(3, dokumentId)
                 it.executeUpdate()
             }
         }
     }
 
-    override fun getSoknaderMedIkkeDistribuerteBrev(behandletBefore: OffsetDateTime): List<Soknad> =
+    override fun getSoknaderMedIkkeDistribuerteDokumenter(behandletBefore: OffsetDateTime): List<Soknad> =
         withConnection(Connection.TRANSACTION_REPEATABLE_READ) { connection ->
             val pSoknader = connection.getSoknaderMedIkkeDistribuerteBrev(behandletBefore)
             connection.toSoknader(pSoknader)
         }
 
     override fun setBrevDistribuert(
-        brevId: UUID,
+        dokumentId: UUID,
         distribuertTidspunkt: OffsetDateTime,
     ) {
         withConnection { connection ->
-            connection.prepareStatement(SET_BREV_DISTRIBUERT).use {
+            connection.prepareStatement(SET_DOKUMENT_DISTRIBUERT).use {
                 it.setObject(1, distribuertTidspunkt)
-                it.setObject(2, brevId)
+                it.setObject(2, dokumentId)
                 it.executeUpdate()
             }
         }
@@ -181,7 +184,7 @@ class SoknadRepository(
         val behandlingIds = behandlingPerSoknad.values.map { it.id }
         val behandlingPerioderPerBehandling =
             getBehandlingPerioder(behandlingIds).groupBy { it.behandlingId }
-        val brevPerBehandling = getBrev(behandlingIds).associateBy { it.behandlingId }
+        val dokumentPerBehandling = getDokumenter(behandlingIds).associateBy { it.behandlingId }
 
         return pSoknader.map { pSoknad ->
             val pBehandling = behandlingPerSoknad[pSoknad.id]
@@ -189,7 +192,7 @@ class SoknadRepository(
                 soktePerioder = perioderPerSoknad[pSoknad.id].orEmpty(),
                 behandling = pBehandling,
                 behandlingPerioder = pBehandling?.let { behandlingPerioderPerBehandling[it.id] }.orEmpty(),
-                brev = pBehandling?.let { brevPerBehandling[it.id] },
+                dokument = pBehandling?.let { dokumentPerBehandling[it.id] },
             )
         }
     }
@@ -255,12 +258,12 @@ class SoknadRepository(
         }
     }
 
-    private fun Connection.getBrev(behandlingIds: List<Int>): List<PBrev> {
+    private fun Connection.getDokumenter(behandlingIds: List<Int>): List<PDokument> {
         if (behandlingIds.isEmpty()) return emptyList()
 
-        return prepareStatement(GET_BREV).use {
+        return prepareStatement(GET_DOKUMENTER).use {
             it.setArray(1, createArrayOf("integer", behandlingIds.toTypedArray()))
-            it.executeQuery().toList { toPBrev() }
+            it.executeQuery().toList { toPDokument() }
         }
     }
 
@@ -307,7 +310,7 @@ class SoknadRepository(
                     ?: throw IllegalArgumentException("Fant ikke søknad med id $soknadId")
             }
         createBehandlingPerioder(pBehandling.id, behandling.innvilgedePerioder)
-        createBrev(pBehandling.id, behandling.brev)
+        createDokument(pBehandling.id, behandling.dokument)
     }
 
     private fun Connection.createBehandlingPerioder(
@@ -324,23 +327,23 @@ class SoknadRepository(
         }
     }
 
-    private fun Connection.createBrev(
+    private fun Connection.createDokument(
         behandlingId: Int,
-        brev: Brev,
+        dokument: Dokument,
     ) {
         val documentJson =
             PGobject().apply {
                 type = "jsonb"
-                value = brev.document.serializeToJson()
+                value = dokument.innhold.serializeToJson()
             }
-        prepareStatement(CREATE_BREV).use {
-            it.setObject(1, brev.brevId)
+        prepareStatement(CREATE_DOKUMENT).use {
+            it.setObject(1, dokument.dokumentId)
             it.setInt(2, behandlingId)
-            it.setString(3, brev.brevtype.dbValue())
+            it.setString(3, dokument.dokumenttype.dbValue())
             it.setObject(4, documentJson)
-            it.setString(5, brev.journalpostId?.value)
-            it.setObject(6, brev.journalfortTidspunkt)
-            it.setObject(7, brev.distribuertTidspunkt)
+            it.setString(5, dokument.journalpostId?.value)
+            it.setObject(6, dokument.journalfortTidspunkt)
+            it.setObject(7, dokument.distribuertTidspunkt)
             it.executeUpdate()
         }
     }
@@ -375,16 +378,16 @@ class SoknadRepository(
             """
                 SELECT DISTINCT s.* FROM soknad s
                     INNER JOIN behandling b ON b.soknad_id = s.id
-                    INNER JOIN brev br ON br.behandling_id = b.id
-                WHERE br.journalpost_id IS NULL AND b.behandlet_tidspunkt < ?
+                    INNER JOIN dokument d ON d.behandling_id = b.id
+                WHERE d.journalpost_id IS NULL AND b.behandlet_tidspunkt < ?
             """
 
         private const val GET_IKKE_DISTRIBUERTE_SOKNADER =
             """
                 SELECT DISTINCT s.* FROM soknad s
                     INNER JOIN behandling b ON b.soknad_id = s.id
-                    INNER JOIN brev br ON br.behandling_id = b.id
-                WHERE br.journalpost_id IS NOT NULL AND br.distribuert_tidspunkt IS NULL
+                    INNER JOIN dokument d ON d.behandling_id = b.id
+                WHERE d.journalpost_id IS NOT NULL AND d.distribuert_tidspunkt IS NULL
                     AND b.behandlet_tidspunkt < ?
             """
 
@@ -400,16 +403,16 @@ class SoknadRepository(
                 WHERE b.behandling_published_at IS NULL AND s.soknad_published_at IS NOT NULL
             """
 
-        private const val SET_BREV_JOURNALFORT =
+        private const val SET_DOKUMENT_JOURNALFORT =
             """
-                UPDATE brev
+                UPDATE dokument
                 SET journalpost_id = ?, journalfort_tidspunkt = ?
                 WHERE uuid = ?
             """
 
-        private const val SET_BREV_DISTRIBUERT =
+        private const val SET_DOKUMENT_DISTRIBUERT =
             """
-                UPDATE brev
+                UPDATE dokument
                 SET distribuert_tidspunkt = ?
                 WHERE uuid = ?
             """
@@ -433,9 +436,9 @@ class SoknadRepository(
                 SELECT * FROM vedtak_periode WHERE behandling_id = ANY(?) ORDER BY fom ASC
             """
 
-        private const val GET_BREV =
+        private const val GET_DOKUMENTER =
             """
-                SELECT * FROM brev WHERE behandling_id = ANY(?)
+                SELECT * FROM dokument WHERE behandling_id = ANY(?)
             """
 
         private const val CREATE_SOKNAD =
@@ -485,13 +488,13 @@ class SoknadRepository(
                 ) VALUES (?, ?, ?)
             """
 
-        private const val CREATE_BREV =
+        private const val CREATE_DOKUMENT =
             """
-                INSERT INTO brev (
+                INSERT INTO dokument (
                     uuid,
                     behandling_id,
-                    brevtype,
-                    document,
+                    dokumenttype,
+                    innhold,
                     journalpost_id,
                     journalfort_tidspunkt,
                     distribuert_tidspunkt
@@ -538,14 +541,14 @@ internal fun ResultSet.toPBehandling(): PBehandling =
         begrunnelse = getString("begrunnelse"),
     )
 
-internal fun ResultSet.toPBrev(): PBrev =
-    PBrev(
+internal fun ResultSet.toPDokument(): PDokument =
+    PDokument(
         id = getInt("id"),
         uuid = getObject("uuid", UUID::class.java),
         createdAt = getObject("created_at", OffsetDateTime::class.java),
         behandlingId = getInt("behandling_id"),
-        brevtype = getString("brevtype"),
-        document = getString("document"),
+        dokumenttype = getString("dokumenttype"),
+        innhold = getString("innhold"),
         journalpostId = getString("journalpost_id"),
         journalfortTidspunkt = getObject("journalfort_tidspunkt", OffsetDateTime::class.java),
         distribuertTidspunkt = getObject("distribuert_tidspunkt", OffsetDateTime::class.java),

@@ -10,7 +10,7 @@ import io.ktor.http.contentType
 import no.nav.syfo.common.http.defaultHttpClient
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.application.IPdfClient
-import no.nav.syfo.utenlandsopphold.domain.Brevtype
+import no.nav.syfo.utenlandsopphold.domain.Dokumenttype
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.sanitizeForPdfGen
 import java.time.LocalDate
@@ -28,10 +28,10 @@ class PdfClient(
     private val config: PdfClientConfig,
     private val httpClient: HttpClient = defaultHttpClient(),
 ) : IPdfClient {
-    override suspend fun createBrevPdf(
+    override suspend fun createDokumentPdf(
         mottakerFodselsnummer: Personident,
         mottakerNavn: String,
-        brevtype: Brevtype,
+        dokumenttype: Dokumenttype,
         documentComponents: List<DocumentComponent>,
         datoSendt: LocalDate,
     ): ByteArray {
@@ -42,7 +42,7 @@ class PdfClient(
                 documentComponents = documentComponents.sanitizeForPdfGen(),
                 datoSendt = datoSendt,
             )
-        val url = getBrevPdfUrl(brevtype)
+        val url = getBrevPdfUrl(dokumenttype)
 
         val response =
             httpClient.post(url) {
@@ -54,12 +54,12 @@ class PdfClient(
         return response.body()
     }
 
-    private fun getBrevPdfUrl(brevtype: Brevtype): String =
-        when (brevtype) {
-            Brevtype.VEDTAK_INNVILGET -> "${config.baseUrl}$VEDTAK_INNVILGET_PDF_PATH"
-            Brevtype.VEDTAK_DELVIS_INNVILGET -> "${config.baseUrl}$VEDTAK_DELVIS_INNVILGET_PDF_PATH"
-            Brevtype.VEDTAK_AVSLAG -> "${config.baseUrl}$VEDTAK_AVSLAG_PDF_PATH"
-            Brevtype.HENLEGGELSE -> "${config.baseUrl}$HENLEGGELSE_PDF_PATH"
+    private fun getBrevPdfUrl(dokumenttype: Dokumenttype): String =
+        when (dokumenttype) {
+            Dokumenttype.VEDTAK_INNVILGET -> "${config.baseUrl}$VEDTAK_INNVILGET_PDF_PATH"
+            Dokumenttype.VEDTAK_DELVIS_INNVILGET -> "${config.baseUrl}$VEDTAK_DELVIS_INNVILGET_PDF_PATH"
+            Dokumenttype.VEDTAK_AVSLAG -> "${config.baseUrl}$VEDTAK_AVSLAG_PDF_PATH"
+            Dokumenttype.HENLEGGELSE -> "${config.baseUrl}$HENLEGGELSE_PDF_PATH"
         }
 
     companion object {

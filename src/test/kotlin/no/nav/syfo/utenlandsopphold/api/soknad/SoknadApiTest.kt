@@ -22,7 +22,7 @@ import no.nav.syfo.common.util.applyCommonJacksonConfig
 import no.nav.syfo.utenlandsopphold.UserConstants
 import no.nav.syfo.utenlandsopphold.api.apiModule
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
-import no.nav.syfo.utenlandsopphold.application.BrevService
+import no.nav.syfo.utenlandsopphold.application.DokumentService
 import no.nav.syfo.utenlandsopphold.application.IDistribusjonService
 import no.nav.syfo.utenlandsopphold.application.IJournalforingService
 import no.nav.syfo.utenlandsopphold.application.IPdfClient
@@ -58,7 +58,7 @@ const val SOKNAD_VEDTAK_PATH = "/api/v1/soknader/%s/vedtak"
 
 class SoknadApiTest {
     private val repository = mockk<ISoknadRepository>()
-    private val brevServiceMock = mockk<BrevService>(relaxed = true)
+    private val dokumentServiceMock = mockk<DokumentService>(relaxed = true)
 
     @BeforeEach
     fun resetMocks() {
@@ -88,13 +88,13 @@ class SoknadApiTest {
 
     private fun ApplicationTestBuilder.setupApiAndClient(
         tilgangskontrollClient: TilgangskontrollClient = mockTilgangskontrollClient(),
-        brevService: BrevService = brevServiceMock,
+        dokumentService: DokumentService = dokumentServiceMock,
     ): HttpClient {
         val soknadService =
             SoknadService(
                 soknadRepository = repository,
                 transactionManager = TestTransactionManager,
-                brevService = brevService,
+                dokumentService = dokumentService,
             )
         application {
             apiModule(
@@ -704,22 +704,22 @@ class SoknadApiTest {
             val journalforingServiceMock = mockk<IJournalforingService>()
             val distribusjonServiceMock = mockk<IDistribusjonService>()
             coEvery { pdlClientMock.getNavn(personident) } returns "Ola Nordmann"
-            coEvery { pdfClientMock.createBrevPdf(personident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
+            coEvery { pdfClientMock.createDokumentPdf(personident, any(), any(), any()) } returns byteArrayOf(1, 2, 3)
             coEvery { journalforingServiceMock.journalfor(personident, any(), any(), any()) } returns
                 Result.success(JournalpostId("999"))
             coEvery { distribusjonServiceMock.distribuer(any(), any()) } returns Result.success("bestilling-1")
             every { repository.setBrevJournalfort(any(), any(), any()) } returns Unit
             every { repository.setBrevDistribuert(any(), any()) } returns Unit
 
-            val brevService =
-                BrevService(
+            val dokumentService =
+                DokumentService(
                     soknadRepository = repository,
                     personInfoClient = pdlClientMock,
                     pdfClient = pdfClientMock,
                     journalforingService = journalforingServiceMock,
                     distribusjonService = distribusjonServiceMock,
                 )
-            val client = setupApiAndClient(brevService = brevService)
+            val client = setupApiAndClient(dokumentService = dokumentService)
 
             val response =
                 client.post(SOKNAD_VEDTAK_PATH.format(soknadId.toString())) {
@@ -754,7 +754,7 @@ class SoknadApiTest {
                             behandletAv = Navident(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG),
                             behandletTidspunkt = OffsetDateTime.parse("2026-03-02T09:00:00Z"),
                             innvilgedePerioder = innvilgedePerioder,
-                            brev =
+                            dokument =
                                 Brev(
                                     brevtype = Brevtype.VEDTAK_INNVILGET,
                                     document = validSoknadVedtakPostDTO().document,

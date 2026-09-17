@@ -42,7 +42,7 @@ data class Soknad(
     }
 
     /**
-     * Registrerer resultatet av å behandle søknaden, sammen med brevet som skal sendes.
+     * Registrerer resultatet av å behandle søknaden, sammen med dokumentet som skal sendes.
      * En søknad kan i dag kun behandles én gang.
      */
     fun behandle(
@@ -85,33 +85,33 @@ data class Soknad(
                     behandletTidspunkt = now,
                     innvilgedePerioder = innvilgedePerioder,
                     begrunnelse = begrunnelse,
-                    brev =
-                        Brev(
-                            brevtype = utfall.brevtype(),
+                    dokument =
+                        Dokument(
+                            brevtype = utfall.dokumenttype(),
                             document = document,
                         ),
                 ),
         )
     }
 
-    fun journalforBrev(
+    fun journalforDokument(
         journalpostId: JournalpostId,
         now: OffsetDateTime,
     ): Soknad {
         val gjeldendeBehandling =
             checkNotNull(behandling) {
-                "Kan ikke journalføre brev for en søknad som ikke er behandlet"
+                "Kan ikke journalføre dokument for en søknad som ikke er behandlet"
             }
 
-        return copy(behandling = gjeldendeBehandling.journalforBrev(journalpostId, now))
+        return copy(behandling = gjeldendeBehandling.journalforDokument(journalpostId, now))
     }
 
-    fun distribuerBrev(now: OffsetDateTime): Soknad {
+    fun distribuerDokument(now: OffsetDateTime): Soknad {
         val gjeldendeBehandling =
             checkNotNull(behandling) {
-                "Kan ikke distribuere brev for en søknad som ikke er behandlet"
+                "Kan ikke distribuere dokument for en søknad som ikke er behandlet"
             }
 
-        return copy(behandling = gjeldendeBehandling.distribuerBrev(now))
+        return copy(behandling = gjeldendeBehandling.distribuerDokument(now))
     }
 }

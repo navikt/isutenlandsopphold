@@ -1,9 +1,9 @@
--- Skiller VEDTAK i BEHANDLING (hva saksbehandler bestemte) og BREV (hva som ble sendt ut).
+-- Skiller VEDTAK i BEHANDLING (hva saksbehandler bestemte) og DOKUMENT (hva som ble sendt ut).
 --
 -- Tabellene døpes om i stedet for å kopieres, slik at interne id-er, uuid-er og
--- fremmednøkler bevares. Brev arver uuid fra det gamle vedtaket, fordi denne verdien
+-- fremmednøkler bevares. Dokumentet arver uuid fra det gamle vedtaket, fordi denne verdien
 -- brukes som eksternReferanseId mot dokarkiv — deduplisering av allerede journalførte
--- brev er avhengig av at den er uendret.
+-- dokument-id-en er avhengig av at den er uendret.
 --
 -- VEDTAK_PERIODE beholder navnet sitt med vilje: perioder hører kun til utfall som er
 -- vedtak, ikke til enhver behandling. Fremmednøkkelen følger automatisk med når VEDTAK
@@ -22,34 +22,34 @@ ALTER TABLE BEHANDLING RENAME CONSTRAINT unique_vedtak_soknad_id TO unique_behan
 ALTER INDEX idx_vedtak_soknad_id RENAME TO idx_behandling_soknad_id;
 ALTER INDEX idx_vedtak_periode_vedtak_id RENAME TO idx_vedtak_periode_behandling_id;
 
-CREATE TABLE BREV
+CREATE TABLE DOKUMENT
 (
     id                    INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     uuid                  UUID        NOT NULL UNIQUE,
     behandling_id         INT         NOT NULL UNIQUE REFERENCES BEHANDLING (id) ON DELETE CASCADE,
-    brevtype              VARCHAR(50) NOT NULL,
-    document              JSONB       NOT NULL,
+    dokumenttype          VARCHAR(50) NOT NULL,
+    innhold               JSONB       NOT NULL,
     journalpost_id        VARCHAR(50),
     journalfort_tidspunkt TIMESTAMPTZ,
     distribuert_tidspunkt TIMESTAMPTZ,
     created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT check_brev_brevtype CHECK (
-        brevtype IN ('VEDTAK_INNVILGET', 'VEDTAK_DELVIS_INNVILGET', 'VEDTAK_AVSLAG', 'HENLEGGELSE')
+    CONSTRAINT check_dokument_dokumenttype CHECK (
+        dokumenttype IN ('VEDTAK_INNVILGET', 'VEDTAK_DELVIS_INNVILGET', 'VEDTAK_AVSLAG', 'HENLEGGELSE')
         ),
     -- Journalpost-id og journalføringstidspunkt settes alltid sammen, og distribusjon
-    -- kan ikke skje før brevet er journalført.
-    CONSTRAINT check_brev_journalfort CHECK ((journalpost_id IS NULL) = (journalfort_tidspunkt IS NULL)),
-    CONSTRAINT check_brev_distribuert CHECK (distribuert_tidspunkt IS NULL OR journalpost_id IS NOT NULL)
+    -- kan ikke skje før dokumentet er journalført.
+    CONSTRAINT check_dokument_journalfort CHECK ((journalpost_id IS NULL) = (journalfort_tidspunkt IS NULL)),
+    CONSTRAINT check_dokument_distribuert CHECK (distribuert_tidspunkt IS NULL OR journalpost_id IS NOT NULL)
 );
 
-INSERT INTO BREV (uuid,
-                  behandling_id,
-                  brevtype,
-                  document,
-                  journalpost_id,
-                  journalfort_tidspunkt,
-                  distribuert_tidspunkt,
-                  created_at)
+INSERT INTO DOKUMENT (uuid,
+                      behandling_id,
+                      dokumenttype,
+                      innhold,
+                      journalpost_id,
+                      journalfort_tidspunkt,
+                      distribuert_tidspunkt,
+                      created_at)
 SELECT behandling.uuid,
        behandling.id,
        CASE behandling.utfall
@@ -69,13 +69,13 @@ DO $$
     DECLARE avvik BIGINT;
     BEGIN
         SELECT count(*) INTO avvik
-        FROM BEHANDLING b JOIN BREV br ON br.behandling_id = b.id
-        WHERE b.document              IS DISTINCT FROM br.document
-           OR b.journalpost_id        IS DISTINCT FROM br.journalpost_id
-           OR b.journalfort_tidspunkt IS DISTINCT FROM br.journalfort_tidspunkt
-           OR b.distribuert_tidspunkt IS DISTINCT FROM br.distribuert_tidspunkt;
-        IF avvik > 0 OR (SELECT count(*) FROM BEHANDLING) <> (SELECT count(*) FROM BREV) THEN
-            RAISE EXCEPTION 'Avbryter: % brev avviker fra behandlingen', avvik;
+        FROM BEHANDLING b JOIN DOKUMENT d ON d.behandling_id = b.id
+        WHERE b.document              IS DISTINCT FROM d.innhold
+           OR b.journalpost_id        IS DISTINCT FROM d.journalpost_id
+           OR b.journalfort_tidspunkt IS DISTINCT FROM d.journalfort_tidspunkt
+           OR b.distribuert_tidspunkt IS DISTINCT FROM d.distribuert_tidspunkt;
+        IF avvik > 0 OR (SELECT count(*) FROM BEHANDLING) <> (SELECT count(*) FROM DOKUMENT) THEN
+            RAISE EXCEPTION 'Avbryter: % dokumenter avviker fra behandlingen', avvik;
         END IF;
     END $$;
 

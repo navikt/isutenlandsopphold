@@ -5,6 +5,7 @@ import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.dokumentId
 import org.slf4j.LoggerFactory
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -12,7 +13,7 @@ import java.util.UUID
 class SoknadService(
     private val transactionManager: TransactionManager,
     private val soknadRepository: ISoknadRepository,
-    private val brevService: BrevService,
+    private val dokumentService: DokumentService,
 ) {
     fun hentSoknad(soknadId: UUID): Soknad? = soknadRepository.hentSoknad(soknadId)
 
@@ -56,11 +57,11 @@ class SoknadService(
     private fun journalforOgDistribuerAsync(behandletSoknad: Soknad) {
         launchAsyncTask {
             try {
-                val journalfortSoknad = brevService.journalforBrev(behandletSoknad)
-                brevService.distribuerBrev(journalfortSoknad)
+                val journalfortSoknad = dokumentService.journalforDokument(behandletSoknad)
+                dokumentService.distribuerDokument(journalfortSoknad)
             } catch (exception: Exception) {
                 log.error(
-                    "Feil ved umiddelbar journalføring/distribusjon av brev ${behandletSoknad.behandling?.brev?.brevId} for søknad ${behandletSoknad.id}",
+                    "Feil ved umiddelbar journalføring/distribusjon av dokument ${behandletSoknad.behandling?.dokument?.dokumentId} for søknad ${behandletSoknad.id}",
                     exception,
                 )
             }

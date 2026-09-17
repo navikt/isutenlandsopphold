@@ -48,7 +48,7 @@ internal fun lagBehandling(
         behandletTidspunkt = behandletTidspunkt,
         innvilgedePerioder = innvilgedePerioder,
         begrunnelse = begrunnelse,
-        brev = brev,
+        dokument = brev,
     )
 
 internal fun lagBrev(

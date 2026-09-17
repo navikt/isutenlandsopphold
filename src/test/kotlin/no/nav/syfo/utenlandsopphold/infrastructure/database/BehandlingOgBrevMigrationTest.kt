@@ -13,7 +13,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 /**
- * Verifiserer at V6_06 flytter eksisterende vedtak over i BEHANDLING og BREV uten å miste data,
+ * Verifiserer at V6_06 flytter eksisterende vedtak over i BEHANDLING og DOKUMENT uten å miste data,
  * og at brevet arver vedtakets uuid. Sistnevnte er kritisk: uuid-en brukes som
  * `eksternReferanseId` mot dokarkiv, og en ny verdi ville gjort at allerede journalførte brev
  * kunne bli journalført på nytt.
@@ -59,7 +59,7 @@ class BehandlingOgBrevMigrationTest {
         migrateTo("6.06")
 
         assertEquals(4, count("BEHANDLING"))
-        assertEquals(4, count("BREV"))
+        assertEquals(4, count("DOKUMENT"))
         assertEquals(4, count("VEDTAK_PERIODE"))
 
         assertBrev(behandlingUuid = innvilgetUuid, brevtype = "VEDTAK_INNVILGET", journalpostId = null, distribuert = false)
@@ -130,10 +130,14 @@ class BehandlingOgBrevMigrationTest {
             connection
                 .prepareStatement(
                     """
-                    SELECT brev.uuid, brev.brevtype, brev.journalpost_id, brev.journalfort_tidspunkt, brev.distribuert_tidspunkt,
-                           brev.document = ?::jsonb AS dokument_bevart
-                    FROM BREV brev
-                             JOIN BEHANDLING behandling ON behandling.id = brev.behandling_id
+                    SELECT dokument.uuid,
+                           dokument.dokumenttype,
+                           dokument.journalpost_id,
+                           dokument.journalfort_tidspunkt,
+                           dokument.distribuert_tidspunkt,
+                           dokument.innhold = ?::jsonb AS dokument_bevart
+                    FROM DOKUMENT dokument
+                             JOIN BEHANDLING behandling ON behandling.id = dokument.behandling_id
                     WHERE behandling.uuid = ?
                     """,
                 ).use { statement ->
@@ -142,7 +146,7 @@ class BehandlingOgBrevMigrationTest {
                     statement.executeQuery().use { rs ->
                         assertEquals(true, rs.next(), "Fant ingen brev for behandling $behandlingUuid")
                         assertEquals(behandlingUuid, rs.getObject("uuid", UUID::class.java))
-                        assertEquals(brevtype, rs.getString("brevtype"))
+                        assertEquals(brevtype, rs.getString("dokumenttype"))
                         assertEquals(true, rs.getBoolean("dokument_bevart"), "Dokumentet ble ikke bevart")
                         assertEquals(journalpostId, rs.getString("journalpost_id"))
                         if (journalpostId == null) {

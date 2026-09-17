@@ -40,16 +40,18 @@ sealed interface Utfall {
 }
 
 /**
- * Brevet et gitt utfall skal gi. Alle dagens utfall sender brev; når brevløse utfall
+ * Dokumentet et gitt utfall skal gi. Alle dagens utfall sender dokument; når dokumentløse utfall
  * (som «ikke aktuell») innføres, blir returtypen nullable.
  */
-fun Utfall.brevtype(): Brevtype =
+fun Utfall.dokumenttype(): Dokumenttype =
     when (this) {
-        Utfall.Innvilget -> Brevtype.VEDTAK_INNVILGET
-        is Utfall.DelvisInnvilget -> Brevtype.VEDTAK_DELVIS_INNVILGET
-        Utfall.Avslag -> Brevtype.VEDTAK_AVSLAG
-        Utfall.Henlagt -> Brevtype.HENLEGGELSE
+        Utfall.Innvilget -> Dokumenttype.VEDTAK_INNVILGET
+        is Utfall.DelvisInnvilget -> Dokumenttype.VEDTAK_DELVIS_INNVILGET
+        Utfall.Avslag -> Dokumenttype.VEDTAK_AVSLAG
+        Utfall.Henlagt -> Dokumenttype.HENLEGGELSE
     }
+
+fun Utfall.brevtype(): Dokumenttype = dokumenttype()
 
 /**
  * Et ferdig registrert resultat av å behandle en søknad — ikke en kladd eller en
@@ -63,7 +65,7 @@ data class Behandling(
     val behandletAv: Navident,
     val behandletTidspunkt: OffsetDateTime,
     val innvilgedePerioder: List<Periode>,
-    val brev: Brev,
+    val dokument: Dokument,
     val behandlingId: UUID = UUID.randomUUID(),
     val begrunnelse: String? = null,
 ) {
@@ -92,15 +94,22 @@ data class Behandling(
             }
         }
 
-        require(brev.brevtype == utfall.brevtype()) {
-            "Behandling $behandlingId med utfall $utfall må ha brev av type ${utfall.brevtype()}, men har ${brev.brevtype}"
+        require(dokument.dokumenttype == utfall.dokumenttype()) {
+            "Behandling $behandlingId med utfall $utfall må ha dokument av type ${utfall.dokumenttype()}, men har ${dokument.dokumenttype}"
         }
     }
+
+    fun journalforDokument(
+        journalpostId: JournalpostId,
+        tidspunkt: OffsetDateTime,
+    ): Behandling = copy(dokument = dokument.journalfor(journalpostId, tidspunkt))
+
+    fun distribuerDokument(tidspunkt: OffsetDateTime): Behandling = copy(dokument = dokument.distribuer(tidspunkt))
 
     fun journalforBrev(
         journalpostId: JournalpostId,
         tidspunkt: OffsetDateTime,
-    ): Behandling = copy(brev = brev.journalfor(journalpostId, tidspunkt))
+    ): Behandling = journalforDokument(journalpostId, tidspunkt)
 
-    fun distribuerBrev(tidspunkt: OffsetDateTime): Behandling = copy(brev = brev.distribuer(tidspunkt))
+    fun distribuerBrev(tidspunkt: OffsetDateTime): Behandling = distribuerDokument(tidspunkt)
 }
