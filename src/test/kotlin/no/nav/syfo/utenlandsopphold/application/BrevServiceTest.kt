@@ -16,8 +16,10 @@ import no.nav.syfo.utenlandsopphold.domain.Brevtype
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.VedtakOppretting
 import no.nav.syfo.utenlandsopphold.domain.brevDocument
 import no.nav.syfo.utenlandsopphold.domain.lagSoknad
+import no.nav.syfo.utenlandsopphold.domain.standardSoktePerioder
 import no.nav.syfo.utenlandsopphold.domain.veileder
 import org.junit.jupiter.api.BeforeEach
 import java.time.LocalDate
@@ -47,35 +49,41 @@ class BrevServiceTest {
         clearMocks(repositoryMock, pdlClientMock, pdfClientMock, journalforingServiceMock, distribusjonServiceMock)
     }
 
-    private fun behandletSoknad(utfall: Utfall = Utfall.Innvilget): Soknad {
+    private fun behandletSoknad(utfall: Utfall = Utfall.Innvilget(standardSoktePerioder)): Soknad {
         val now = OffsetDateTime.parse("2026-01-10T12:00:00Z")
-        val begrunnelse = if (utfall == Utfall.Innvilget) null else "begrunnelse"
 
         return when (utfall) {
             is Utfall.Vedtak ->
                 lagSoknad().fattVedtak(
-                    utfall = utfall,
+                    vedtakOppretting = utfall.somVedtakOppretting(),
                     behandletAv = veileder,
                     now = now,
                     document = brevDocument,
-                    begrunnelse = begrunnelse,
                 )
-            Utfall.Henlagt ->
+            is Utfall.Henlagt ->
                 lagSoknad().henlegg(
                     behandletAv = veileder,
                     now = now,
                     document = brevDocument,
-                    begrunnelse = begrunnelse,
+                    begrunnelse = utfall.begrunnelse,
                 )
             is Utfall.IkkeAktuell ->
                 error("Ikke aktuell gir ikke brev, og hører derfor ikke hjemme i BrevServiceTest")
         }
     }
 
+    /** Testene uttrykker seg i utfall. Vedtaksinputen er den samme informasjonen, snudd andre veien. */
+    private fun Utfall.Vedtak.somVedtakOppretting(): VedtakOppretting =
+        when (this) {
+            is Utfall.Innvilget -> VedtakOppretting.Innvilgelse
+            is Utfall.DelvisInnvilget -> VedtakOppretting.DelvisInnvilgelse(innvilgedePerioder, begrunnelse)
+            is Utfall.Avslag -> VedtakOppretting.Avslag(begrunnelse)
+        }
+
     @Test
     fun `journalfører og oppdaterer ikke-journalførte brev ved innvilgelse`() =
         runTest {
-            val soknad = behandletSoknad(utfall = Utfall.Innvilget)
+            val soknad = behandletSoknad(utfall = Utfall.Innvilget(standardSoktePerioder))
 
             every { repositoryMock.getIkkeJournalforteSoknader(any()) } returns listOf(soknad)
             every { repositoryMock.setBrevJournalfort(any(), any(), any()) } just Runs
@@ -101,6 +109,7 @@ class BrevServiceTest {
             val delvisInnvilget =
                 Utfall.DelvisInnvilget(
                     innvilgedePerioder = listOf(Periode(fom = LocalDate.of(2026, 1, 5), tom = LocalDate.of(2026, 1, 7))),
+                    begrunnelse = "begrunnelse",
                 )
             val soknad = behandletSoknad(utfall = delvisInnvilget)
 
@@ -126,7 +135,7 @@ class BrevServiceTest {
     @Test
     fun `journalfører og oppdaterer ikke-journalførte brev ved avslag`() =
         runTest {
-            val soknad = behandletSoknad(utfall = Utfall.Avslag)
+            val soknad = behandletSoknad(utfall = Utfall.Avslag("begrunnelse"))
 
             every { repositoryMock.getIkkeJournalforteSoknader(any()) } returns listOf(soknad)
             every { repositoryMock.setBrevJournalfort(any(), any(), any()) } just Runs
@@ -149,7 +158,7 @@ class BrevServiceTest {
     @Test
     fun `journalfører henleggelse med dokumenttype HENLEGGELSE`() =
         runTest {
-            val soknad = behandletSoknad(utfall = Utfall.Henlagt)
+            val soknad = behandletSoknad(utfall = Utfall.Henlagt("begrunnelse"))
 
             every { repositoryMock.getIkkeJournalforteSoknader(any()) } returns listOf(soknad)
             every { repositoryMock.setBrevJournalfort(any(), any(), any()) } just Runs
@@ -256,7 +265,7 @@ class BrevServiceTest {
     fun `distribuerer vedtaksbrev med distribusjonstype VEDTAK`() =
         runTest {
             val soknad =
-                behandletSoknad(utfall = Utfall.Innvilget)
+                behandletSoknad(utfall = Utfall.Innvilget(standardSoktePerioder))
                     .journalforBrev(JournalpostId("999"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
 
             every { repositoryMock.getSoknaderMedIkkeDistribuerteBrev(any()) } returns listOf(soknad)
@@ -274,7 +283,7 @@ class BrevServiceTest {
     fun `distribuerer henleggelsesbrev med distribusjonstype VIKTIG`() =
         runTest {
             val soknad =
-                behandletSoknad(utfall = Utfall.Henlagt)
+                behandletSoknad(utfall = Utfall.Henlagt("begrunnelse"))
                     .journalforBrev(JournalpostId("999"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
 
             every { repositoryMock.getSoknaderMedIkkeDistribuerteBrev(any()) } returns listOf(soknad)

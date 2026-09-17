@@ -2,6 +2,7 @@ package no.nav.syfo.utenlandsopphold.infrastructure.kafka.soknadstatus
 
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.innvilgedePerioder
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -39,7 +40,8 @@ data class SoknadstatusRecord(
                         veilederident = behandling.behandletAv.value,
                         utfall = behandling.utfall.toBehandlingRecordUtfall(),
                         ikkeAktuellGrunn = (behandling.utfall as? Utfall.IkkeAktuell)?.grunn?.name,
-                        innvilgedePerioder = behandling.innvilgedePerioder.map { BehandlingRecordPeriode(it.fom, it.tom) },
+                        innvilgedePerioder =
+                            behandling.utfall.innvilgedePerioder().map { BehandlingRecordPeriode(it.fom, it.tom) },
                     ),
             )
         }

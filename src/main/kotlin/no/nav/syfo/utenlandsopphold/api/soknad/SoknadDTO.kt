@@ -6,6 +6,7 @@ import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.SoknadStatus
 import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.innvilgedePerioder
 import no.nav.syfo.utenlandsopphold.util.toLocalDateTimeOslo
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -84,20 +85,23 @@ fun Soknad.toDTO(): SoknadDTO =
 
 private fun Periode.toDTO(): PeriodeDTO = PeriodeDTO(fom = fom, tom = tom)
 
-private fun Behandling.toDTO(): VedtakDTO =
-    VedtakDTO(
-        utfall =
-            when (utfall) {
-                Utfall.Innvilget -> "INNVILGET"
-                is Utfall.DelvisInnvilget -> "DELVIS_INNVILGET"
-                Utfall.Avslag -> "AVSLAG"
-                Utfall.Henlagt -> "HENLAGT"
-                is Utfall.IkkeAktuell -> "IKKE_AKTUELL"
-            },
-        innvilgedePerioder = innvilgedePerioder.map { it.toDTO() },
+private fun Behandling.toDTO(): VedtakDTO {
+    val (utfallVerdi, begrunnelse) =
+        when (utfall) {
+            is Utfall.Innvilget -> "INNVILGET" to null
+            is Utfall.DelvisInnvilget -> "DELVIS_INNVILGET" to utfall.begrunnelse
+            is Utfall.Avslag -> "AVSLAG" to utfall.begrunnelse
+            is Utfall.Henlagt -> "HENLAGT" to utfall.begrunnelse
+            is Utfall.IkkeAktuell -> "IKKE_AKTUELL" to null
+        }
+
+    return VedtakDTO(
+        utfall = utfallVerdi,
+        innvilgedePerioder = utfall.innvilgedePerioder().map { it.toDTO() },
         fattetAv = behandletAv.value,
         fattetTidspunkt = behandletTidspunkt.toLocalDateTimeOslo(),
         begrunnelse = begrunnelse,
     )
+}
 
 fun PeriodeDTO.toDomain(): Periode = Periode(fom = fom, tom = tom)

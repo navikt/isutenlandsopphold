@@ -80,11 +80,9 @@ data class PBehandling(
     ): Behandling =
         Behandling(
             behandlingId = uuid,
-            utfall = utfall.toUtfall(innvilgedePerioder, ikkeAktuellGrunn),
+            utfall = utfall.toUtfall(innvilgedePerioder, ikkeAktuellGrunn, begrunnelse),
             behandletAv = Navident(behandletAv),
             behandletTidspunkt = behandletTidspunkt,
-            innvilgedePerioder = innvilgedePerioder,
-            begrunnelse = begrunnelse,
             brev = brev?.toBrev(),
         )
 }
@@ -119,10 +117,10 @@ private fun String.toDocumentComponents(): List<DocumentComponent> = documentMap
 
 fun Utfall.dbValue(): String =
     when (this) {
-        Utfall.Innvilget -> "INNVILGET"
+        is Utfall.Innvilget -> "INNVILGET"
         is Utfall.DelvisInnvilget -> "DELVIS_INNVILGET"
-        Utfall.Avslag -> "AVSLAG"
-        Utfall.Henlagt -> "HENLAGT"
+        is Utfall.Avslag -> "AVSLAG"
+        is Utfall.Henlagt -> "HENLAGT"
         is Utfall.IkkeAktuell -> "IKKE_AKTUELL"
     }
 
@@ -132,15 +130,33 @@ fun Utfall.ikkeAktuellGrunnDbValue(): String? =
         else -> null
     }
 
+/**
+ * Kolonnen er nullbar fordi innvilgelse og ikke aktuell ikke har begrunnelse. Den
+ * nullbarheten hører til databasen, ikke til domenet, der begrunnelsen ligger på
+ * utfallene som faktisk krever den.
+ */
+fun Utfall.begrunnelseDbValue(): String? =
+    when (this) {
+        is Utfall.DelvisInnvilget -> begrunnelse
+        is Utfall.Avslag -> begrunnelse
+        is Utfall.Henlagt -> begrunnelse
+        is Utfall.Innvilget, is Utfall.IkkeAktuell -> null
+    }
+
 private fun String.toUtfall(
     innvilgedePerioder: List<Periode>,
     ikkeAktuellGrunn: String?,
+    begrunnelse: String?,
 ): Utfall =
     when (this) {
-        "INNVILGET" -> Utfall.Innvilget
-        "DELVIS_INNVILGET" -> Utfall.DelvisInnvilget(innvilgedePerioder)
-        "AVSLAG" -> Utfall.Avslag
-        "HENLAGT" -> Utfall.Henlagt
+        "INNVILGET" -> Utfall.Innvilget(innvilgedePerioder = innvilgedePerioder)
+        "DELVIS_INNVILGET" ->
+            Utfall.DelvisInnvilget(
+                innvilgedePerioder = innvilgedePerioder,
+                begrunnelse = begrunnelseFraDatabasen(begrunnelse, this),
+            )
+        "AVSLAG" -> Utfall.Avslag(begrunnelse = begrunnelseFraDatabasen(begrunnelse, this))
+        "HENLAGT" -> Utfall.Henlagt(begrunnelse = begrunnelseFraDatabasen(begrunnelse, this))
         "IKKE_AKTUELL" ->
             Utfall.IkkeAktuell(
                 grunn =
@@ -160,3 +176,13 @@ fun Brevtype.dbValue(): String = name
 private fun String.toBrevtype(): Brevtype =
     Brevtype.entries.firstOrNull { it.name == this }
         ?: throw IllegalStateException("Ukjent brevtype lagret i database: $this")
+
+/**
+ * Databasen tillater null i begrunnelse fordi innvilgelse og ikke aktuell ikke skal ha
+ * noen. Mangler den for et utfall som krever den, er raden inkonsistent.
+ */
+private fun begrunnelseFraDatabasen(
+    begrunnelse: String?,
+    utfall: String,
+): String =
+    checkNotNull(begrunnelse) { "Behandling med utfall $utfall mangler begrunnelse i databasen" }

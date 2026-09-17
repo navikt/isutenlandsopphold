@@ -163,30 +163,30 @@ private fun Periode.toV2DTO(): PeriodeV2DTO = PeriodeV2DTO(fom = fom, tom = tom)
 
 private fun Behandling.toV2DTO(): BehandlingV2DTO =
     when (val utfall = utfall) {
-        Utfall.Innvilget ->
+        is Utfall.Innvilget ->
             InnvilgetBehandlingV2DTO(
                 behandletAv = behandletAv.value,
                 behandletTidspunkt = behandletTidspunkt.toLocalDateTimeOslo(),
-                innvilgedePerioder = innvilgedePerioder.map { it.toV2DTO() },
+                innvilgedePerioder = utfall.innvilgedePerioder.map { it.toV2DTO() },
             )
         is Utfall.DelvisInnvilget ->
             DelvisInnvilgetBehandlingV2DTO(
                 behandletAv = behandletAv.value,
                 behandletTidspunkt = behandletTidspunkt.toLocalDateTimeOslo(),
-                innvilgedePerioder = innvilgedePerioder.map { it.toV2DTO() },
-                begrunnelse = paakrevdBegrunnelse(),
+                innvilgedePerioder = utfall.innvilgedePerioder.map { it.toV2DTO() },
+                begrunnelse = utfall.begrunnelse,
             )
-        Utfall.Avslag ->
+        is Utfall.Avslag ->
             AvslagBehandlingV2DTO(
                 behandletAv = behandletAv.value,
                 behandletTidspunkt = behandletTidspunkt.toLocalDateTimeOslo(),
-                begrunnelse = paakrevdBegrunnelse(),
+                begrunnelse = utfall.begrunnelse,
             )
-        Utfall.Henlagt ->
+        is Utfall.Henlagt ->
             HenlagtBehandlingV2DTO(
                 behandletAv = behandletAv.value,
                 behandletTidspunkt = behandletTidspunkt.toLocalDateTimeOslo(),
-                begrunnelse = paakrevdBegrunnelse(),
+                begrunnelse = utfall.begrunnelse,
             )
         is Utfall.IkkeAktuell ->
             IkkeAktuellBehandlingV2DTO(
@@ -195,12 +195,5 @@ private fun Behandling.toV2DTO(): BehandlingV2DTO =
                 ikkeAktuellGrunn = utfall.grunn.toV2DTO(),
             )
     }
-
-/**
- * [Behandling] krever begrunnelse for disse utfallene, men feltet er nullable fordi de
- * øvrige utfallene ikke skal ha noen. Her bekreftes garantien slik at DTO-en slipper.
- */
-private fun Behandling.paakrevdBegrunnelse(): String =
-    checkNotNull(begrunnelse) { "Behandling $behandlingId med utfall $utfall skal ha begrunnelse" }
 
 fun PeriodeV2DTO.toDomain(): Periode = Periode(fom = fom, tom = tom)

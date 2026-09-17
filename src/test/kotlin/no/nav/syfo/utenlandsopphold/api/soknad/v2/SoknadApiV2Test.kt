@@ -30,6 +30,7 @@ import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellGrunn
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.VedtakOppretting
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
 import no.nav.syfo.utenlandsopphold.infrastructure.mock.mockTilgangskontrollClient
 import no.nav.syfo.utenlandsopphold.testutil.TEST_AZURE_APP_CLIENT_ID
@@ -124,11 +125,10 @@ class SoknadApiV2Test {
         testApplication {
             val behandletSoknad =
                 soknad.fattVedtak(
-                    utfall = Utfall.Avslag,
+                    vedtakOppretting = VedtakOppretting.Avslag("Oppholdet er ikke forenlig med aktivitetsplikten"),
                     behandletAv = Navident(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG),
                     now = OffsetDateTime.parse("2026-03-02T09:00:00Z"),
                     document = document,
-                    begrunnelse = "Oppholdet er ikke forenlig med aktivitetsplikten",
                 )
             every {
                 repository.hentSoknader(UserConstants.PERSON_VEILEDERE_HAR_TILGANG_TIL)
@@ -163,11 +163,10 @@ class SoknadApiV2Test {
         testApplication {
             val behandletSoknad =
                 soknad.fattVedtak(
-                    utfall = Utfall.Avslag,
+                    vedtakOppretting = VedtakOppretting.Avslag("Oppholdet er ikke forenlig med aktivitetsplikten"),
                     behandletAv = Navident(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG),
                     now = OffsetDateTime.parse("2026-03-02T09:00:00Z"),
                     document = document,
-                    begrunnelse = "Oppholdet er ikke forenlig med aktivitetsplikten",
                 )
             every {
                 repository.hentSoknader(UserConstants.PERSON_VEILEDERE_HAR_TILGANG_TIL)
@@ -220,7 +219,7 @@ class SoknadApiV2Test {
 
             assertEquals(HttpStatusCode.OK, response.status)
             val behandling = assertNotNull(assertNotNull(lagret).behandling)
-            assertEquals(Utfall.Innvilget, behandling.utfall)
+            assertEquals(Utfall.Innvilget(soknad.soktePerioder), behandling.utfall)
             assertEquals(
                 Navident(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG),
                 behandling.behandletAv,
@@ -271,8 +270,7 @@ class SoknadApiV2Test {
 
             assertEquals(HttpStatusCode.OK, response.status)
             val behandling = assertNotNull(assertNotNull(lagret).behandling)
-            assertEquals(Utfall.Henlagt, behandling.utfall)
-            assertEquals("Søker har trukket søknaden", behandling.begrunnelse)
+            assertEquals(Utfall.Henlagt("Søker har trukket søknaden"), behandling.utfall)
             assertEquals(document, assertNotNull(behandling.brev).document)
         }
 
@@ -406,11 +404,10 @@ class SoknadApiV2Test {
         testApplication {
             val behandletSoknad =
                 soknad.fattVedtak(
-                    utfall = Utfall.Innvilget,
+                    vedtakOppretting = VedtakOppretting.Innvilgelse,
                     behandletAv = Navident(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG),
                     now = OffsetDateTime.parse("2026-03-02T09:00:00Z"),
                     document = document,
-                    begrunnelse = null,
                 )
             every { repository.hentSoknad(any()) } returns behandletSoknad
             every { repository.hentSoknadForUpdate(any(), any()) } returns behandletSoknad

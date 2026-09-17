@@ -9,6 +9,7 @@ import no.nav.syfo.utenlandsopphold.domain.Behandling
 import no.nav.syfo.utenlandsopphold.domain.Brev
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
+import no.nav.syfo.utenlandsopphold.domain.innvilgedePerioder
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
 import no.nav.syfo.utenlandsopphold.infrastructure.database.jdbcConnection
 import no.nav.syfo.utenlandsopphold.infrastructure.database.toList
@@ -301,13 +302,13 @@ class SoknadRepository(
                 it.setString(2, behandling.utfall.dbValue())
                 it.setString(3, behandling.behandletAv.value)
                 it.setObject(4, behandling.behandletTidspunkt)
-                it.setString(5, behandling.begrunnelse)
+                it.setString(5, behandling.utfall.begrunnelseDbValue())
                 it.setString(6, behandling.utfall.ikkeAktuellGrunnDbValue())
                 it.setObject(7, soknadId)
                 it.executeQuery().toList { toPBehandling() }.singleOrNull()
                     ?: throw IllegalArgumentException("Fant ikke søknad med id $soknadId")
             }
-        createBehandlingPerioder(pBehandling.id, behandling.innvilgedePerioder)
+        createBehandlingPerioder(pBehandling.id, behandling.utfall.innvilgedePerioder())
         behandling.brev?.let { createBrev(pBehandling.id, it) }
     }
 

@@ -43,10 +43,9 @@ class SoknadstatusRecordTest {
         val innvilgetPeriode = Periode(LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 7))
         val behandling =
             lagBehandling(
-                utfall = Utfall.DelvisInnvilget(listOf(innvilgetPeriode)),
+                utfall = Utfall.DelvisInnvilget(listOf(innvilgetPeriode), "Delvis innvilget begrunnelse"),
                 behandletAv = Navident("Z999999"),
                 behandletTidspunkt = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
-                begrunnelse = "Delvis innvilget begrunnelse",
             )
         val soknad = lagSoknad(behandling = behandling)
 
@@ -66,7 +65,7 @@ class SoknadstatusRecordTest {
 
     @Test
     fun `henleggelse publiseres med utfall HENLAGT og uten innvilgede perioder`() {
-        val soknad = lagSoknad(behandling = lagBehandling(utfall = Utfall.Henlagt, begrunnelse = "Trukket"))
+        val soknad = lagSoknad(behandling = lagBehandling(utfall = Utfall.Henlagt("Trukket")))
 
         val json = serialize(SoknadstatusRecord.fromBehandletSoknad(soknad))
 
@@ -76,7 +75,7 @@ class SoknadstatusRecordTest {
 
     @Test
     fun `begrunnelse og brev publiseres ikke på topicet`() {
-        val soknad = lagSoknad(behandling = lagBehandling(utfall = Utfall.Avslag, begrunnelse = "Intern begrunnelse"))
+        val soknad = lagSoknad(behandling = lagBehandling(utfall = Utfall.Avslag("Intern begrunnelse")))
 
         val json = serialize(SoknadstatusRecord.fromBehandletSoknad(soknad))
 
@@ -101,7 +100,7 @@ class SoknadstatusRecordTest {
 
     @Test
     fun `andre utfall publiseres uten grunn`() {
-        val soknad = lagSoknad(behandling = lagBehandling(utfall = Utfall.Henlagt, begrunnelse = "Trukket"))
+        val soknad = lagSoknad(behandling = lagBehandling(utfall = Utfall.Henlagt("Trukket")))
 
         val grunn = serialize(SoknadstatusRecord.fromBehandletSoknad(soknad))["behandling"]["ikkeAktuellGrunn"]
 

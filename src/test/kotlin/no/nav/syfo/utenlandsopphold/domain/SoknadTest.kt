@@ -15,20 +15,17 @@ class SoknadTest {
 
         val resultat =
             lagSoknad().fattVedtak(
-                utfall = Utfall.Innvilget,
+                vedtakOppretting = VedtakOppretting.Innvilgelse,
                 behandletAv = veileder,
                 now = now,
                 document = brevDocument,
-                begrunnelse = null,
             )
 
         assertEquals(SoknadStatus.INNVILGET, resultat.status)
         val behandling = assertNotNull(resultat.behandling)
-        assertEquals(Utfall.Innvilget, behandling.utfall)
+        assertEquals(Utfall.Innvilget(standardSoktePerioder), behandling.utfall)
         assertEquals(veileder, behandling.behandletAv)
         assertEquals(now, behandling.behandletTidspunkt)
-        assertEquals(resultat.soktePerioder, behandling.innvilgedePerioder)
-        assertEquals(null, behandling.begrunnelse)
     }
 
     @Test
@@ -37,18 +34,15 @@ class SoknadTest {
 
         val resultat =
             lagSoknad().fattVedtak(
-                utfall = Utfall.DelvisInnvilget(listOf(innvilgetPeriode)),
+                vedtakOppretting = VedtakOppretting.DelvisInnvilgelse(listOf(innvilgetPeriode), "Delvis innvilget begrunnelse"),
                 behandletAv = veileder,
                 now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = brevDocument,
-                begrunnelse = "Delvis innvilget begrunnelse",
             )
 
         assertEquals(SoknadStatus.DELVIS_INNVILGET, resultat.status)
         val behandling = assertNotNull(resultat.behandling)
-        assertEquals(Utfall.DelvisInnvilget(listOf(innvilgetPeriode)), behandling.utfall)
-        assertEquals(listOf(innvilgetPeriode), behandling.innvilgedePerioder)
-        assertEquals("Delvis innvilget begrunnelse", behandling.begrunnelse)
+        assertEquals(Utfall.DelvisInnvilget(listOf(innvilgetPeriode), "Delvis innvilget begrunnelse"), behandling.utfall)
     }
 
     @Test
@@ -62,15 +56,14 @@ class SoknadTest {
 
         val resultat =
             lagSoknad(soktePerioder = soktePerioder).fattVedtak(
-                utfall = Utfall.DelvisInnvilget(listOf(innvilgetPeriode)),
+                vedtakOppretting = VedtakOppretting.DelvisInnvilgelse(listOf(innvilgetPeriode), "Delvis innvilget begrunnelse"),
                 behandletAv = veileder,
                 now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = brevDocument,
-                begrunnelse = "Delvis innvilget begrunnelse",
             )
 
         assertEquals(SoknadStatus.DELVIS_INNVILGET, resultat.status)
-        assertEquals(listOf(innvilgetPeriode), resultat.behandling?.innvilgedePerioder)
+        assertEquals(Utfall.DelvisInnvilget(listOf(innvilgetPeriode), "Delvis innvilget begrunnelse"), resultat.behandling?.utfall)
     }
 
     @Test
@@ -83,11 +76,10 @@ class SoknadTest {
 
         assertFailsWith<IllegalArgumentException> {
             lagSoknad(soktePerioder = soktePerioder).fattVedtak(
-                utfall = Utfall.DelvisInnvilget(listOf(Periode(LocalDate.of(2026, 1, 8), LocalDate.of(2026, 1, 12)))),
+                vedtakOppretting = VedtakOppretting.DelvisInnvilgelse(listOf(Periode(LocalDate.of(2026, 1, 8), LocalDate.of(2026, 1, 12))), "Delvis innvilget begrunnelse"),
                 behandletAv = veileder,
                 now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = brevDocument,
-                begrunnelse = "Delvis innvilget begrunnelse",
             )
         }
     }
@@ -96,17 +88,17 @@ class SoknadTest {
     fun `fattVedtak om delvis innvilgelse med overlappende innvilgede perioder kaster feil`() {
         assertFailsWith<IllegalArgumentException> {
             lagSoknad().fattVedtak(
-                utfall =
-                    Utfall.DelvisInnvilget(
+                vedtakOppretting =
+                    VedtakOppretting.DelvisInnvilgelse(
                         listOf(
                             Periode(LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 7)),
                             Periode(LocalDate.of(2026, 1, 7), LocalDate.of(2026, 1, 9)),
                         ),
+                        "Delvis innvilget begrunnelse",
                     ),
                 behandletAv = veileder,
                 now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = brevDocument,
-                begrunnelse = "Delvis innvilget begrunnelse",
             )
         }
     }
@@ -115,11 +107,10 @@ class SoknadTest {
     fun `fattVedtak om delvis innvilgelse uten innvilgede perioder kaster feil`() {
         assertFailsWith<IllegalArgumentException> {
             lagSoknad().fattVedtak(
-                utfall = Utfall.DelvisInnvilget(emptyList()),
+                vedtakOppretting = VedtakOppretting.DelvisInnvilgelse(emptyList(), "Delvis innvilget begrunnelse"),
                 behandletAv = veileder,
                 now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = brevDocument,
-                begrunnelse = "Delvis innvilget begrunnelse",
             )
         }
     }
@@ -128,14 +119,14 @@ class SoknadTest {
     fun `fattVedtak om delvis innvilgelse med periode utenfor søkte perioder kaster feil`() {
         assertFailsWith<IllegalArgumentException> {
             lagSoknad().fattVedtak(
-                utfall =
-                    Utfall.DelvisInnvilget(
+                vedtakOppretting =
+                    VedtakOppretting.DelvisInnvilgelse(
                         listOf(Periode(LocalDate.of(2026, 1, 4), LocalDate.of(2026, 1, 7))),
+                        "Delvis innvilget begrunnelse",
                     ),
                 behandletAv = veileder,
                 now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = brevDocument,
-                begrunnelse = "Delvis innvilget begrunnelse",
             )
         }
     }
@@ -144,35 +135,19 @@ class SoknadTest {
     fun `fattVedtak om avslag gir avslag uten innvilgede perioder`() {
         val resultat =
             lagSoknad().fattVedtak(
-                utfall = Utfall.Avslag,
+                vedtakOppretting = VedtakOppretting.Avslag("Avslag begrunnelse"),
                 behandletAv = veileder,
                 now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = brevDocument,
-                begrunnelse = "Avslag begrunnelse",
             )
 
         assertEquals(SoknadStatus.AVSLAG, resultat.status)
         val behandling = assertNotNull(resultat.behandling)
-        assertEquals(Utfall.Avslag, behandling.utfall)
-        assertEquals(emptyList(), behandling.innvilgedePerioder)
-        assertEquals("Avslag begrunnelse", behandling.begrunnelse)
+        assertEquals(Utfall.Avslag("Avslag begrunnelse"), behandling.utfall)
     }
 
     @Test
-    fun `fattVedtak om avslag uten begrunnelse kaster feil`() {
-        assertFailsWith<IllegalArgumentException> {
-            lagSoknad().fattVedtak(
-                utfall = Utfall.Avslag,
-                behandletAv = veileder,
-                now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
-                document = brevDocument,
-                begrunnelse = null,
-            )
-        }
-    }
-
-    @Test
-    fun `henlegg gir henlagt status uten innvilgede perioder`() {
+    fun `henlegg gir henlagt status med begrunnelse`() {
         val resultat =
             lagSoknad().henlegg(
                 behandletAv = veileder,
@@ -183,32 +158,17 @@ class SoknadTest {
 
         assertEquals(SoknadStatus.HENLAGT, resultat.status)
         val behandling = assertNotNull(resultat.behandling)
-        assertEquals(Utfall.Henlagt, behandling.utfall)
-        assertEquals(emptyList(), behandling.innvilgedePerioder)
-        assertEquals("Søker har trukket søknaden", behandling.begrunnelse)
+        assertEquals(Utfall.Henlagt("Søker har trukket søknaden"), behandling.utfall)
     }
 
     @Test
-    fun `henlegg uten begrunnelse kaster feil`() {
+    fun `henlegg med blank begrunnelse kaster feil`() {
         assertFailsWith<IllegalArgumentException> {
             lagSoknad().henlegg(
                 behandletAv = veileder,
                 now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = brevDocument,
-                begrunnelse = null,
-            )
-        }
-    }
-
-    @Test
-    fun `fattVedtak om innvilgelse med begrunnelse kaster feil`() {
-        assertFailsWith<IllegalArgumentException> {
-            lagSoknad().fattVedtak(
-                utfall = Utfall.Innvilget,
-                behandletAv = veileder,
-                now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
-                document = brevDocument,
-                begrunnelse = "Skal ikke være satt",
+                begrunnelse = "   ",
             )
         }
     }
@@ -217,20 +177,18 @@ class SoknadTest {
     fun `fattVedtak på allerede innvilget søknad kaster`() {
         val alleredeInnvilget =
             lagSoknad().fattVedtak(
-                utfall = Utfall.Innvilget,
+                vedtakOppretting = VedtakOppretting.Innvilgelse,
                 behandletAv = veileder,
                 now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = brevDocument,
-                begrunnelse = null,
             )
 
         assertFailsWith<IllegalStateException> {
             alleredeInnvilget.fattVedtak(
-                utfall = Utfall.Innvilget,
+                vedtakOppretting = VedtakOppretting.Innvilgelse,
                 behandletAv = veileder,
                 now = OffsetDateTime.parse("2026-01-11T12:00:00Z"),
                 document = brevDocument,
-                begrunnelse = null,
             )
         }
     }
@@ -246,11 +204,10 @@ class SoknadTest {
     fun `journalforBrev setter journalpostId på brevet`() {
         val innvilget =
             lagSoknad().fattVedtak(
-                utfall = Utfall.Innvilget,
+                vedtakOppretting = VedtakOppretting.Innvilgelse,
                 behandletAv = veileder,
                 now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = brevDocument,
-                begrunnelse = null,
             )
         val journalpostId = JournalpostId("123")
         val journalfortTidspunkt = OffsetDateTime.parse("2026-01-11T08:00:00Z")
@@ -307,14 +264,12 @@ class SoknadTest {
         assertEquals(Utfall.IkkeAktuell(IkkeAktuellGrunn.BEHANDLET_I_INFOTRYGD), behandling.utfall)
         assertEquals(veileder, behandling.behandletAv)
         assertEquals(now, behandling.behandletTidspunkt)
-        assertEquals(emptyList(), behandling.innvilgedePerioder)
-        assertEquals(null, behandling.begrunnelse)
         assertEquals(null, behandling.brev)
     }
 
     @Test
     fun `merkIkkeAktuell på allerede behandlet søknad kaster feil`() {
-        val behandletSoknad = lagSoknad(behandling = lagBehandling(utfall = Utfall.Innvilget))
+        val behandletSoknad = lagSoknad(behandling = lagBehandling(utfall = Utfall.Innvilget(standardSoktePerioder)))
 
         assertFailsWith<IllegalStateException> {
             behandletSoknad.merkIkkeAktuell(

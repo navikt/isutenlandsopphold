@@ -410,8 +410,7 @@ class SoknadApiTest {
 
             assertEquals(HttpStatusCode.OK, response.status)
             assertEquals(soknadId, lagretSoknad?.id)
-            assertEquals(Utfall.Innvilget, lagretSoknad?.behandling?.utfall)
-            assertEquals(innvilgedePerioder, lagretSoknad?.behandling?.innvilgedePerioder)
+            assertEquals(Utfall.Innvilget(innvilgedePerioder), lagretSoknad?.behandling?.utfall)
 
             val body = response.body<SoknadVedtakResponseDTO>()
             assertEquals(soknadId.toString(), body.soknad.soknadId)
@@ -451,8 +450,10 @@ class SoknadApiTest {
                 }
 
             assertEquals(HttpStatusCode.OK, response.status)
-            assertEquals(Utfall.DelvisInnvilget(listOf(innvilgetPeriode)), lagretSoknad?.behandling?.utfall)
-            assertEquals(listOf(innvilgetPeriode), lagretSoknad?.behandling?.innvilgedePerioder)
+            assertEquals(
+                Utfall.DelvisInnvilget(listOf(innvilgetPeriode), "Delvis innvilget begrunnelse"),
+                lagretSoknad?.behandling?.utfall,
+            )
 
             val body = response.body<SoknadVedtakResponseDTO>()
             assertEquals(SoknadStatusDTO.DELVIS_INNVILGET, body.soknad.status)
@@ -486,8 +487,7 @@ class SoknadApiTest {
                 }
 
             assertEquals(HttpStatusCode.OK, response.status)
-            assertEquals(Utfall.Avslag, lagretSoknad?.behandling?.utfall)
-            assertEquals(emptyList(), lagretSoknad?.behandling?.innvilgedePerioder)
+            assertEquals(Utfall.Avslag("Avslag begrunnelse"), lagretSoknad?.behandling?.utfall)
 
             val body = response.body<SoknadVedtakResponseDTO>()
             assertEquals(SoknadStatusDTO.AVSLAG, body.soknad.status)
@@ -521,8 +521,7 @@ class SoknadApiTest {
                 }
 
             assertEquals(HttpStatusCode.OK, response.status)
-            assertEquals(Utfall.Henlagt, lagretSoknad?.behandling?.utfall)
-            assertEquals(emptyList(), lagretSoknad?.behandling?.innvilgedePerioder)
+            assertEquals(Utfall.Henlagt("Søker har trukket søknaden"), lagretSoknad?.behandling?.utfall)
 
             val body = response.body<SoknadVedtakResponseDTO>()
             assertEquals(SoknadStatusDTO.HENLAGT, body.soknad.status)
@@ -531,111 +530,10 @@ class SoknadApiTest {
             assertEquals("Søker har trukket søknaden", body.soknad.vedtak?.begrunnelse)
         }
 
-    @Test
-    fun `vedtak med henleggelse uten begrunnelse gir 400`() =
-        testApplication {
-            stubHentSoknadOgLagreBehandling(ubruktSoknad)
-            val client = setupApiAndClient()
-
-            val response =
-                client.post(SOKNAD_VEDTAK_PATH.format(UUID.randomUUID())) {
-                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
-                    contentType(ContentType.Application.Json)
-                    setBody(validSoknadVedtakPostDTO().copy(utfall = "HENLAGT"))
-                }
-
-            assertEquals(HttpStatusCode.BadRequest, response.status)
-        }
-
-    @Test
-    fun `vedtak med henleggelse med blank begrunnelse gir 400`() =
-        testApplication {
-            stubHentSoknadOgLagreBehandling(ubruktSoknad)
-            val client = setupApiAndClient()
-
-            val response =
-                client.post(SOKNAD_VEDTAK_PATH.format(UUID.randomUUID())) {
-                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
-                    contentType(ContentType.Application.Json)
-                    setBody(validSoknadVedtakPostDTO().copy(utfall = "HENLAGT", begrunnelse = "   "))
-                }
-
-            assertEquals(HttpStatusCode.BadRequest, response.status)
-        }
-
-    @Test
-    fun `vedtak med delvis innvilgelse uten innvilgede perioder gir 400`() =
-        testApplication {
-            stubHentSoknadOgLagreBehandling(ubruktSoknad)
-            val client = setupApiAndClient()
-
-            val response =
-                client.post(SOKNAD_VEDTAK_PATH.format(UUID.randomUUID())) {
-                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
-                    contentType(ContentType.Application.Json)
-                    setBody(validSoknadVedtakPostDTO().copy(utfall = "DELVIS_INNVILGET"))
-                }
-
-            assertEquals(HttpStatusCode.BadRequest, response.status)
-        }
-
-    @Test
-    fun `vedtak med delvis innvilgelse med overlappende innvilgede perioder gir 400`() =
-        testApplication {
-            stubHentSoknadOgLagreBehandling(ubruktSoknad)
-            val client = setupApiAndClient()
-
-            val response =
-                client.post(SOKNAD_VEDTAK_PATH.format(UUID.randomUUID())) {
-                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
-                    contentType(ContentType.Application.Json)
-                    setBody(
-                        validSoknadVedtakPostDTO().copy(
-                            utfall = "DELVIS_INNVILGET",
-                            innvilgedePerioder =
-                                listOf(
-                                    PeriodeDTO(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 5)),
-                                    PeriodeDTO(LocalDate.of(2026, 4, 5), LocalDate.of(2026, 4, 7)),
-                                ),
-                        ),
-                    )
-                }
-
-            assertEquals(HttpStatusCode.BadRequest, response.status)
-        }
-
-    @Test
-    fun `vedtak med delvis innvilgelse uten begrunnelse gir 400`() =
-        testApplication {
-            stubHentSoknadOgLagreBehandling(ubruktSoknad)
-            val client = setupApiAndClient()
-
-            val response =
-                client.post(SOKNAD_VEDTAK_PATH.format(UUID.randomUUID())) {
-                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
-                    contentType(ContentType.Application.Json)
-                    setBody(validSoknadVedtakPostDTO().copy(utfall = "DELVIS_INNVILGET"))
-                }
-
-            assertEquals(HttpStatusCode.BadRequest, response.status)
-        }
-
-    @Test
-    fun `vedtak med delvis innvilgelse med blank begrunnelse gir 400`() =
-        testApplication {
-            stubHentSoknadOgLagreBehandling(ubruktSoknad)
-            val client = setupApiAndClient()
-
-            val response =
-                client.post(SOKNAD_VEDTAK_PATH.format(UUID.randomUUID())) {
-                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
-                    contentType(ContentType.Application.Json)
-                    setBody(validSoknadVedtakPostDTO().copy(utfall = "DELVIS_INNVILGET", begrunnelse = "   "))
-                }
-
-            assertEquals(HttpStatusCode.BadRequest, response.status)
-        }
-
+    /**
+     * Begrunnelsesreglene i seg selv er dekket i domenet. Denne testen vokter bare at et
+     * brudd på dem kommer ut av v1-API-et som 400, ikke som 500.
+     */
     @Test
     fun `vedtak med avslag uten begrunnelse gir 400`() =
         testApplication {
@@ -647,38 +545,6 @@ class SoknadApiTest {
                     bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
                     contentType(ContentType.Application.Json)
                     setBody(validSoknadVedtakPostDTO().copy(utfall = "AVSLAG"))
-                }
-
-            assertEquals(HttpStatusCode.BadRequest, response.status)
-        }
-
-    @Test
-    fun `vedtak med avslag med blank begrunnelse gir 400`() =
-        testApplication {
-            stubHentSoknadOgLagreBehandling(ubruktSoknad)
-            val client = setupApiAndClient()
-
-            val response =
-                client.post(SOKNAD_VEDTAK_PATH.format(UUID.randomUUID())) {
-                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
-                    contentType(ContentType.Application.Json)
-                    setBody(validSoknadVedtakPostDTO().copy(utfall = "AVSLAG", begrunnelse = "   "))
-                }
-
-            assertEquals(HttpStatusCode.BadRequest, response.status)
-        }
-
-    @Test
-    fun `vedtak med innvilgelse som har begrunnelse gir 400`() =
-        testApplication {
-            stubHentSoknadOgLagreBehandling(ubruktSoknad)
-            val client = setupApiAndClient()
-
-            val response =
-                client.post(SOKNAD_VEDTAK_PATH.format(UUID.randomUUID())) {
-                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
-                    contentType(ContentType.Application.Json)
-                    setBody(validSoknadVedtakPostDTO().copy(begrunnelse = "Skal ikke være satt"))
                 }
 
             assertEquals(HttpStatusCode.BadRequest, response.status)
@@ -752,10 +618,9 @@ class SoknadApiTest {
                     innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
                     behandling =
                         Behandling(
-                            utfall = Utfall.Innvilget,
+                            utfall = Utfall.Innvilget(innvilgedePerioder),
                             behandletAv = Navident(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG),
                             behandletTidspunkt = OffsetDateTime.parse("2026-03-02T09:00:00Z"),
-                            innvilgedePerioder = innvilgedePerioder,
                             brev =
                                 Brev(
                                     brevtype = Brevtype.VEDTAK_INNVILGET,

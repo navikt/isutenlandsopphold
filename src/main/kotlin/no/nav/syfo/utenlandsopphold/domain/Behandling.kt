@@ -10,33 +10,49 @@ sealed interface Utfall {
      * Utfall som avgjør retten til sykepenger under utenlandsopphold. En henleggelse
      * avslutter saken uten å ta stilling til retten, og er derfor ikke et vedtak.
      */
-    sealed interface Vedtak : Utfall {
-        companion object {
-            fun from(
-                utfall: String,
-                innvilgedePerioder: List<Periode>,
-            ): Vedtak =
-                when (utfall) {
-                    "INNVILGET" -> Innvilget
-                    "DELVIS_INNVILGET" -> DelvisInnvilget(innvilgedePerioder)
-                    "AVSLAG" -> {
-                        require(innvilgedePerioder.isEmpty()) { "innvilgedePerioder skal være tom ved avslag" }
-                        Avslag
-                    }
-                    else -> throw IllegalArgumentException("Invalid utfall: $utfall")
-                }
+    sealed interface Vedtak : Utfall
+
+    /**
+     * Utfall som innvilger perioder. De øvrige utfallene innvilger ingenting, og har
+     * derfor ingen perioder å bære.
+     */
+    sealed interface Innvilgelse : Vedtak {
+        val innvilgedePerioder: List<Periode>
+    }
+
+    data class Innvilget(
+        override val innvilgedePerioder: List<Periode>,
+    ) : Innvilgelse {
+        init {
+            require(innvilgedePerioder.isNotEmpty()) { "Innvilgelse må ha innvilgede perioder" }
         }
     }
 
-    data object Innvilget : Vedtak
-
     data class DelvisInnvilget(
-        val innvilgedePerioder: List<Periode>,
-    ) : Vedtak
+        override val innvilgedePerioder: List<Periode>,
+        val begrunnelse: String,
+    ) : Innvilgelse {
+        init {
+            require(innvilgedePerioder.isNotEmpty()) { "Delvis innvilgelse må ha innvilgede perioder" }
+            require(begrunnelse.isNotBlank()) { "Delvis innvilgelse må ha begrunnelse" }
+        }
+    }
 
-    data object Avslag : Vedtak
+    data class Avslag(
+        val begrunnelse: String,
+    ) : Vedtak {
+        init {
+            require(begrunnelse.isNotBlank()) { "Avslag må ha begrunnelse" }
+        }
+    }
 
-    data object Henlagt : Utfall
+    data class Henlagt(
+        val begrunnelse: String,
+    ) : Utfall {
+        init {
+            require(begrunnelse.isNotBlank()) { "Henleggelse må ha begrunnelse" }
+        }
+    }
 
     /**
      * Søknaden skal ikke realitetsbehandles her, og gir derfor ikke brev til bruker.
@@ -44,27 +60,28 @@ sealed interface Utfall {
     data class IkkeAktuell(
         val grunn: IkkeAktuellGrunn,
     ) : Utfall
-
-    companion object {
-        /**
-         * Brukes av v1, der henleggelse er en utfallsverdi på vedtaksendepunktet. I v2
-         * er henleggelse et eget endepunkt, og `/vedtak` bruker [Vedtak.from].
-         *
-         * IKKE_AKTUELL mangler bevisst: v1 kan vise utfallet, men ikke opprette det.
-         */
-        fun from(
-            utfall: String,
-            innvilgedePerioder: List<Periode>,
-        ): Utfall =
-            when (utfall) {
-                "HENLAGT" -> {
-                    require(innvilgedePerioder.isEmpty()) { "innvilgedePerioder skal være tom ved henleggelse" }
-                    Henlagt
-                }
-                else -> Vedtak.from(utfall = utfall, innvilgedePerioder = innvilgedePerioder)
-            }
-    }
 }
+
+/**
+ * Perioder saksbehandleren har tatt stilling til. Ligger utenfor [Utfall] fordi bare
+ * [Utfall.Innvilgelse] har dem, og fordi de øvrige utfallene ikke skal fristes til å
+ * svare på spørsmålet.
+ */
+fun Utfall.innvilgedePerioder(): List<Periode> =
+    when (this) {
+        is Utfall.Innvilgelse -> innvilgedePerioder
+        is Utfall.Avslag, is Utfall.Henlagt, is Utfall.IkkeAktuell -> emptyList()
+    }
+
+/**
+ * Begrunnelsen kommer inn som nullbar fra API-et, så påkrevdheten må sjekkes der
+ * inputen treffer domenet.
+ */
+internal fun paakrevdBegrunnelse(
+    begrunnelse: String?,
+    utfall: String,
+): String =
+    requireNotNull(begrunnelse?.takeIf { it.isNotBlank() }) { "Begrunnelse er påkrevd ved $utfall" }
 
 enum class IkkeAktuellGrunn {
     BEHANDLET_I_INFOTRYGD,
@@ -77,10 +94,10 @@ enum class IkkeAktuellGrunn {
  */
 fun Utfall.brevtype(): Brevtype? =
     when (this) {
-        Utfall.Innvilget -> Brevtype.VEDTAK_INNVILGET
+        is Utfall.Innvilget -> Brevtype.VEDTAK_INNVILGET
         is Utfall.DelvisInnvilget -> Brevtype.VEDTAK_DELVIS_INNVILGET
-        Utfall.Avslag -> Brevtype.VEDTAK_AVSLAG
-        Utfall.Henlagt -> Brevtype.HENLEGGELSE
+        is Utfall.Avslag -> Brevtype.VEDTAK_AVSLAG
+        is Utfall.Henlagt -> Brevtype.HENLEGGELSE
         is Utfall.IkkeAktuell -> null
     }
 
@@ -95,42 +112,10 @@ data class Behandling(
     val utfall: Utfall,
     val behandletAv: Navident,
     val behandletTidspunkt: OffsetDateTime,
-    val innvilgedePerioder: List<Periode>,
     val brev: Brev?,
     val behandlingId: UUID = UUID.randomUUID(),
-    val begrunnelse: String? = null,
 ) {
     init {
-        when (utfall) {
-            Utfall.Innvilget -> {
-                require(innvilgedePerioder.isNotEmpty()) { "Innvilget behandling må ha innvilgede perioder" }
-                require(begrunnelse == null) { "Innvilget behandling skal ikke ha begrunnelse" }
-            }
-            is Utfall.DelvisInnvilget -> {
-                require(utfall.innvilgedePerioder.isNotEmpty()) {
-                    "Delvis innvilget behandling må ha innvilgede perioder"
-                }
-                require(utfall.innvilgedePerioder == innvilgedePerioder) {
-                    "Innvilgede perioder på utfall og behandling må være like"
-                }
-                require(!begrunnelse.isNullOrBlank()) { "Delvis innvilget behandling må ha begrunnelse" }
-            }
-            Utfall.Avslag -> {
-                require(innvilgedePerioder.isEmpty()) { "Avslått behandling skal ikke ha innvilgede perioder" }
-                require(!begrunnelse.isNullOrBlank()) { "Avslått behandling må ha begrunnelse" }
-            }
-            Utfall.Henlagt -> {
-                require(innvilgedePerioder.isEmpty()) { "Henlagt behandling skal ikke ha innvilgede perioder" }
-                require(!begrunnelse.isNullOrBlank()) { "Henlagt behandling må ha begrunnelse" }
-            }
-            is Utfall.IkkeAktuell -> {
-                require(innvilgedePerioder.isEmpty()) {
-                    "Behandling merket ikke aktuell skal ikke ha innvilgede perioder"
-                }
-                require(begrunnelse == null) { "Behandling merket ikke aktuell skal ikke ha begrunnelse" }
-            }
-        }
-
         // Dekker fire tilfeller på én gang: riktig brevtype, feil brevtype, utfall som
         // skal ha brev uten å ha det, og utfall uten brev som likevel har et.
         require(brev?.brevtype == utfall.brevtype()) {

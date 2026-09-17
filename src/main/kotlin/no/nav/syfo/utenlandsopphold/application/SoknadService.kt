@@ -5,7 +5,7 @@ import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellGrunn
 import no.nav.syfo.utenlandsopphold.domain.Soknad
-import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.VedtakOppretting
 import org.slf4j.LoggerFactory
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -24,18 +24,16 @@ class SoknadService(
     fun fattVedtak(
         soknadId: UUID,
         behandletAv: Navident,
-        utfall: Utfall.Vedtak,
+        vedtakOppretting: VedtakOppretting,
         document: List<DocumentComponent>,
-        begrunnelse: String?,
     ): Soknad {
         val lagretSoknad =
             behandleOgLagreSoknad(soknadId) { soknad ->
                 soknad.fattVedtak(
-                    utfall = utfall,
+                    vedtakOppretting = vedtakOppretting,
                     behandletAv = behandletAv,
                     now = OffsetDateTime.now(),
                     document = document,
-                    begrunnelse = begrunnelse,
                 )
             }
         journalforOgDistribuerAsync(lagretSoknad)

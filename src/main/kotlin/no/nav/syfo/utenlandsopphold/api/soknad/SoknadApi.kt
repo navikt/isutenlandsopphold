@@ -8,7 +8,8 @@ import no.nav.syfo.common.tilgangskontroll.checkPersonAndSyfoTilgang
 import no.nav.syfo.common.tilgangskontroll.client.TilgangskontrollClient
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.application.SoknadService
-import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.VedtakOppretting
+import no.nav.syfo.utenlandsopphold.domain.paakrevdBegrunnelse
 import java.util.UUID
 
 fun Route.registerSoknadApi(
@@ -45,34 +46,32 @@ fun Route.registerSoknadApi(
                 tilgangskontrollClient = tilgangskontrollClient,
                 requiresWriteAccess = true,
             ) { authorizedUser, _, _ ->
-                val utfall =
-                    Utfall.from(
-                        utfall = request.utfall,
-                        innvilgedePerioder = request.innvilgedePerioder.map { it.toDomain() },
-                    )
-
-                val behandletSoknad = when (utfall) {
-                    is Utfall.Vedtak -> {
-                        soknadService.fattVedtak(
-                            soknadId = soknadId,
-                            utfall = utfall,
-                            behandletAv = authorizedUser.navident,
-                            document = request.document,
-                            begrunnelse = request.begrunnelse,
-                        )
+                val behandletSoknad =
+                    when (request.utfall) {
+                        "HENLAGT" -> {
+                            require(request.innvilgedePerioder.isEmpty()) {
+                                "innvilgedePerioder skal være tom ved henleggelse"
+                            }
+                            soknadService.henlegg(
+                                soknadId = soknadId,
+                                behandletAv = authorizedUser.navident,
+                                document = request.document,
+                                begrunnelse = paakrevdBegrunnelse(request.begrunnelse, "henleggelse"),
+                            )
+                        }
+                        else ->
+                            soknadService.fattVedtak(
+                                soknadId = soknadId,
+                                vedtakOppretting =
+                                    VedtakOppretting.from(
+                                        utfall = request.utfall,
+                                        innvilgedePerioder = request.innvilgedePerioder.map { it.toDomain() },
+                                        begrunnelse = request.begrunnelse,
+                                    ),
+                                behandletAv = authorizedUser.navident,
+                                document = request.document,
+                            )
                     }
-                    is Utfall.Henlagt -> {
-                        soknadService.henlegg(
-                            soknadId = soknadId,
-                            behandletAv = authorizedUser.navident,
-                            document = request.document,
-                            begrunnelse = requireNotNull(request.begrunnelse) { "Begrunnelse må oppgis for henleggelse" },
-                        )
-                    }
-                    else -> {
-                        throw BadRequestException("Ugyldig utfall: ${request.utfall}")
-                    }
-                }
 
                 call.respond(behandletSoknad.toResponseDTO())
             }
