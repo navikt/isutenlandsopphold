@@ -76,7 +76,11 @@ class SoknadTest {
 
         assertFailsWith<IllegalArgumentException> {
             lagSoknad(soktePerioder = soktePerioder).fattVedtak(
-                vedtakOppretting = VedtakOppretting.DelvisInnvilgelse(listOf(Periode(LocalDate.of(2026, 1, 8), LocalDate.of(2026, 1, 12))), "Delvis innvilget begrunnelse"),
+                vedtakOppretting =
+                    VedtakOppretting.DelvisInnvilgelse(
+                        listOf(Periode(LocalDate.of(2026, 1, 8), LocalDate.of(2026, 1, 12))),
+                        "Delvis innvilget begrunnelse",
+                    ),
                 behandletAv = veileder,
                 now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
                 document = brevDocument,

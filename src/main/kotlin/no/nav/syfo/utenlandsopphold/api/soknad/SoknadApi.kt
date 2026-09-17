@@ -62,7 +62,7 @@ fun Route.registerSoknadApi(
                         else ->
                             soknadService.fattVedtak(
                                 soknadId = soknadId,
-                                vedtakOppretting =
+                                vedtak =
                                     VedtakOppretting.from(
                                         utfall = request.utfall,
                                         innvilgedePerioder = request.innvilgedePerioder.map { it.toDomain() },

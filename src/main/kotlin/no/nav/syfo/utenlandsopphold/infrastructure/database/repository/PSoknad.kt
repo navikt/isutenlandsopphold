@@ -184,5 +184,4 @@ private fun String.toBrevtype(): Brevtype =
 private fun begrunnelseFraDatabasen(
     begrunnelse: String?,
     utfall: String,
-): String =
-    checkNotNull(begrunnelse) { "Behandling med utfall $utfall mangler begrunnelse i databasen" }
+): String = checkNotNull(begrunnelse) { "Behandling med utfall $utfall mangler begrunnelse i databasen" }

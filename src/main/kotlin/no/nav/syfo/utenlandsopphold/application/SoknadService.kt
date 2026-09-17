@@ -24,13 +24,13 @@ class SoknadService(
     fun fattVedtak(
         soknadId: UUID,
         behandletAv: Navident,
-        vedtakOppretting: VedtakOppretting,
+        vedtak: VedtakOppretting,
         document: List<DocumentComponent>,
     ): Soknad {
         val lagretSoknad =
             behandleOgLagreSoknad(soknadId) { soknad ->
                 soknad.fattVedtak(
-                    vedtakOppretting = vedtakOppretting,
+                    vedtakOppretting = vedtak,
                     behandletAv = behandletAv,
                     now = OffsetDateTime.now(),
                     document = document,

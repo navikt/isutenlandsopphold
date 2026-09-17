@@ -80,8 +80,7 @@ fun Utfall.innvilgedePerioder(): List<Periode> =
 internal fun paakrevdBegrunnelse(
     begrunnelse: String?,
     utfall: String,
-): String =
-    requireNotNull(begrunnelse?.takeIf { it.isNotBlank() }) { "Begrunnelse er påkrevd ved $utfall" }
+): String = requireNotNull(begrunnelse?.takeIf { it.isNotBlank() }) { "Begrunnelse er påkrevd ved $utfall" }
 
 enum class IkkeAktuellGrunn {
     BEHANDLET_I_INFOTRYGD,

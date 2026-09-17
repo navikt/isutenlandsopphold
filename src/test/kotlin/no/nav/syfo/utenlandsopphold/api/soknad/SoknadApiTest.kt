@@ -77,7 +77,9 @@ class SoknadApiTest {
 
     private fun stubHentSoknadOgLagreBehandling(
         soknad: Soknad?,
-        lagreBehandling: (Soknad) -> Unit = { _ -> error("Skal ikke kalles") },
+        // AssertionError, ikke error(): en IllegalStateException herfra ville blitt mappet
+        // til 409, og da kan ikke testene skille en ekte konflikt fra et uventet kall hit.
+        lagreBehandling: (Soknad) -> Unit = { _ -> throw AssertionError("lagreBehandling skal ikke kalles") },
     ) {
         every { repository.hentSoknad(any()) } returns soknad
         every { repository.hentSoknadForUpdate(any(), any()) } returns soknad
@@ -229,6 +231,26 @@ class SoknadApiTest {
                 }
 
             assertEquals(HttpStatusCode.Unauthorized, response.status)
+        }
+
+    /**
+     * v1 har bare ett skriveendepunkt. Lesetilgang til personen er ikke nok — uten dette
+     * kravet kunne en veileder med kun lesetilgang fattet vedtak.
+     */
+    @Test
+    fun `vedtak krever skrivetilgang, ikke bare lesetilgang`() =
+        testApplication {
+            stubHentSoknadOgLagreBehandling(ubruktSoknad)
+            val client = setupApiAndClient()
+
+            val response =
+                client.post(SOKNAD_VEDTAK_PATH.format(UUID.randomUUID())) {
+                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_LESETILGANG))
+                    contentType(ContentType.Application.Json)
+                    setBody(validSoknadVedtakPostDTO())
+                }
+
+            assertEquals(HttpStatusCode.Forbidden, response.status)
         }
 
     @Test

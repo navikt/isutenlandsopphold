@@ -67,22 +67,22 @@ data class Soknad(
      * Ved full innvilgelse er de innvilgede periodene søknadens egne. Oversettelsen
      * hører derfor hjemme her, der de søkte periodene er kjent.
      */
-    private fun vedtakFor(vedtakOppretting: VedtakOppretting): Utfall.Vedtak =
-        when (vedtakOppretting) {
+    private fun vedtakFor(vedtak: VedtakOppretting): Utfall.Vedtak =
+        when (vedtak) {
             VedtakOppretting.Innvilgelse -> Utfall.Innvilget(innvilgedePerioder = soktePerioder)
             is VedtakOppretting.DelvisInnvilgelse -> {
-                require(!vedtakOppretting.innvilgedePerioder.harOverlapp()) {
+                require(!vedtak.innvilgedePerioder.harOverlapp()) {
                     "Innvilgede perioder ved delvis innvilgelse kan ikke overlappe"
                 }
-                require(vedtakOppretting.innvilgedePerioder.alleDagerErInnenfor(soktePerioder)) {
+                require(vedtak.innvilgedePerioder.alleDagerErInnenfor(soktePerioder)) {
                     "Innvilgede perioder ved delvis innvilgelse må være innenfor søkte perioder"
                 }
                 Utfall.DelvisInnvilget(
-                    innvilgedePerioder = vedtakOppretting.innvilgedePerioder,
-                    begrunnelse = vedtakOppretting.begrunnelse,
+                    innvilgedePerioder = vedtak.innvilgedePerioder,
+                    begrunnelse = vedtak.begrunnelse,
                 )
             }
-            is VedtakOppretting.Avslag -> Utfall.Avslag(begrunnelse = vedtakOppretting.begrunnelse)
+            is VedtakOppretting.Avslag -> Utfall.Avslag(begrunnelse = vedtak.begrunnelse)
         }
 
     fun henlegg(

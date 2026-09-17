@@ -709,9 +709,7 @@ class SoknadRepositoryTest {
             listOf(Periode(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 10)))
     }
 
-    private fun generateBehandling(
-        utfall: Utfall = Utfall.Innvilget(behandlingsperioder),
-    ): Behandling =
+    private fun generateBehandling(utfall: Utfall = Utfall.Innvilget(behandlingsperioder)): Behandling =
         Behandling(
             utfall = utfall,
             behandletAv = Navident("Z999999"),
