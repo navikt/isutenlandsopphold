@@ -14,7 +14,7 @@ internal fun lagSoknad(
                 tom = LocalDate.of(2026, 1, 9),
             ),
         ),
-    vedtak: Vedtak? = null,
+    behandling: Behandling? = null,
 ): Soknad =
     Soknad(
         id = UUID.randomUUID(),
@@ -22,12 +22,47 @@ internal fun lagSoknad(
         personident = Personident("11111111111"),
         soktePerioder = soktePerioder,
         innsendtTidspunkt = OffsetDateTime.parse("2026-01-02T08:00:00Z"),
-        vedtak = vedtak,
+        behandling = behandling,
+    )
+
+/**
+ * Lager en behandling med et brev som matcher utfallet. Brevtypen utledes fra utfallet,
+ * slik at testene ikke trenger å gjenta koblingen mellom utfall og brev.
+ */
+internal fun lagBehandling(
+    utfall: Utfall = Utfall.Innvilget,
+    behandletAv: Navident = veileder,
+    behandletTidspunkt: OffsetDateTime = OffsetDateTime.parse("2026-01-10T08:00:00Z"),
+    innvilgedePerioder: List<Periode> =
+        when (utfall) {
+            Utfall.Innvilget -> listOf(Periode(fom = LocalDate.of(2026, 1, 5), tom = LocalDate.of(2026, 1, 9)))
+            is Utfall.DelvisInnvilget -> utfall.innvilgedePerioder
+            Utfall.Avslag, Utfall.Henlagt -> emptyList()
+        },
+    begrunnelse: String? = if (utfall == Utfall.Innvilget) null else "Begrunnelse",
+    brev: Brev = lagBrev(brevtype = utfall.brevtype()),
+): Behandling =
+    Behandling(
+        utfall = utfall,
+        behandletAv = behandletAv,
+        behandletTidspunkt = behandletTidspunkt,
+        innvilgedePerioder = innvilgedePerioder,
+        begrunnelse = begrunnelse,
+        brev = brev,
+    )
+
+internal fun lagBrev(
+    brevtype: Brevtype = Brevtype.VEDTAK_INNVILGET,
+    document: List<DocumentComponent> = brevDocument,
+): Brev =
+    Brev(
+        brevtype = brevtype,
+        document = document,
     )
 
 internal val veileder = Navident("Z990000")
 
-internal val vedtakDocument =
+internal val brevDocument =
     listOf(
         DocumentComponent(
             type = DocumentComponentType.HEADER_H1,

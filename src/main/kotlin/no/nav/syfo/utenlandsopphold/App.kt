@@ -8,11 +8,11 @@ import no.nav.syfo.common.tilgangskontroll.client.TilgangskontrollClient
 import no.nav.syfo.common.token.texas.EntraIdClient
 import no.nav.syfo.utenlandsopphold.api.apiModule
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
-import no.nav.syfo.utenlandsopphold.application.JournalforVedtakService
+import no.nav.syfo.utenlandsopphold.application.BrevService
 import no.nav.syfo.utenlandsopphold.application.PublishSoknadstatusService
 import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.infrastructure.clients.ClientsModule
-import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.journalforing.JournalforVedtakCronjob
+import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.journalforing.JournalforBrevCronjob
 import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.journalforing.JournalforingCronjobConfig
 import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.launchCronjobs
 import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.soknadstatus.PublishSoknadstatusCronjob
@@ -61,21 +61,21 @@ fun main(args: Array<String>) {
 
     val clientsModule = ClientsModule(systemTokenProvider = entraIdClient)
     val journalforingCronjobConfig = JournalforingCronjobConfig.fromEnv()
-    val journalforVedtakService =
-        JournalforVedtakService(
+    val brevService =
+        BrevService(
             soknadRepository = soknadRepository,
             personInfoClient = clientsModule.personInfoClient,
             pdfClient = clientsModule.pdfClient,
             journalforingService = clientsModule.journalforingService,
             distribusjonService = clientsModule.distribusjonService,
-            freshVedtakGracePeriod = journalforingCronjobConfig.freshVedtakGracePeriod,
+            freshBehandlingGracePeriod = journalforingCronjobConfig.freshBehandlingGracePeriod,
         )
 
     val soknadService =
         SoknadService(
             transactionManager = transactionManager,
             soknadRepository = soknadRepository,
-            journalforVedtakService = journalforVedtakService,
+            brevService = brevService,
         )
 
     val soknadstatusProducer =
@@ -124,8 +124,8 @@ fun main(args: Array<String>) {
                         leaderElection = clientsModule.leaderElection,
                         cronjobs =
                             listOf(
-                                JournalforVedtakCronjob(
-                                    journalforVedtakService = journalforVedtakService,
+                                JournalforBrevCronjob(
+                                    brevService = brevService,
                                     initialDelayMinutes = journalforingCronjobConfig.initialDelayMinutes,
                                     intervalDelayMinutes = journalforingCronjobConfig.interval.inWholeMinutes,
                                 ),

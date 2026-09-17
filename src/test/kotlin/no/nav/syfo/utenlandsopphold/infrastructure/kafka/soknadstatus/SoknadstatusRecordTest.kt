@@ -1,0 +1,92 @@
+package no.nav.syfo.utenlandsopphold.infrastructure.kafka.soknadstatus
+
+import com.fasterxml.jackson.databind.JsonNode
+import no.nav.syfo.common.types.ident.Navident
+import no.nav.syfo.common.util.configuredJacksonMapper
+import no.nav.syfo.utenlandsopphold.domain.Periode
+import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.lagBehandling
+import no.nav.syfo.utenlandsopphold.domain.lagSoknad
+import java.time.LocalDate
+import java.time.OffsetDateTime
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
+
+/**
+ * Låser den serialiserte formen på meldingene vi publiserer på
+ * `teamsykefravr.utenlandsopphold-soknad-status`. Konsumentene (syfooversiktsrv og
+ * datavarehuset) leser JSON-en direkte, så feltnavnene er en ekstern kontrakt selv om
+ * domenetypene endrer navn internt.
+ */
+class SoknadstatusRecordTest {
+    private val mapper = configuredJacksonMapper()
+
+    private fun serialize(record: SoknadstatusRecord): JsonNode = mapper.readTree(mapper.writeValueAsBytes(record))
+
+    @Test
+    fun `MOTTATT-melding har forventede felter og ingen behandling`() {
+        val soknad = lagSoknad()
+
+        val json = serialize(SoknadstatusRecord.fromSoknad(soknad))
+
+        assertEquals(soknad.eksternId.toString(), json["uuid"].asText())
+        assertEquals(soknad.personident.value, json["personident"].asText())
+        assertEquals("MOTTATT", json["status"].asText())
+        assertTrue(json["behandling"] == null || json["behandling"].isNull)
+    }
+
+    @Test
+    fun `BEHANDLET-melding har behandling med utfall og innvilgede perioder`() {
+        val innvilgetPeriode = Periode(LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 7))
+        val behandling =
+            lagBehandling(
+                utfall = Utfall.DelvisInnvilget(listOf(innvilgetPeriode)),
+                behandletAv = Navident("Z999999"),
+                behandletTidspunkt = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
+                begrunnelse = "Delvis innvilget begrunnelse",
+            )
+        val soknad = lagSoknad(behandling = behandling)
+
+        val json = serialize(SoknadstatusRecord.fromBehandletSoknad(soknad))
+
+        assertEquals(soknad.eksternId.toString(), json["uuid"].asText())
+        assertEquals("BEHANDLET", json["status"].asText())
+
+        val behandlingJson = json["behandling"]
+        assertEquals(behandling.behandlingId.toString(), behandlingJson["uuid"].asText())
+        assertEquals("Z999999", behandlingJson["veilederident"].asText())
+        assertEquals("DELVIS_INNVILGET", behandlingJson["utfall"].asText())
+        assertEquals(1, behandlingJson["innvilgedePerioder"].size())
+        assertEquals("2026-01-05", behandlingJson["innvilgedePerioder"][0]["fom"].asText())
+        assertEquals("2026-01-07", behandlingJson["innvilgedePerioder"][0]["tom"].asText())
+    }
+
+    @Test
+    fun `henleggelse publiseres med utfall HENLAGT og uten innvilgede perioder`() {
+        val soknad = lagSoknad(behandling = lagBehandling(utfall = Utfall.Henlagt, begrunnelse = "Trukket"))
+
+        val json = serialize(SoknadstatusRecord.fromBehandletSoknad(soknad))
+
+        assertEquals("HENLAGT", json["behandling"]["utfall"].asText())
+        assertEquals(0, json["behandling"]["innvilgedePerioder"].size())
+    }
+
+    @Test
+    fun `begrunnelse og brev publiseres ikke på topicet`() {
+        val soknad = lagSoknad(behandling = lagBehandling(utfall = Utfall.Avslag, begrunnelse = "Intern begrunnelse"))
+
+        val json = serialize(SoknadstatusRecord.fromBehandletSoknad(soknad))
+
+        assertTrue(json["behandling"]["begrunnelse"] == null)
+        assertTrue(json["behandling"]["brev"] == null)
+    }
+
+    @Test
+    fun `fromBehandletSoknad på ubehandlet soknad kaster`() {
+        assertFailsWith<IllegalStateException> {
+            SoknadstatusRecord.fromBehandletSoknad(lagSoknad())
+        }
+    }
+}

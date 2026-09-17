@@ -32,8 +32,9 @@ class TestDatabase : DatabaseInterface {
 fun TestDatabase.dropData() {
     val queryList =
         listOf(
+            "DELETE FROM brev",
             "DELETE FROM vedtak_periode",
-            "DELETE FROM vedtak",
+            "DELETE FROM behandling",
             "DELETE FROM soknad_periode",
             "DELETE FROM soknad",
         )
