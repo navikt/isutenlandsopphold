@@ -107,6 +107,21 @@ class SoknadstatusRecordTest {
         assertTrue(grunn == null || grunn.isNull, "ikkeAktuellGrunn skal ikke ha verdi for andre utfall enn ikke aktuell")
     }
 
+    /**
+     * `ikkeAktuellGrunn` serialiseres som `grunn.name`, og samme navn ligger lagret i
+     * kolonnen `behandling.ikke_aktuell_grunn`. Enumnavnene er altså wire-kontrakt mot både
+     * konsumentene og eksisterende rader. Et rename i IntelliJ ville endret begge deler uten
+     * å gi kompileringsfeil. Feiler denne testen: varsle konsumentene og migrer dataene
+     * før du endrer settet.
+     */
+    @Test
+    fun `navnene på ikke-aktuell-grunnene er wire-kontrakt`() {
+        assertEquals(
+            setOf("BEHANDLET_I_INFOTRYGD", "DUPLIKAT", "ANNET"),
+            IkkeAktuellGrunn.entries.map { it.name }.toSet(),
+        )
+    }
+
     @Test
     fun `fromBehandletSoknad på ubehandlet soknad kaster`() {
         assertFailsWith<IllegalStateException> {
