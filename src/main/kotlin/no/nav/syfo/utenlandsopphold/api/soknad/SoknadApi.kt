@@ -66,7 +66,7 @@ fun Route.registerSoknadApi(
                             soknadId = soknadId,
                             behandletAv = authorizedUser.navident,
                             document = request.document,
-                            begrunnelse = request.begrunnelse,
+                            begrunnelse = requireNotNull(request.begrunnelse) { "Begrunnelse må oppgis for henleggelse" },
                         )
                     }
                     else -> {

@@ -74,7 +74,7 @@ class SoknadRepository(
     ): Soknad {
         val behandling =
             checkNotNull(behandletSoknad.behandling) {
-                "Søknad ${behandletSoknad.id} mangler behandling etter behandle()"
+                "Søknad ${behandletSoknad.id} mangler behandling"
             }
 
         transaction.jdbcConnection().lagreBehandling(behandletSoknad.id, behandling)

@@ -62,14 +62,13 @@ data class Soknad(
             begrunnelse = begrunnelse,
             brev = Brev(brevtype = brevtype, document = document),
         )
-
     }
 
     fun henlegg(
         behandletAv: Navident,
         now: OffsetDateTime,
         document: List<DocumentComponent>,
-        begrunnelse: String?,
+        begrunnelse: String,
     ): Soknad {
         return registrerBehandling(
             utfall = Utfall.Henlagt,
@@ -77,32 +76,6 @@ data class Soknad(
             now = now,
             begrunnelse = begrunnelse,
             brev = Brev(brevtype = Brevtype.HENLEGGELSE, document = document),
-        )
-    }
-
-    //todo slett
-    /**
-     * Registrerer resultatet av å behandle søknaden, sammen med brevet som skal sendes.
-     * En søknad kan i dag kun behandles én gang.
-     */
-    fun behandle(
-        utfall: Utfall,
-        behandletAv: Navident,
-        now: OffsetDateTime,
-        document: List<DocumentComponent>,
-        begrunnelse: String?,
-    ): Soknad {
-        val brevtype =
-            requireNotNull(utfall.brevtype()) {
-                "Utfall $utfall gir ikke brev og kan ikke behandles med dokumentinnhold"
-            }
-
-        return registrerBehandling(
-            utfall = utfall,
-            behandletAv = behandletAv,
-            now = now,
-            begrunnelse = begrunnelse,
-            brev = Brev(brevtype = brevtype, document = document),
         )
     }
 
@@ -132,17 +105,6 @@ data class Soknad(
     ): Soknad {
         check(status == SoknadStatus.MOTTATT) {
             "En søknad kan kun behandles når den er MOTTATT, men status er $status"
-        }
-
-        // check that brev is set if utfall.brevtype() is not null, and that brev is null if utfall.brevtype() is null
-        if (utfall.brevtype() != null) {
-            requireNotNull(brev) {
-                "Utfall $utfall gir brevtype ${utfall.brevtype()}, men brev er ikke satt"
-            }
-        } else {
-            require(brev == null) {
-                "Utfall $utfall gir ikke brevtype, men brev er satt"
-            }
         }
 
         val innvilgedePerioder =

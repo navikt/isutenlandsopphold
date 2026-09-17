@@ -58,7 +58,7 @@ class PublishSoknadstatusServiceTest {
     private fun lagreBehandletSoknad(soknad: Soknad): Soknad {
         repository.lagreMottattSoknad(soknad)
         val behandletSoknad =
-            soknad.behandle(
+            soknad.fattVedtak(
                 utfall = Utfall.Innvilget,
                 behandletAv = Navident("Z999999"),
                 now = OffsetDateTime.parse("2026-03-05T10:00:00Z"),

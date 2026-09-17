@@ -123,7 +123,7 @@ class SoknadApiV2Test {
     fun `query returnerer søknad med behandling under nytt feltnavn`() =
         testApplication {
             val behandletSoknad =
-                soknad.behandle(
+                soknad.fattVedtak(
                     utfall = Utfall.Avslag,
                     behandletAv = Navident(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG),
                     now = OffsetDateTime.parse("2026-03-02T09:00:00Z"),
@@ -162,7 +162,7 @@ class SoknadApiV2Test {
     fun `JSON-en for behandling har utfall som skillefelt og bare feltene som gjelder utfallet`() =
         testApplication {
             val behandletSoknad =
-                soknad.behandle(
+                soknad.fattVedtak(
                     utfall = Utfall.Avslag,
                     behandletAv = Navident(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG),
                     now = OffsetDateTime.parse("2026-03-02T09:00:00Z"),

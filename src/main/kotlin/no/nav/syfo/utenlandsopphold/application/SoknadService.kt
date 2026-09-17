@@ -46,7 +46,7 @@ class SoknadService(
         soknadId: UUID,
         behandletAv: Navident,
         document: List<DocumentComponent>,
-        begrunnelse: String?,
+        begrunnelse: String,
     ): Soknad {
         val lagretSoknad =
             behandleOgLagreSoknad(soknadId) { soknad ->

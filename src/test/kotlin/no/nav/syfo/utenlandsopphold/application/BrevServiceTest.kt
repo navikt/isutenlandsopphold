@@ -47,14 +47,30 @@ class BrevServiceTest {
         clearMocks(repositoryMock, pdlClientMock, pdfClientMock, journalforingServiceMock, distribusjonServiceMock)
     }
 
-    private fun behandletSoknad(utfall: Utfall = Utfall.Innvilget): Soknad =
-        lagSoknad().behandle(
-            utfall = utfall,
-            behandletAv = veileder,
-            now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
-            document = brevDocument,
-            begrunnelse = if (utfall == Utfall.Innvilget) null else "begrunnelse",
-        )
+    private fun behandletSoknad(utfall: Utfall = Utfall.Innvilget): Soknad {
+        val now = OffsetDateTime.parse("2026-01-10T12:00:00Z")
+        val begrunnelse = if (utfall == Utfall.Innvilget) null else "begrunnelse"
+
+        return when (utfall) {
+            is Utfall.Vedtak ->
+                lagSoknad().fattVedtak(
+                    utfall = utfall,
+                    behandletAv = veileder,
+                    now = now,
+                    document = brevDocument,
+                    begrunnelse = begrunnelse,
+                )
+            Utfall.Henlagt ->
+                lagSoknad().henlegg(
+                    behandletAv = veileder,
+                    now = now,
+                    document = brevDocument,
+                    begrunnelse = begrunnelse,
+                )
+            is Utfall.IkkeAktuell ->
+                error("Ikke aktuell gir ikke brev, og hører derfor ikke hjemme i BrevServiceTest")
+        }
+    }
 
     @Test
     fun `journalfører og oppdaterer ikke-journalførte brev ved innvilgelse`() =
