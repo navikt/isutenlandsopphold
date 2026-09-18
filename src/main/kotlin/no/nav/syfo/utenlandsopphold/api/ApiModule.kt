@@ -22,6 +22,7 @@ import no.nav.syfo.common.util.consumerClientId
 import no.nav.syfo.utenlandsopphold.api.endpoints.registerMetricApi
 import no.nav.syfo.utenlandsopphold.api.endpoints.registerPodApi
 import no.nav.syfo.utenlandsopphold.api.soknad.registerSoknadApi
+import no.nav.syfo.utenlandsopphold.api.soknad.v2.registerSoknadApiV2
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
 import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
@@ -59,6 +60,10 @@ fun Application.apiModule(
         registerMetricApi()
         authenticate(JwtIssuerType.INTERNAL_AZUREAD.name) {
             registerSoknadApi(
+                soknadService = soknadService,
+                tilgangskontrollClient = tilgangskontrollClient,
+            )
+            registerSoknadApiV2(
                 soknadService = soknadService,
                 tilgangskontrollClient = tilgangskontrollClient,
             )

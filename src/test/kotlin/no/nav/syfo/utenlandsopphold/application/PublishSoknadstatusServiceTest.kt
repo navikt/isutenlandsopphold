@@ -9,7 +9,7 @@ import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponentType
 import no.nav.syfo.utenlandsopphold.domain.Soknad
-import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.VedtakOppretting
 import no.nav.syfo.utenlandsopphold.domain.lagSoknad
 import no.nav.syfo.utenlandsopphold.infrastructure.database.JdbcTransactionManager
 import no.nav.syfo.utenlandsopphold.infrastructure.database.TestDatabase
@@ -58,8 +58,8 @@ class PublishSoknadstatusServiceTest {
     private fun lagreBehandletSoknad(soknad: Soknad): Soknad {
         repository.lagreMottattSoknad(soknad)
         val behandletSoknad =
-            soknad.behandle(
-                utfall = Utfall.Innvilget,
+            soknad.fattVedtak(
+                vedtakOppretting = VedtakOppretting.Innvilgelse,
                 behandletAv = Navident("Z999999"),
                 now = OffsetDateTime.parse("2026-03-05T10:00:00Z"),
                 document =
@@ -70,7 +70,6 @@ class PublishSoknadstatusServiceTest {
                             texts = listOf("Søknaden din er innvilget"),
                         ),
                     ),
-                begrunnelse = null,
             )
         return transactionManager.inTransaction { transaction ->
             val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!

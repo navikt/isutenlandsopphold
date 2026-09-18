@@ -7,13 +7,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 internal fun lagSoknad(
-    soktePerioder: List<Periode> =
-        listOf(
-            Periode(
-                fom = LocalDate.of(2026, 1, 5),
-                tom = LocalDate.of(2026, 1, 9),
-            ),
-        ),
+    soktePerioder: List<Periode> = standardSoktePerioder,
     behandling: Behandling? = null,
 ): Soknad =
     Soknad(
@@ -25,29 +19,29 @@ internal fun lagSoknad(
         behandling = behandling,
     )
 
+/** Standard søkte perioder. Ved full innvilgelse er de også de innvilgede periodene. */
+internal val standardSoktePerioder =
+    listOf(
+        Periode(
+            fom = LocalDate.of(2026, 1, 5),
+            tom = LocalDate.of(2026, 1, 9),
+        ),
+    )
+
 /**
  * Lager en behandling med et brev som matcher utfallet. Brevtypen utledes fra utfallet,
  * slik at testene ikke trenger å gjenta koblingen mellom utfall og brev.
  */
 internal fun lagBehandling(
-    utfall: Utfall = Utfall.Innvilget,
+    utfall: Utfall = Utfall.Innvilget(standardSoktePerioder),
     behandletAv: Navident = veileder,
     behandletTidspunkt: OffsetDateTime = OffsetDateTime.parse("2026-01-10T08:00:00Z"),
-    innvilgedePerioder: List<Periode> =
-        when (utfall) {
-            Utfall.Innvilget -> listOf(Periode(fom = LocalDate.of(2026, 1, 5), tom = LocalDate.of(2026, 1, 9)))
-            is Utfall.DelvisInnvilget -> utfall.innvilgedePerioder
-            Utfall.Avslag, Utfall.Henlagt -> emptyList()
-        },
-    begrunnelse: String? = if (utfall == Utfall.Innvilget) null else "Begrunnelse",
-    brev: Brev = lagBrev(brevtype = utfall.brevtype()),
+    brev: Brev? = utfall.brevtype()?.let { lagBrev(brevtype = it) },
 ): Behandling =
     Behandling(
         utfall = utfall,
         behandletAv = behandletAv,
         behandletTidspunkt = behandletTidspunkt,
-        innvilgedePerioder = innvilgedePerioder,
-        begrunnelse = begrunnelse,
         brev = brev,
     )
 

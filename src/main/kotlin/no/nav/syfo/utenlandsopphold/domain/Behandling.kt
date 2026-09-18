@@ -6,49 +6,98 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 sealed interface Utfall {
+    /**
+     * Utfall som avgjør retten til sykepenger under utenlandsopphold. En henleggelse
+     * avslutter saken uten å ta stilling til retten, og er derfor ikke et vedtak.
+     */
     sealed interface Vedtak : Utfall
 
-    data object Innvilget : Vedtak
+    /**
+     * Utfall som innvilger perioder. De øvrige utfallene innvilger ingenting, og har
+     * derfor ingen perioder å bære.
+     */
+    sealed interface Innvilgelse : Vedtak {
+        val innvilgedePerioder: List<Periode>
+    }
+
+    data class Innvilget(
+        override val innvilgedePerioder: List<Periode>,
+    ) : Innvilgelse {
+        init {
+            require(innvilgedePerioder.isNotEmpty()) { "Innvilgelse må ha innvilgede perioder" }
+        }
+    }
 
     data class DelvisInnvilget(
-        val innvilgedePerioder: List<Periode>,
-    ) : Vedtak
-
-    data object Avslag : Vedtak
-
-    data object Henlagt : Utfall
-
-    companion object {
-        fun from(
-            utfall: String,
-            innvilgedePerioder: List<Periode>,
-        ): Utfall =
-            when (utfall) {
-                "INNVILGET" -> Innvilget
-                "DELVIS_INNVILGET" -> DelvisInnvilget(innvilgedePerioder)
-                "AVSLAG" -> {
-                    require(innvilgedePerioder.isEmpty()) { "innvilgedePerioder skal være tom ved avslag" }
-                    Avslag
-                }
-                "HENLAGT" -> {
-                    require(innvilgedePerioder.isEmpty()) { "innvilgedePerioder skal være tom ved henleggelse" }
-                    Henlagt
-                }
-                else -> throw IllegalArgumentException("Invalid utfall: $utfall")
-            }
+        override val innvilgedePerioder: List<Periode>,
+        val begrunnelse: String,
+    ) : Innvilgelse {
+        init {
+            require(innvilgedePerioder.isNotEmpty()) { "Delvis innvilgelse må ha innvilgede perioder" }
+            require(begrunnelse.isNotBlank()) { "Delvis innvilgelse må ha begrunnelse" }
+        }
     }
+
+    data class Avslag(
+        val begrunnelse: String,
+    ) : Vedtak {
+        init {
+            require(begrunnelse.isNotBlank()) { "Avslag må ha begrunnelse" }
+        }
+    }
+
+    data class Henlagt(
+        val begrunnelse: String,
+    ) : Utfall {
+        init {
+            require(begrunnelse.isNotBlank()) { "Henleggelse må ha begrunnelse" }
+        }
+    }
+
+    /**
+     * Søknaden skal ikke realitetsbehandles her, og gir derfor ikke brev til bruker.
+     */
+    data class IkkeAktuell(
+        val grunn: IkkeAktuellGrunn,
+    ) : Utfall
 }
 
 /**
- * Brevet et gitt utfall skal gi. Alle dagens utfall sender brev; når brevløse utfall
- * (som «ikke aktuell») innføres, blir returtypen nullable.
+ * Perioder saksbehandleren har tatt stilling til. Ligger utenfor [Utfall] fordi bare
+ * [Utfall.Innvilgelse] har dem, og fordi de øvrige utfallene ikke skal fristes til å
+ * svare på spørsmålet.
  */
-fun Utfall.brevtype(): Brevtype =
+fun Utfall.innvilgedePerioder(): List<Periode> =
     when (this) {
-        Utfall.Innvilget -> Brevtype.VEDTAK_INNVILGET
+        is Utfall.Innvilgelse -> innvilgedePerioder
+        is Utfall.Avslag, is Utfall.Henlagt, is Utfall.IkkeAktuell -> emptyList()
+    }
+
+/**
+ * Begrunnelsen kommer inn som nullbar fra API-et, så påkrevdheten må sjekkes der
+ * inputen treffer domenet.
+ */
+internal fun paakrevdBegrunnelse(
+    begrunnelse: String?,
+    utfall: String,
+): String = requireNotNull(begrunnelse?.takeIf { it.isNotBlank() }) { "Begrunnelse er påkrevd ved $utfall" }
+
+enum class IkkeAktuellGrunn {
+    BEHANDLET_I_INFOTRYGD,
+    DUPLIKAT,
+    ANNET,
+}
+
+/**
+ * Brevet et gitt utfall skal gi, eller null for utfall som ikke sender brev.
+ */
+fun Utfall.brevtype(): Brevtype? =
+    when (this) {
+        is Utfall.Innvilget -> Brevtype.VEDTAK_INNVILGET
         is Utfall.DelvisInnvilget -> Brevtype.VEDTAK_DELVIS_INNVILGET
-        Utfall.Avslag -> Brevtype.VEDTAK_AVSLAG
-        Utfall.Henlagt -> Brevtype.HENLEGGELSE
+        is Utfall.Avslag -> Brevtype.VEDTAK_AVSLAG
+        is Utfall.Henlagt -> Brevtype.HENLEGGELSE
+        is Utfall.IkkeAktuell -> null
     }
 
 /**
@@ -62,45 +111,31 @@ data class Behandling(
     val utfall: Utfall,
     val behandletAv: Navident,
     val behandletTidspunkt: OffsetDateTime,
-    val innvilgedePerioder: List<Periode>,
-    val brev: Brev,
+    val brev: Brev?,
     val behandlingId: UUID = UUID.randomUUID(),
-    val begrunnelse: String? = null,
 ) {
     init {
-        when (utfall) {
-            Utfall.Innvilget -> {
-                require(innvilgedePerioder.isNotEmpty()) { "Innvilget behandling må ha innvilgede perioder" }
-                require(begrunnelse == null) { "Innvilget behandling skal ikke ha begrunnelse" }
-            }
-            is Utfall.DelvisInnvilget -> {
-                require(utfall.innvilgedePerioder.isNotEmpty()) {
-                    "Delvis innvilget behandling må ha innvilgede perioder"
-                }
-                require(utfall.innvilgedePerioder == innvilgedePerioder) {
-                    "Innvilgede perioder på utfall og behandling må være like"
-                }
-                require(!begrunnelse.isNullOrBlank()) { "Delvis innvilget behandling må ha begrunnelse" }
-            }
-            Utfall.Avslag -> {
-                require(innvilgedePerioder.isEmpty()) { "Avslått behandling skal ikke ha innvilgede perioder" }
-                require(!begrunnelse.isNullOrBlank()) { "Avslått behandling må ha begrunnelse" }
-            }
-            Utfall.Henlagt -> {
-                require(innvilgedePerioder.isEmpty()) { "Henlagt behandling skal ikke ha innvilgede perioder" }
-                require(!begrunnelse.isNullOrBlank()) { "Henlagt behandling må ha begrunnelse" }
-            }
-        }
-
-        require(brev.brevtype == utfall.brevtype()) {
-            "Behandling $behandlingId med utfall $utfall må ha brev av type ${utfall.brevtype()}, men har ${brev.brevtype}"
+        // Dekker fire tilfeller på én gang: riktig brevtype, feil brevtype, utfall som
+        // skal ha brev uten å ha det, og utfall uten brev som likevel har et.
+        require(brev?.brevtype == utfall.brevtype()) {
+            "Behandling $behandlingId med utfall $utfall må ha brev av type ${utfall.brevtype()}, men har ${brev?.brevtype}"
         }
     }
 
     fun journalforBrev(
         journalpostId: JournalpostId,
         tidspunkt: OffsetDateTime,
-    ): Behandling = copy(brev = brev.journalfor(journalpostId, tidspunkt))
+    ): Behandling {
+        val gjeldendeBrev =
+            checkNotNull(brev) { "Behandling $behandlingId har ikke brev og kan ikke journalføres" }
 
-    fun distribuerBrev(tidspunkt: OffsetDateTime): Behandling = copy(brev = brev.distribuer(tidspunkt))
+        return copy(brev = gjeldendeBrev.journalfor(journalpostId, tidspunkt))
+    }
+
+    fun distribuerBrev(tidspunkt: OffsetDateTime): Behandling {
+        val gjeldendeBrev =
+            checkNotNull(brev) { "Behandling $behandlingId har ikke brev og kan ikke distribueres" }
+
+        return copy(brev = gjeldendeBrev.distribuer(tidspunkt))
+    }
 }

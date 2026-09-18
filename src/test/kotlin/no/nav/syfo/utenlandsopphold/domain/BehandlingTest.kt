@@ -9,127 +9,81 @@ class BehandlingTest {
     private val innvilgetPeriode = Periode(LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 7))
 
     @Test
-    fun `delvis innvilget behandling krever samme innvilgede perioder på utfall og behandling`() {
-        val behandling =
-            lagBehandling(
-                utfall = Utfall.DelvisInnvilget(listOf(innvilgetPeriode)),
-                begrunnelse = "Delvis innvilget begrunnelse",
-            )
-
-        assertEquals(Utfall.DelvisInnvilget(listOf(innvilgetPeriode)), behandling.utfall)
-        assertEquals(listOf(innvilgetPeriode), behandling.innvilgedePerioder)
+    fun `innvilgelse uten innvilgede perioder kaster`() {
+        assertFailsWith<IllegalArgumentException> { Utfall.Innvilget(emptyList()) }
     }
 
     @Test
-    fun `delvis innvilget behandling med avvikende innvilgede perioder kaster`() {
+    fun `delvis innvilgelse uten innvilgede perioder kaster`() {
         assertFailsWith<IllegalArgumentException> {
-            lagBehandling(
-                utfall = Utfall.DelvisInnvilget(listOf(innvilgetPeriode)),
-                innvilgedePerioder = listOf(Periode(LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 9))),
-                begrunnelse = "Delvis innvilget begrunnelse",
-            )
+            Utfall.DelvisInnvilget(emptyList(), "Delvis innvilget begrunnelse")
         }
     }
 
     @Test
-    fun `delvis innvilget behandling uten innvilgede perioder kaster`() {
+    fun `delvis innvilgelse med blank begrunnelse kaster`() {
         assertFailsWith<IllegalArgumentException> {
-            lagBehandling(utfall = Utfall.DelvisInnvilget(emptyList()), begrunnelse = "Begrunnelse")
+            Utfall.DelvisInnvilget(listOf(innvilgetPeriode), " ")
         }
     }
 
     @Test
-    fun `delvis innvilget behandling uten begrunnelse kaster`() {
-        assertFailsWith<IllegalArgumentException> {
-            lagBehandling(utfall = Utfall.DelvisInnvilget(listOf(innvilgetPeriode)), begrunnelse = null)
-        }
+    fun `avslag med blank begrunnelse kaster`() {
+        assertFailsWith<IllegalArgumentException> { Utfall.Avslag("   ") }
     }
 
     @Test
-    fun `delvis innvilget behandling med blank begrunnelse kaster`() {
-        assertFailsWith<IllegalArgumentException> {
-            lagBehandling(utfall = Utfall.DelvisInnvilget(listOf(innvilgetPeriode)), begrunnelse = " ")
-        }
+    fun `henleggelse med blank begrunnelse kaster`() {
+        assertFailsWith<IllegalArgumentException> { Utfall.Henlagt("   ") }
     }
 
+    /**
+     * Bare [Utfall.Innvilgelse] bærer perioder. De øvrige utfallene har ingen å bære,
+     * og kan ikke uttrykke noe annet enn en tom liste.
+     */
     @Test
-    fun `avslått behandling med innvilgede perioder kaster`() {
-        assertFailsWith<IllegalArgumentException> {
-            lagBehandling(
-                utfall = Utfall.Avslag,
-                innvilgedePerioder = listOf(innvilgetPeriode),
-                begrunnelse = "Avslag begrunnelse",
-            )
-        }
-    }
-
-    @Test
-    fun `avslått behandling uten begrunnelse kaster`() {
-        assertFailsWith<IllegalArgumentException> {
-            lagBehandling(utfall = Utfall.Avslag, begrunnelse = null)
-        }
-    }
-
-    @Test
-    fun `avslått behandling med blank begrunnelse kaster`() {
-        assertFailsWith<IllegalArgumentException> {
-            lagBehandling(utfall = Utfall.Avslag, begrunnelse = "   ")
-        }
-    }
-
-    @Test
-    fun `henlagt behandling uten innvilgede perioder og med begrunnelse er gyldig`() {
-        val behandling = lagBehandling(utfall = Utfall.Henlagt, begrunnelse = "Søker har trukket søknaden")
-
-        assertEquals(Utfall.Henlagt, behandling.utfall)
-    }
-
-    @Test
-    fun `henlagt behandling med innvilgede perioder kaster`() {
-        assertFailsWith<IllegalArgumentException> {
-            lagBehandling(
-                utfall = Utfall.Henlagt,
-                innvilgedePerioder = listOf(innvilgetPeriode),
-                begrunnelse = "Henleggelse begrunnelse",
-            )
-        }
-    }
-
-    @Test
-    fun `henlagt behandling uten begrunnelse kaster`() {
-        assertFailsWith<IllegalArgumentException> {
-            lagBehandling(utfall = Utfall.Henlagt, begrunnelse = null)
-        }
-    }
-
-    @Test
-    fun `henlagt behandling med blank begrunnelse kaster`() {
-        assertFailsWith<IllegalArgumentException> {
-            lagBehandling(utfall = Utfall.Henlagt, begrunnelse = "   ")
-        }
-    }
-
-    @Test
-    fun `innvilget behandling med begrunnelse kaster`() {
-        assertFailsWith<IllegalArgumentException> {
-            lagBehandling(utfall = Utfall.Innvilget, begrunnelse = "Skal ikke være satt")
-        }
-    }
-
-    @Test
-    fun `innvilget behandling uten innvilgede perioder kaster`() {
-        assertFailsWith<IllegalArgumentException> {
-            lagBehandling(utfall = Utfall.Innvilget, innvilgedePerioder = emptyList())
-        }
+    fun `innvilgede perioder leses fra innvilgelsesutfallene og er tomme ellers`() {
+        assertEquals(listOf(innvilgetPeriode), Utfall.Innvilget(listOf(innvilgetPeriode)).innvilgedePerioder())
+        assertEquals(
+            listOf(innvilgetPeriode),
+            Utfall.DelvisInnvilget(listOf(innvilgetPeriode), "Begrunnelse").innvilgedePerioder(),
+        )
+        assertEquals(emptyList(), Utfall.Avslag("Begrunnelse").innvilgedePerioder())
+        assertEquals(emptyList(), Utfall.Henlagt("Begrunnelse").innvilgedePerioder())
+        assertEquals(emptyList(), Utfall.IkkeAktuell(IkkeAktuellGrunn.ANNET).innvilgedePerioder())
     }
 
     @Test
     fun `behandling med brev som ikke matcher utfallet kaster`() {
         assertFailsWith<IllegalArgumentException> {
             lagBehandling(
-                utfall = Utfall.Henlagt,
-                begrunnelse = "Begrunnelse",
+                utfall = Utfall.Henlagt("Begrunnelse"),
                 brev = lagBrev(brevtype = Brevtype.VEDTAK_AVSLAG),
+            )
+        }
+    }
+
+    @Test
+    fun `behandling med utfall som skal ha brev kaster uten brev`() {
+        assertFailsWith<IllegalArgumentException> {
+            lagBehandling(utfall = Utfall.Henlagt("Begrunnelse"), brev = null)
+        }
+    }
+
+    @Test
+    fun `behandling merket ikke aktuell er gyldig uten brev`() {
+        val behandling = lagBehandling(utfall = Utfall.IkkeAktuell(IkkeAktuellGrunn.DUPLIKAT))
+
+        assertEquals(null, behandling.brev)
+        assertEquals(IkkeAktuellGrunn.DUPLIKAT, (behandling.utfall as Utfall.IkkeAktuell).grunn)
+    }
+
+    @Test
+    fun `behandling merket ikke aktuell med brev kaster`() {
+        assertFailsWith<IllegalArgumentException> {
+            lagBehandling(
+                utfall = Utfall.IkkeAktuell(IkkeAktuellGrunn.ANNET),
+                brev = lagBrev(brevtype = Brevtype.HENLEGGELSE),
             )
         }
     }
@@ -140,21 +94,81 @@ class BehandlingTest {
      * uten å mene det.
      */
     @Test
-    fun `innvilgelse, delvis innvilgelse og avslag er realitetsbehandling, henleggelse er det ikke`() {
-        val delvisInnvilget = Utfall.DelvisInnvilget(listOf(innvilgetPeriode))
-        val alleUtfall: List<Utfall> = listOf(Utfall.Innvilget, delvisInnvilget, Utfall.Avslag, Utfall.Henlagt)
+    fun `innvilgelse, delvis innvilgelse og avslag er vedtak, henleggelse er det ikke`() {
+        val innvilget = Utfall.Innvilget(listOf(innvilgetPeriode))
+        val delvisInnvilget = Utfall.DelvisInnvilget(listOf(innvilgetPeriode), "Delvis innvilget begrunnelse")
+        val avslag = Utfall.Avslag("Avslag begrunnelse")
+        val henlagt = Utfall.Henlagt("Henleggelse begrunnelse")
+        val ikkeAktuell = Utfall.IkkeAktuell(IkkeAktuellGrunn.DUPLIKAT)
+        val alleUtfall: List<Utfall> =
+            listOf(innvilget, delvisInnvilget, avslag, henlagt, ikkeAktuell)
 
-        val (realitetsbehandlinger, ovrige) = alleUtfall.partition { it is Utfall.Vedtak }
+        val (vedtak, ovrige) = alleUtfall.partition { it is Utfall.Vedtak }
 
-        assertEquals(listOf(Utfall.Innvilget, delvisInnvilget, Utfall.Avslag), realitetsbehandlinger)
-        assertEquals(listOf(Utfall.Henlagt), ovrige)
+        assertEquals(listOf(innvilget, delvisInnvilget, avslag), vedtak)
+        assertEquals(listOf(henlagt, ikkeAktuell), ovrige)
     }
 
     @Test
     fun `brevtype utledes fra utfall`() {
-        assertEquals(Brevtype.VEDTAK_INNVILGET, Utfall.Innvilget.brevtype())
-        assertEquals(Brevtype.VEDTAK_DELVIS_INNVILGET, Utfall.DelvisInnvilget(listOf(innvilgetPeriode)).brevtype())
-        assertEquals(Brevtype.VEDTAK_AVSLAG, Utfall.Avslag.brevtype())
-        assertEquals(Brevtype.HENLEGGELSE, Utfall.Henlagt.brevtype())
+        assertEquals(Brevtype.VEDTAK_INNVILGET, Utfall.Innvilget(listOf(innvilgetPeriode)).brevtype())
+        assertEquals(
+            Brevtype.VEDTAK_DELVIS_INNVILGET,
+            Utfall.DelvisInnvilget(listOf(innvilgetPeriode), "Begrunnelse").brevtype(),
+        )
+        assertEquals(Brevtype.VEDTAK_AVSLAG, Utfall.Avslag("Begrunnelse").brevtype())
+        assertEquals(Brevtype.HENLEGGELSE, Utfall.Henlagt("Begrunnelse").brevtype())
+        assertEquals(null, Utfall.IkkeAktuell(IkkeAktuellGrunn.ANNET).brevtype())
+    }
+
+    @Test
+    fun `VedtakOppretting from godtar de tre vedtaksutfallene, men ikke henleggelse eller ikke aktuell`() {
+        assertEquals(VedtakOppretting.Innvilgelse, VedtakOppretting.from("INNVILGET", emptyList(), begrunnelse = null))
+        assertEquals(
+            VedtakOppretting.DelvisInnvilgelse(listOf(innvilgetPeriode), "Begrunnelse"),
+            VedtakOppretting.from("DELVIS_INNVILGET", listOf(innvilgetPeriode), begrunnelse = "Begrunnelse"),
+        )
+        assertEquals(
+            VedtakOppretting.Avslag("Begrunnelse"),
+            VedtakOppretting.from("AVSLAG", emptyList(), begrunnelse = "Begrunnelse"),
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            VedtakOppretting.from("HENLAGT", emptyList(), begrunnelse = "Begrunnelse")
+        }
+        assertFailsWith<IllegalArgumentException> {
+            VedtakOppretting.from("IKKE_AKTUELL", emptyList(), begrunnelse = null)
+        }
+    }
+
+    /**
+     * Begrunnelsen kommer inn som nullbar fra API-et. Fabrikken er derfor det eneste
+     * stedet et manglende eller overflødig begrunnelsesfelt kan oppstå i praksis.
+     */
+    @Test
+    fun `VedtakOppretting from krever begrunnelse der utfallet trenger det, og avviser den ellers`() {
+        assertFailsWith<IllegalArgumentException> {
+            VedtakOppretting.from("INNVILGET", emptyList(), begrunnelse = "Skal ikke være satt")
+        }
+        assertFailsWith<IllegalArgumentException> {
+            VedtakOppretting.from("AVSLAG", emptyList(), begrunnelse = null)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            VedtakOppretting.from("DELVIS_INNVILGET", listOf(innvilgetPeriode), begrunnelse = null)
+        }
+    }
+
+    @Test
+    fun `VedtakOppretting from avviser innvilgede perioder ved avslag`() {
+        assertFailsWith<IllegalArgumentException> {
+            VedtakOppretting.from("AVSLAG", listOf(innvilgetPeriode), begrunnelse = "Begrunnelse")
+        }
+    }
+
+    @Test
+    fun `paakrevdBegrunnelse avviser manglende og blank begrunnelse`() {
+        assertEquals("Begrunnelse", paakrevdBegrunnelse("Begrunnelse", "henleggelse"))
+        assertFailsWith<IllegalArgumentException> { paakrevdBegrunnelse(null, "henleggelse") }
+        assertFailsWith<IllegalArgumentException> { paakrevdBegrunnelse("   ", "henleggelse") }
     }
 }

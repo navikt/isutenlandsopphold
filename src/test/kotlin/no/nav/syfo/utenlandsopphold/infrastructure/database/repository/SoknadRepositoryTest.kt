@@ -9,6 +9,7 @@ import no.nav.syfo.utenlandsopphold.domain.Brev
 import no.nav.syfo.utenlandsopphold.domain.Brevtype
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponentType
+import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellGrunn
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.SoknadStatus
@@ -135,7 +136,7 @@ class SoknadRepositoryTest {
         val soknad = soknad(soktePerioder = soktePerioder)
         repository.lagreMottattSoknad(soknad)
 
-        val behandling = generateBehandling(innvilgedePerioder = soktePerioder)
+        val behandling = generateBehandling(utfall = Utfall.Innvilget(soktePerioder))
         val oppdatertSoknad =
             transactionManager.inTransaction { transaction ->
                 val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
@@ -143,11 +144,10 @@ class SoknadRepositoryTest {
             }
 
         assertEquals(SoknadStatus.INNVILGET, oppdatertSoknad.status)
-        assertEquals(Utfall.Innvilget, oppdatertSoknad.behandling?.utfall)
+        assertEquals(Utfall.Innvilget(soktePerioder), oppdatertSoknad.behandling?.utfall)
         assertEquals(behandling.behandletAv, oppdatertSoknad.behandling?.behandletAv)
         assertEquals(behandling.behandletTidspunkt, oppdatertSoknad.behandling?.behandletTidspunkt)
-        assertEquals(soktePerioder, oppdatertSoknad.behandling?.innvilgedePerioder)
-        assertEquals(behandling.brev.document, oppdatertSoknad.behandling?.brev?.document)
+        assertEquals(behandling.brev!!.document, oppdatertSoknad.behandling?.brev?.document)
     }
 
     @Test
@@ -155,7 +155,7 @@ class SoknadRepositoryTest {
         val soktePerioder = listOf(Periode(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 10)))
         val soknad = soknad(soktePerioder = soktePerioder)
         repository.lagreMottattSoknad(soknad)
-        val behandling = generateBehandling(innvilgedePerioder = soktePerioder)
+        val behandling = generateBehandling(utfall = Utfall.Innvilget(soktePerioder))
         transactionManager.inTransaction { transaction ->
             val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
             repository.lagreBehandling(transaction, lagretSoknad.copy(behandling = behandling))
@@ -164,7 +164,7 @@ class SoknadRepositoryTest {
         val hentetPaNytt = repository.hentSoknader(personident).single()
 
         assertEquals(SoknadStatus.INNVILGET, hentetPaNytt.status)
-        assertEquals(soktePerioder, hentetPaNytt.behandling?.innvilgedePerioder)
+        assertEquals(Utfall.Innvilget(soktePerioder), hentetPaNytt.behandling?.utfall)
         assertEquals(behandling.behandlingId, hentetPaNytt.behandling?.behandlingId)
     }
 
@@ -189,7 +189,7 @@ class SoknadRepositoryTest {
         // skal ikke ha lagt igjen et foreldreløst brev.
         val hentetPaNytt = repository.hentSoknader(personident).single()
         assertEquals(forsteBehandling.behandlingId, hentetPaNytt.behandling?.behandlingId)
-        assertEquals(forsteBehandling.brev.brevId, hentetPaNytt.behandling?.brev?.brevId)
+        assertEquals(forsteBehandling.brev!!.brevId, hentetPaNytt.behandling?.brev?.brevId)
         assertEquals(1, countRows("BREV"))
         assertEquals(1, countRows("BEHANDLING"))
     }
@@ -204,6 +204,21 @@ class SoknadRepositoryTest {
             }
         }
 
+    /**
+     * Leses direkte fra kolonnen, ikke gjennom domenet. Utfall uten begrunnelse har
+     * ingen plass å bære en verdi, så en round-trip kan ikke avsløre at skrivveien
+     * likevel la noe i kolonnen.
+     */
+    private fun lagretBegrunnelse(): String? =
+        database.connection.use { connection ->
+            connection.prepareStatement("SELECT begrunnelse FROM behandling").use { statement ->
+                statement.executeQuery().use { rs ->
+                    rs.next()
+                    rs.getString(1)
+                }
+            }
+        }
+
     @Test
     fun `lagreBehandling persisterer og henter delvis innvilget behandling`() {
         val soktePerioder = listOf(Periode(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 10)))
@@ -212,9 +227,7 @@ class SoknadRepositoryTest {
         repository.lagreMottattSoknad(soknad)
         val behandling =
             generateBehandling(
-                utfall = Utfall.DelvisInnvilget(innvilgedePerioder),
-                innvilgedePerioder = innvilgedePerioder,
-                begrunnelse = "Delvis innvilget begrunnelse",
+                utfall = Utfall.DelvisInnvilget(innvilgedePerioder, "Delvis innvilget begrunnelse"),
             )
         transactionManager.inTransaction { transaction ->
             val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
@@ -224,9 +237,7 @@ class SoknadRepositoryTest {
         val hentetPaNytt = repository.hentSoknader(personident).single()
 
         assertEquals(SoknadStatus.DELVIS_INNVILGET, hentetPaNytt.status)
-        assertEquals(Utfall.DelvisInnvilget(innvilgedePerioder), hentetPaNytt.behandling?.utfall)
-        assertEquals(innvilgedePerioder, hentetPaNytt.behandling?.innvilgedePerioder)
-        assertEquals("Delvis innvilget begrunnelse", hentetPaNytt.behandling?.begrunnelse)
+        assertEquals(Utfall.DelvisInnvilget(innvilgedePerioder, "Delvis innvilget begrunnelse"), hentetPaNytt.behandling?.utfall)
     }
 
     @Test
@@ -235,9 +246,7 @@ class SoknadRepositoryTest {
         repository.lagreMottattSoknad(soknad)
         val behandling =
             generateBehandling(
-                utfall = Utfall.Avslag,
-                innvilgedePerioder = emptyList(),
-                begrunnelse = "Avslag begrunnelse",
+                utfall = Utfall.Avslag("Avslag begrunnelse"),
             )
         transactionManager.inTransaction { transaction ->
             val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
@@ -247,9 +256,7 @@ class SoknadRepositoryTest {
         val hentetPaNytt = repository.hentSoknader(personident).single()
 
         assertEquals(SoknadStatus.AVSLAG, hentetPaNytt.status)
-        assertEquals(Utfall.Avslag, hentetPaNytt.behandling?.utfall)
-        assertEquals(emptyList(), hentetPaNytt.behandling?.innvilgedePerioder)
-        assertEquals("Avslag begrunnelse", hentetPaNytt.behandling?.begrunnelse)
+        assertEquals(Utfall.Avslag("Avslag begrunnelse"), hentetPaNytt.behandling?.utfall)
     }
 
     @Test
@@ -258,9 +265,7 @@ class SoknadRepositoryTest {
         repository.lagreMottattSoknad(soknad)
         val behandling =
             generateBehandling(
-                utfall = Utfall.Henlagt,
-                innvilgedePerioder = emptyList(),
-                begrunnelse = "Søker har trukket søknaden",
+                utfall = Utfall.Henlagt("Søker har trukket søknaden"),
             )
         transactionManager.inTransaction { transaction ->
             val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
@@ -270,9 +275,7 @@ class SoknadRepositoryTest {
         val hentetPaNytt = repository.hentSoknader(personident).single()
 
         assertEquals(SoknadStatus.HENLAGT, hentetPaNytt.status)
-        assertEquals(Utfall.Henlagt, hentetPaNytt.behandling?.utfall)
-        assertEquals(emptyList(), hentetPaNytt.behandling?.innvilgedePerioder)
-        assertEquals("Søker har trukket søknaden", hentetPaNytt.behandling?.begrunnelse)
+        assertEquals(Utfall.Henlagt("Søker har trukket søknaden"), hentetPaNytt.behandling?.utfall)
     }
 
     @Test
@@ -280,7 +283,7 @@ class SoknadRepositoryTest {
         val soktePerioder = listOf(Periode(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 10)))
         val soknad = soknad(soktePerioder = soktePerioder)
         repository.lagreMottattSoknad(soknad)
-        val behandling = generateBehandling(innvilgedePerioder = soktePerioder)
+        val behandling = generateBehandling(utfall = Utfall.Innvilget(soktePerioder))
         transactionManager.inTransaction { transaction ->
             val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
             repository.lagreBehandling(transaction, lagretSoknad.copy(behandling = behandling))
@@ -289,7 +292,97 @@ class SoknadRepositoryTest {
         val hentetPaNytt = repository.hentSoknader(personident).single()
 
         assertEquals(SoknadStatus.INNVILGET, hentetPaNytt.status)
-        assertNull(hentetPaNytt.behandling?.begrunnelse)
+        assertNull(lagretBegrunnelse())
+    }
+
+    @Test
+    fun `lagreBehandling persisterer og henter behandling merket ikke aktuell, uten brev`() {
+        val soknad = soknad()
+        repository.lagreMottattSoknad(soknad)
+        transactionManager.inTransaction { transaction ->
+            val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
+            repository.lagreBehandling(
+                transaction,
+                lagretSoknad.merkIkkeAktuell(
+                    grunn = IkkeAktuellGrunn.BEHANDLET_I_INFOTRYGD,
+                    behandletAv = Navident("Z999999"),
+                    now = OffsetDateTime.parse("2026-03-05T10:00:00Z"),
+                ),
+            )
+        }
+
+        val hentetPaNytt = repository.hentSoknader(personident).single()
+
+        assertEquals(SoknadStatus.IKKE_AKTUELL, hentetPaNytt.status)
+        assertEquals(
+            Utfall.IkkeAktuell(IkkeAktuellGrunn.BEHANDLET_I_INFOTRYGD),
+            hentetPaNytt.behandling?.utfall,
+        )
+        assertNull(lagretBegrunnelse())
+        assertNull(hentetPaNytt.behandling?.brev)
+        assertEquals(0, countRows("brev"))
+    }
+
+    /**
+     * Databasen skal håndheve koblingen mellom utfall og grunn begge veier, ikke bare
+     * stole på at domenet gjør det.
+     */
+    @Test
+    fun `databasen avviser ikke_aktuell_grunn på andre utfall, og ikke aktuell uten grunn`() {
+        val soknad = soknad()
+        repository.lagreMottattSoknad(soknad)
+
+        assertFailsWith<PSQLException> {
+            insertBehandlingDirekte(soknadEksternId = soknad.eksternId, utfall = "HENLAGT", ikkeAktuellGrunn = "DUPLIKAT")
+        }
+        assertFailsWith<PSQLException> {
+            insertBehandlingDirekte(soknadEksternId = soknad.eksternId, utfall = "IKKE_AKTUELL", ikkeAktuellGrunn = null)
+        }
+    }
+
+    private fun insertBehandlingDirekte(
+        soknadEksternId: UUID,
+        utfall: String,
+        ikkeAktuellGrunn: String?,
+    ) = database.connection.use { connection ->
+        connection
+            .prepareStatement(
+                """
+                INSERT INTO behandling (uuid, soknad_id, utfall, behandlet_av, behandlet_tidspunkt, ikke_aktuell_grunn)
+                SELECT ?, s.id, ?, 'Z999999', now(), ?
+                FROM soknad s WHERE s.ekstern_id = ?
+                """.trimIndent(),
+            ).use { statement ->
+                statement.setObject(1, UUID.randomUUID())
+                statement.setString(2, utfall)
+                statement.setString(3, ikkeAktuellGrunn)
+                statement.setObject(4, soknadEksternId)
+                statement.executeUpdate()
+            }
+        connection.commit()
+    }
+
+    @Test
+    fun `getIkkeJournalforteSoknader utelater behandling merket ikke aktuell`() {
+        val soknad = soknad()
+        repository.lagreMottattSoknad(soknad)
+        transactionManager.inTransaction { transaction ->
+            val lagretSoknad = repository.hentSoknadForUpdate(transaction, soknad.id)!!
+            repository.lagreBehandling(
+                transaction,
+                lagretSoknad.merkIkkeAktuell(
+                    grunn = IkkeAktuellGrunn.ANNET,
+                    behandletAv = Navident("Z999999"),
+                    now = OffsetDateTime.parse("2026-03-05T10:00:00Z"),
+                ),
+            )
+        }
+
+        assertEquals(emptyList(), repository.getIkkeJournalforteSoknader(behandletBefore = etterAlleTestBehandlinger))
+        assertEquals(
+            emptyList(),
+            repository.getSoknaderMedIkkeDistribuerteBrev(behandletBefore = etterAlleTestBehandlinger),
+        )
     }
 
     @Test
@@ -369,7 +462,7 @@ class SoknadRepositoryTest {
                 ?.title,
         )
         assertEquals(1, soknad.soktePerioder.size)
-        assertEquals(soknad.soktePerioder, behandling?.innvilgedePerioder)
+        assertEquals(Utfall.Innvilget(soknad.soktePerioder), behandling?.utfall)
     }
 
     @Test
@@ -611,36 +704,29 @@ class SoknadRepositoryTest {
         // getIkkeJournalforteSoknader/getSoknaderMedIkkeDistribuerteBrev sine
         // eksisterende asserts ikke påvirkes av grace-vinduet.
         private val etterAlleTestBehandlinger = OffsetDateTime.parse("2026-06-01T00:00:00Z")
+
+        private val behandlingsperioder =
+            listOf(Periode(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 10)))
     }
 
-    private fun generateBehandling(
-        utfall: Utfall = Utfall.Innvilget,
-        innvilgedePerioder: List<Periode> =
-            listOf(
-                Periode(
-                    LocalDate.of(2026, 4, 1),
-                    LocalDate.of(2026, 4, 10),
-                ),
-            ),
-        begrunnelse: String? = null,
-    ): Behandling =
+    private fun generateBehandling(utfall: Utfall = Utfall.Innvilget(behandlingsperioder)): Behandling =
         Behandling(
             utfall = utfall,
             behandletAv = Navident("Z999999"),
             behandletTidspunkt = OffsetDateTime.parse("2026-03-05T10:00:00Z"),
-            innvilgedePerioder = innvilgedePerioder,
-            begrunnelse = begrunnelse,
             brev =
-                Brev(
-                    brevtype = utfall.brevtype(),
-                    document =
-                        listOf(
-                            DocumentComponent(
-                                type = DocumentComponentType.HEADER_H1,
-                                title = "Vedtak",
-                                texts = listOf("Søknaden din er innvilget"),
+                utfall.brevtype()?.let { brevtype ->
+                    Brev(
+                        brevtype = brevtype,
+                        document =
+                            listOf(
+                                DocumentComponent(
+                                    type = DocumentComponentType.HEADER_H1,
+                                    title = "Vedtak",
+                                    texts = listOf("Søknaden din er innvilget"),
+                                ),
                             ),
-                        ),
-                ),
+                    )
+                },
         )
 }

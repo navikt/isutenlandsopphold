@@ -9,6 +9,7 @@ import no.nav.syfo.utenlandsopphold.domain.Behandling
 import no.nav.syfo.utenlandsopphold.domain.Brev
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
+import no.nav.syfo.utenlandsopphold.domain.innvilgedePerioder
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
 import no.nav.syfo.utenlandsopphold.infrastructure.database.jdbcConnection
 import no.nav.syfo.utenlandsopphold.infrastructure.database.toList
@@ -74,7 +75,7 @@ class SoknadRepository(
     ): Soknad {
         val behandling =
             checkNotNull(behandletSoknad.behandling) {
-                "Søknad ${behandletSoknad.id} mangler behandling etter behandle()"
+                "Søknad ${behandletSoknad.id} mangler behandling"
             }
 
         transaction.jdbcConnection().lagreBehandling(behandletSoknad.id, behandling)
@@ -301,13 +302,14 @@ class SoknadRepository(
                 it.setString(2, behandling.utfall.dbValue())
                 it.setString(3, behandling.behandletAv.value)
                 it.setObject(4, behandling.behandletTidspunkt)
-                it.setString(5, behandling.begrunnelse)
-                it.setObject(6, soknadId)
+                it.setString(5, behandling.utfall.begrunnelseDbValue())
+                it.setString(6, behandling.utfall.ikkeAktuellGrunnDbValue())
+                it.setObject(7, soknadId)
                 it.executeQuery().toList { toPBehandling() }.singleOrNull()
                     ?: throw IllegalArgumentException("Fant ikke søknad med id $soknadId")
             }
-        createBehandlingPerioder(pBehandling.id, behandling.innvilgedePerioder)
-        createBrev(pBehandling.id, behandling.brev)
+        createBehandlingPerioder(pBehandling.id, behandling.utfall.innvilgedePerioder())
+        behandling.brev?.let { createBrev(pBehandling.id, it) }
     }
 
     private fun Connection.createBehandlingPerioder(
@@ -468,9 +470,10 @@ class SoknadRepository(
                     utfall,
                     behandlet_av,
                     behandlet_tidspunkt,
-                    begrunnelse
+                    begrunnelse,
+                    ikke_aktuell_grunn
                 )
-                SELECT ?, s.id, ?, ?, ?, ?
+                SELECT ?, s.id, ?, ?, ?, ?, ?
                 FROM soknad s
                 WHERE s.uuid = ?
                 RETURNING *
@@ -536,6 +539,7 @@ internal fun ResultSet.toPBehandling(): PBehandling =
         behandletAv = getString("behandlet_av"),
         behandletTidspunkt = getObject("behandlet_tidspunkt", OffsetDateTime::class.java),
         begrunnelse = getString("begrunnelse"),
+        ikkeAktuellGrunn = getString("ikke_aktuell_grunn"),
     )
 
 internal fun ResultSet.toPBrev(): PBrev =
