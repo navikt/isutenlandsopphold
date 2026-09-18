@@ -12,10 +12,6 @@ import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.VedtakOppretting
 import java.util.UUID
 
-/**
- * v2 av søknads-APIet. Hovedforskjellen fra v1 er at hver måte å behandle en søknad
- * på har sitt eget endepunkt, i stedet for én `utfall`-diskriminator på `/vedtak`.
- */
 fun Route.registerSoknadApiV2(
     soknadService: SoknadService,
     tilgangskontrollClient: TilgangskontrollClient,

@@ -1,13 +1,7 @@
 -- Legger til utfallet IKKE_AKTUELL for søknader som ikke skal realitetsbehandles her.
 --
 -- Grunnen ligger som kolonne på BEHANDLING framfor i egen tabell: det er én verdi som
--- settes én gang og aldri endres, uten egen livssyklus slik BREV har. Kolonnen gir også
--- en sterkere garanti enn en egen tabell kunne gitt, siden CHECK-en binder begge veier —
--- grunnen finnes nøyaktig når utfallet er IKKE_AKTUELL.
---
--- Kolonnen heter ikke_aktuell_grunn og ikke grunn, både for å unngå forveksling med
--- begrunnelse i samme tabell, og fordi den flate tabellen mangler innrammingen som
--- Utfall.IkkeAktuell gir i domenet.
+-- settes én gang og aldri endres, uten egen livssyklus slik BREV har.
 --
 -- En behandling merket ikke aktuell sender ikke brev, og får derfor ingen rad i BREV.
 -- Cronjobbene for journalføring og distribusjon bruker INNER JOIN mot BREV, så slike
