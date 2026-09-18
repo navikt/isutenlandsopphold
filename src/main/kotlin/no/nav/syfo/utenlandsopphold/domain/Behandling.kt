@@ -6,32 +6,20 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 sealed interface Utfall {
-    /**
-     * Utfall som avgjør retten til sykepenger under utenlandsopphold. En henleggelse
-     * avslutter saken uten å ta stilling til retten, og er derfor ikke et vedtak.
-     */
     sealed interface Vedtak : Utfall
 
-    /**
-     * Utfall som innvilger perioder. De øvrige utfallene innvilger ingenting, og har
-     * derfor ingen perioder å bære.
-     */
-    sealed interface Innvilgelse : Vedtak {
-        val innvilgedePerioder: List<Periode>
-    }
-
     data class Innvilget(
-        override val innvilgedePerioder: List<Periode>,
-    ) : Innvilgelse {
+        val innvilgedePerioder: List<Periode>,
+    ) : Vedtak {
         init {
             require(innvilgedePerioder.isNotEmpty()) { "Innvilgelse må ha innvilgede perioder" }
         }
     }
 
     data class DelvisInnvilget(
-        override val innvilgedePerioder: List<Periode>,
+        val innvilgedePerioder: List<Periode>,
         val begrunnelse: String,
-    ) : Innvilgelse {
+    ) : Vedtak {
         init {
             require(innvilgedePerioder.isNotEmpty()) { "Delvis innvilgelse må ha innvilgede perioder" }
             require(begrunnelse.isNotBlank()) { "Delvis innvilgelse må ha begrunnelse" }
@@ -62,21 +50,13 @@ sealed interface Utfall {
     ) : Utfall
 }
 
-/**
- * Perioder saksbehandleren har tatt stilling til. Ligger utenfor [Utfall] fordi bare
- * [Utfall.Innvilgelse] har dem, og fordi de øvrige utfallene ikke skal fristes til å
- * svare på spørsmålet.
- */
 fun Utfall.innvilgedePerioder(): List<Periode> =
     when (this) {
-        is Utfall.Innvilgelse -> innvilgedePerioder
+        is Utfall.Innvilget -> innvilgedePerioder
+        is Utfall.DelvisInnvilget -> innvilgedePerioder
         is Utfall.Avslag, is Utfall.Henlagt, is Utfall.IkkeAktuell -> emptyList()
     }
 
-/**
- * Begrunnelsen kommer inn som nullbar fra API-et, så påkrevdheten må sjekkes der
- * inputen treffer domenet.
- */
 internal fun paakrevdBegrunnelse(
     begrunnelse: String?,
     utfall: String,

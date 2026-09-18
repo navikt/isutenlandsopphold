@@ -37,10 +37,6 @@ class BehandlingTest {
         assertFailsWith<IllegalArgumentException> { Utfall.Henlagt("   ") }
     }
 
-    /**
-     * Bare [Utfall.Innvilgelse] bærer perioder. De øvrige utfallene har ingen å bære,
-     * og kan ikke uttrykke noe annet enn en tom liste.
-     */
     @Test
     fun `innvilgede perioder leses fra innvilgelsesutfallene og er tomme ellers`() {
         assertEquals(listOf(innvilgetPeriode), Utfall.Innvilget(listOf(innvilgetPeriode)).innvilgedePerioder())
