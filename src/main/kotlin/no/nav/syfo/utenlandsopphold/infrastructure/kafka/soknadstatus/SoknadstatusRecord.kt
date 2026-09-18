@@ -11,7 +11,7 @@ data class SoknadstatusRecord(
     val createdAt: OffsetDateTime,
     val personident: String,
     val status: Soknadstatus,
-    val vedtak: VedtakRecord? = null,
+    val behandling: BehandlingRecord? = null,
 ) {
     companion object {
         fun fromSoknad(soknad: Soknad) =
@@ -22,22 +22,23 @@ data class SoknadstatusRecord(
                 status = Soknadstatus.MOTTATT,
             )
 
-        fun fromSoknadMedVedtak(soknad: Soknad): SoknadstatusRecord {
-            require(soknad.vedtak != null) {
-                "Soknad må ha vedtak for å lage SoknadstatusRecord med vedtak"
-            }
+        fun fromBehandletSoknad(soknad: Soknad): SoknadstatusRecord {
+            val behandling =
+                checkNotNull(soknad.behandling) {
+                    "Soknad må være behandlet for å lage SoknadstatusRecord med behandling"
+                }
             return SoknadstatusRecord(
                 uuid = soknad.eksternId,
                 createdAt = soknad.innsendtTidspunkt,
                 personident = soknad.personident.value,
                 status = Soknadstatus.BEHANDLET,
-                vedtak =
-                    VedtakRecord(
-                        uuid = soknad.vedtak.vedtakId,
-                        createdAt = soknad.vedtak.fattetTidspunkt,
-                        veilederident = soknad.vedtak.fattetAv.value,
-                        utfall = soknad.vedtak.utfall.toVedtakRecordUtfall(),
-                        innvilgedePerioder = soknad.vedtak.innvilgedePerioder.map { VedtakRecordPeriode(it.fom, it.tom) },
+                behandling =
+                    BehandlingRecord(
+                        uuid = behandling.behandlingId,
+                        createdAt = behandling.behandletTidspunkt,
+                        veilederident = behandling.behandletAv.value,
+                        utfall = behandling.utfall.toBehandlingRecordUtfall(),
+                        innvilgedePerioder = behandling.innvilgedePerioder.map { BehandlingRecordPeriode(it.fom, it.tom) },
                     ),
             )
         }
@@ -49,30 +50,30 @@ enum class Soknadstatus {
     BEHANDLET,
 }
 
-data class VedtakRecord(
+data class BehandlingRecord(
     val uuid: UUID,
     val createdAt: OffsetDateTime,
     val veilederident: String,
-    val utfall: VedtakRecordUtfall,
-    val innvilgedePerioder: List<VedtakRecordPeriode>,
+    val utfall: BehandlingRecordUtfall,
+    val innvilgedePerioder: List<BehandlingRecordPeriode>,
 )
 
-enum class VedtakRecordUtfall {
+enum class BehandlingRecordUtfall {
     AVSLAG,
     DELVIS_INNVILGET,
     INNVILGET,
     HENLAGT,
 }
 
-data class VedtakRecordPeriode(
+data class BehandlingRecordPeriode(
     val fom: LocalDate,
     val tom: LocalDate,
 )
 
-private fun Utfall.toVedtakRecordUtfall(): VedtakRecordUtfall =
+private fun Utfall.toBehandlingRecordUtfall(): BehandlingRecordUtfall =
     when (this) {
-        is Utfall.Avslag -> VedtakRecordUtfall.AVSLAG
-        is Utfall.DelvisInnvilget -> VedtakRecordUtfall.DELVIS_INNVILGET
-        is Utfall.Innvilget -> VedtakRecordUtfall.INNVILGET
-        is Utfall.Henlagt -> VedtakRecordUtfall.HENLAGT
+        is Utfall.Avslag -> BehandlingRecordUtfall.AVSLAG
+        is Utfall.DelvisInnvilget -> BehandlingRecordUtfall.DELVIS_INNVILGET
+        is Utfall.Innvilget -> BehandlingRecordUtfall.INNVILGET
+        is Utfall.Henlagt -> BehandlingRecordUtfall.HENLAGT
     }

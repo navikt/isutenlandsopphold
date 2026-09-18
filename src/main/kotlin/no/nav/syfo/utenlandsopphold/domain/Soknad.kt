@@ -20,14 +20,14 @@ data class Soknad(
     val personident: Personident,
     val soktePerioder: List<Periode>,
     val innsendtTidspunkt: OffsetDateTime,
-    val vedtak: Vedtak? = null,
+    val behandling: Behandling? = null,
 ) {
     val status: SoknadStatus
         get() =
-            when (vedtak) {
+            when (behandling) {
                 null -> SoknadStatus.MOTTATT
                 else ->
-                    when (vedtak.utfall) {
+                    when (behandling.utfall) {
                         Utfall.Innvilget -> SoknadStatus.INNVILGET
                         is Utfall.DelvisInnvilget -> SoknadStatus.DELVIS_INNVILGET
                         Utfall.Avslag -> SoknadStatus.AVSLAG
@@ -41,15 +41,19 @@ data class Soknad(
         }
     }
 
-    fun fattVedtak(
+    /**
+     * Registrerer resultatet av å behandle søknaden, sammen med brevet som skal sendes.
+     * En søknad kan i dag kun behandles én gang.
+     */
+    fun behandle(
         utfall: Utfall,
-        fattetAv: Navident,
+        behandletAv: Navident,
         now: OffsetDateTime,
         document: List<DocumentComponent>,
         begrunnelse: String?,
     ): Soknad {
         check(status == SoknadStatus.MOTTATT) {
-            "Vedtak kan kun fattes på en MOTTATT soknad, men status er $status"
+            "En søknad kan kun behandles når den er MOTTATT, men status er $status"
         }
 
         val innvilgedePerioder =
@@ -74,46 +78,40 @@ data class Soknad(
             }
 
         return copy(
-            vedtak =
-                Vedtak(
+            behandling =
+                Behandling(
                     utfall = utfall,
-                    fattetAv = fattetAv,
-                    fattetTidspunkt = now,
+                    behandletAv = behandletAv,
+                    behandletTidspunkt = now,
                     innvilgedePerioder = innvilgedePerioder,
-                    document = document,
                     begrunnelse = begrunnelse,
+                    brev =
+                        Brev(
+                            brevtype = utfall.brevtype(),
+                            document = document,
+                        ),
                 ),
         )
     }
 
-    /**
-     * Aggregatroten (Soknad) styrer invarianten om at journalføring kun kan skje
-     * på en søknad som faktisk har et vedtak. Selve idempotens-sjekken (kan ikke
-     * journalføres to ganger) håndheves av Vedtak.journalfor().
-     */
-    fun journalforVedtak(
+    fun journalforBrev(
         journalpostId: JournalpostId,
         now: OffsetDateTime,
     ): Soknad {
-        val gjeldendeVedtak =
-            checkNotNull(vedtak) {
-                "Kan ikke journalføre en søknad som ikke har fått vedtak"
+        val gjeldendeBehandling =
+            checkNotNull(behandling) {
+                "Kan ikke journalføre brev for en søknad som ikke er behandlet"
             }
 
-        return copy(vedtak = gjeldendeVedtak.journalfor(journalpostId, now))
+        return copy(behandling = gjeldendeBehandling.journalforBrev(journalpostId, now))
     }
 
-    /**
-     * Aggregatroten (Soknad) styrer invarianten om at distribusjon kun kan skje
-     * på en søknad som faktisk har et vedtak. Selve idempotens- og rekkefølge-sjekken
-     * (må være journalført, kan ikke distribueres to ganger) håndheves av Vedtak.distribuer().
-     */
-    fun distribuerVedtak(now: OffsetDateTime): Soknad {
-        val gjeldendeVedtak =
-            checkNotNull(vedtak) {
-                "Kan ikke distribuere en søknad som ikke har fått vedtak"
+    fun distribuerBrev(now: OffsetDateTime): Soknad {
+        val gjeldendeBehandling =
+            checkNotNull(behandling) {
+                "Kan ikke distribuere brev for en søknad som ikke er behandlet"
             }
 
-        return copy(vedtak = gjeldendeVedtak.distribuer(now))
+        return copy(behandling = gjeldendeBehandling.distribuerBrev(now))
     }
 }
