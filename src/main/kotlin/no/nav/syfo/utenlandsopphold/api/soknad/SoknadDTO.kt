@@ -1,11 +1,11 @@
 package no.nav.syfo.utenlandsopphold.api.soknad
 
 import no.nav.syfo.utenlandsopphold.domain.Behandling
+import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.SoknadStatus
-import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.domain.innvilgedePerioder
 import no.nav.syfo.utenlandsopphold.util.toLocalDateTimeOslo
 import java.time.LocalDate

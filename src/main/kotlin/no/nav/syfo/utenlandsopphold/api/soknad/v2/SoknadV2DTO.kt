@@ -3,12 +3,12 @@ package no.nav.syfo.utenlandsopphold.api.soknad.v2
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import no.nav.syfo.utenlandsopphold.domain.Behandling
+import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellGrunn
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.SoknadStatus
-import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.domain.VedtaksUtfall
 import no.nav.syfo.utenlandsopphold.util.toLocalDateTimeOslo
 import java.time.LocalDate
@@ -34,8 +34,8 @@ data class SoknadResponseV2DTO(
 
 data class VedtakPostV2DTO(
     val utfall: VedtaksUtfall,
-    val innvilgedePerioder: List<PeriodeV2DTO>,
     val document: List<DocumentComponent>,
+    val innvilgedePerioder: List<PeriodeV2DTO>? = null,
     val begrunnelse: String? = null,
 )
 

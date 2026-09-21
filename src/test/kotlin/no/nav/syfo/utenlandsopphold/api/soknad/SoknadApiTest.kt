@@ -33,6 +33,7 @@ import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.application.Transaction
 import no.nav.syfo.utenlandsopphold.application.TransactionManager
 import no.nav.syfo.utenlandsopphold.domain.Behandling
+import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.domain.Brev
 import no.nav.syfo.utenlandsopphold.domain.Brevtype
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
@@ -40,7 +41,6 @@ import no.nav.syfo.utenlandsopphold.domain.DocumentComponentType
 import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellGrunn
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
-import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
 import no.nav.syfo.utenlandsopphold.infrastructure.mock.mockTilgangskontrollClient
 import no.nav.syfo.utenlandsopphold.testutil.TEST_AZURE_APP_CLIENT_ID

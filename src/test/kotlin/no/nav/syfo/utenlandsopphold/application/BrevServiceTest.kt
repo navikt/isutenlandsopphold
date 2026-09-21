@@ -12,10 +12,10 @@ import kotlinx.coroutines.test.runTest
 import no.nav.syfo.common.distribusjon.dto.Distribusjonstype
 import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.common.types.ident.Personident
+import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.domain.Brevtype
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
-import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.domain.VedtaksUtfall
 import no.nav.syfo.utenlandsopphold.domain.brevDocument
 import no.nav.syfo.utenlandsopphold.domain.innvilgedePerioder

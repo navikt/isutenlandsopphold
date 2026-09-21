@@ -3,9 +3,9 @@ package no.nav.syfo.utenlandsopphold.infrastructure.kafka.soknadstatus
 import com.fasterxml.jackson.databind.JsonNode
 import no.nav.syfo.common.types.ident.Navident
 import no.nav.syfo.common.util.configuredJacksonMapper
+import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellGrunn
 import no.nav.syfo.utenlandsopphold.domain.Periode
-import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.domain.lagBehandling
 import no.nav.syfo.utenlandsopphold.domain.lagSoknad
 import java.time.LocalDate

@@ -24,12 +24,12 @@ import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.application.Transaction
 import no.nav.syfo.utenlandsopphold.application.TransactionManager
 import no.nav.syfo.utenlandsopphold.domain.Behandling
+import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponentType
 import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellGrunn
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
-import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.domain.VedtaksUtfall
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
 import no.nav.syfo.utenlandsopphold.infrastructure.mock.mockTilgangskontrollClient
@@ -215,7 +215,6 @@ class SoknadApiV2Test {
                     somSaksbehandlerMedSkrivetilgang(
                         VedtakPostV2DTO(
                             utfall = VedtaksUtfall.INNVILGET,
-                            innvilgedePerioder = emptyList(),
                             document = document,
                         ),
                     )
@@ -233,6 +232,29 @@ class SoknadApiV2Test {
                     .body<SoknadResponseV2DTO>()
                     .soknad.behandling,
             )
+        }
+
+    @Test
+    fun `vedtak godtar innvilgedePerioder som utelatt, null og tom liste`() =
+        testApplication {
+            stubHentSoknadOgLagreBehandling()
+            val client = setupApiAndClient()
+            val utenPerioder = mapOf("utfall" to "INNVILGET", "document" to document)
+            val former =
+                mapOf(
+                    "utelatt" to utenPerioder,
+                    "null" to utenPerioder + ("innvilgedePerioder" to null),
+                    "tom liste" to utenPerioder + ("innvilgedePerioder" to emptyList<Any>()),
+                )
+
+            for ((navn, body) in former) {
+                val response =
+                    client.post(VEDTAK_PATH.format(soknad.id)) {
+                        somSaksbehandlerMedSkrivetilgang(body)
+                    }
+
+                assertEquals(HttpStatusCode.OK, response.status, "$navn skal godtas")
+            }
         }
 
     /**

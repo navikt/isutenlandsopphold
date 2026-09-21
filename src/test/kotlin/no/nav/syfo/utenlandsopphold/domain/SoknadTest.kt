@@ -69,7 +69,10 @@ class SoknadTest {
             )
 
         assertEquals(SoknadStatus.DELVIS_INNVILGET, resultat.status)
-        assertEquals(BehandlingsUtfall.DelvisInnvilget(listOf(innvilgetPeriode), "Delvis innvilget begrunnelse"), resultat.behandling?.utfall)
+        assertEquals(
+            BehandlingsUtfall.DelvisInnvilget(listOf(innvilgetPeriode), "Delvis innvilget begrunnelse"),
+            resultat.behandling?.utfall,
+        )
     }
 
     @Test

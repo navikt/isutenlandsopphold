@@ -6,13 +6,13 @@ import no.nav.syfo.common.types.ident.Navident
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.common.util.configuredJacksonMapper
 import no.nav.syfo.utenlandsopphold.domain.Behandling
+import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.domain.Brev
 import no.nav.syfo.utenlandsopphold.domain.Brevtype
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellGrunn
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
-import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID

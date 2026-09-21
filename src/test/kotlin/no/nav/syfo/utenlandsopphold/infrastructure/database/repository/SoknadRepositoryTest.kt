@@ -5,6 +5,7 @@ import no.nav.syfo.common.types.ident.Navident
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.application.LagreMottattSoknadResultat
 import no.nav.syfo.utenlandsopphold.domain.Behandling
+import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.domain.Brev
 import no.nav.syfo.utenlandsopphold.domain.Brevtype
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
@@ -13,7 +14,6 @@ import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellGrunn
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.SoknadStatus
-import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.domain.brevtype
 import no.nav.syfo.utenlandsopphold.infrastructure.database.JdbcTransactionManager
 import no.nav.syfo.utenlandsopphold.infrastructure.database.TestDatabase

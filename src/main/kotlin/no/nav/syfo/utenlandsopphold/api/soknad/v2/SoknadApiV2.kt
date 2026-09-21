@@ -45,7 +45,7 @@ fun Route.registerSoknadApiV2(
                     soknadService.fattVedtak(
                         soknadId = soknad.id,
                         utfall = request.utfall,
-                        innvilgedePerioder = request.innvilgedePerioder.map { it.toDomain() },
+                        innvilgedePerioder = request.innvilgedePerioder.orEmpty().map { it.toDomain() },
                         begrunnelse = request.begrunnelse,
                         behandletAv = authorizedUser.navident,
                         document = request.document,

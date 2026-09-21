@@ -1,7 +1,7 @@
 package no.nav.syfo.utenlandsopphold.infrastructure.kafka.soknadstatus
 
-import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
+import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.innvilgedePerioder
 import java.time.LocalDate
 import java.time.OffsetDateTime
