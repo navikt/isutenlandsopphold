@@ -51,7 +51,7 @@ data class Soknad(
 
     /**
      * Fatter vedtak. [innvilgedePerioder] og [begrunnelse] brukes bare for bestemte
-     * vedtaksutfall.
+     * vedtaksutfall. Innvilgede perioder ignoreres for [VedtaksUtfall.INNVILGET].
      */
     fun fattVedtak(
         utfall: VedtaksUtfall,
