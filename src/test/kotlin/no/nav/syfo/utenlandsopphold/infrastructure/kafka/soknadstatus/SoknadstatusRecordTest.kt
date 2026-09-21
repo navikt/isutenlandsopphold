@@ -94,7 +94,7 @@ class SoknadstatusRecordTest {
 
         assertEquals("BEHANDLET", json["status"].asText())
         assertEquals("IKKE_AKTUELL", json["behandling"]["utfall"].asText())
-        assertEquals("BEHANDLET_I_INFOTRYGD", json["behandling"]["ikkeAktuellArsak"].asText())
+        assertEquals("BEHANDLET_I_INFOTRYGD", json["behandling"]["arsak"].asText())
         assertEquals(0, json["behandling"]["innvilgedePerioder"].size())
     }
 
@@ -102,13 +102,13 @@ class SoknadstatusRecordTest {
     fun `andre utfall publiseres uten årsak`() {
         val soknad = lagSoknad(behandling = lagBehandling(utfall = BehandlingsUtfall.Henlagt("Trukket")))
 
-        val arsak = serialize(SoknadstatusRecord.fromBehandletSoknad(soknad))["behandling"]["ikkeAktuellArsak"]
+        val arsak = serialize(SoknadstatusRecord.fromBehandletSoknad(soknad))["behandling"]["arsak"]
 
-        assertTrue(arsak == null || arsak.isNull, "ikkeAktuellArsak skal ikke ha verdi for andre utfall enn ikke aktuell")
+        assertTrue(arsak == null || arsak.isNull, "arsak skal ikke ha verdi for andre utfall enn ikke aktuell")
     }
 
     /**
-     * `ikkeAktuellArsak` serialiseres som `arsak.name`, og samme navn ligger lagret i
+     * Kafka-feltet `arsak` er navnet på en [IkkeAktuellArsak], og samme navn ligger lagret i
      * kolonnen `behandling.ikke_aktuell_arsak`. Enumnavnene er altså wire-kontrakt mot både
      * konsumentene og eksisterende rader. Et rename i IntelliJ ville endret begge deler uten
      * å gi kompileringsfeil. Feiler denne testen: varsle konsumentene og migrer dataene

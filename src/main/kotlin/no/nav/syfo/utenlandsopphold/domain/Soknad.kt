@@ -50,8 +50,8 @@ data class Soknad(
     }
 
     /**
-     * Fatter vedtak. [innvilgedePerioder] og [begrunnelse] leses bare der utfallet bruker dem:
-     * full innvilgelse utleder periodene fra de søkte, og har ingen begrunnelse.
+     * Fatter vedtak. [innvilgedePerioder] og [begrunnelse] brukes bare for bestemte
+     * vedtaksutfall.
      */
     fun fattVedtak(
         utfall: VedtaksUtfall,
