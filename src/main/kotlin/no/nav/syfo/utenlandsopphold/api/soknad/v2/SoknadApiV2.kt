@@ -9,7 +9,6 @@ import no.nav.syfo.common.tilgangskontroll.client.TilgangskontrollClient
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.domain.Soknad
-import no.nav.syfo.utenlandsopphold.domain.VedtakOppretting
 import java.util.UUID
 
 fun Route.registerSoknadApiV2(
@@ -45,12 +44,9 @@ fun Route.registerSoknadApiV2(
                 val behandletSoknad =
                     soknadService.fattVedtak(
                         soknadId = soknad.id,
-                        vedtak =
-                            VedtakOppretting.from(
-                                utfall = request.utfall,
-                                innvilgedePerioder = request.innvilgedePerioder.map { it.toDomain() },
-                                begrunnelse = request.begrunnelse,
-                            ),
+                        utfall = request.utfall,
+                        innvilgedePerioder = request.innvilgedePerioder.map { it.toDomain() },
+                        begrunnelse = request.begrunnelse,
                         behandletAv = authorizedUser.navident,
                         document = request.document,
                     )

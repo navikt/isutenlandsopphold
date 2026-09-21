@@ -16,8 +16,9 @@ import no.nav.syfo.utenlandsopphold.domain.Brevtype
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.Utfall
-import no.nav.syfo.utenlandsopphold.domain.VedtakOppretting
+import no.nav.syfo.utenlandsopphold.domain.VedtaksUtfall
 import no.nav.syfo.utenlandsopphold.domain.brevDocument
+import no.nav.syfo.utenlandsopphold.domain.innvilgedePerioder
 import no.nav.syfo.utenlandsopphold.domain.lagSoknad
 import no.nav.syfo.utenlandsopphold.domain.standardSoktePerioder
 import no.nav.syfo.utenlandsopphold.domain.veileder
@@ -55,7 +56,9 @@ class BrevServiceTest {
         return when (utfall) {
             is Utfall.Vedtak ->
                 lagSoknad().fattVedtak(
-                    vedtakOppretting = utfall.somVedtakOppretting(),
+                    utfall = utfall.vedtakUtfall(),
+                    innvilgedePerioder = utfall.innvilgedePerioder(),
+                    begrunnelse = utfall.begrunnelse(),
                     behandletAv = veileder,
                     now = now,
                     document = brevDocument,
@@ -73,11 +76,18 @@ class BrevServiceTest {
     }
 
     /** Testene uttrykker seg i utfall. Vedtaksinputen er den samme informasjonen, snudd andre veien. */
-    private fun Utfall.Vedtak.somVedtakOppretting(): VedtakOppretting =
+    private fun Utfall.Vedtak.vedtakUtfall(): VedtaksUtfall =
         when (this) {
-            is Utfall.Innvilget -> VedtakOppretting.Innvilgelse
-            is Utfall.DelvisInnvilget -> VedtakOppretting.DelvisInnvilgelse(innvilgedePerioder, begrunnelse)
-            is Utfall.Avslag -> VedtakOppretting.Avslag(begrunnelse)
+            is Utfall.Innvilget -> VedtaksUtfall.INNVILGET
+            is Utfall.DelvisInnvilget -> VedtaksUtfall.DELVIS_INNVILGET
+            is Utfall.Avslag -> VedtaksUtfall.AVSLAG
+        }
+
+    private fun Utfall.Vedtak.begrunnelse(): String? =
+        when (this) {
+            is Utfall.Innvilget -> null
+            is Utfall.DelvisInnvilget -> begrunnelse
+            is Utfall.Avslag -> begrunnelse
         }
 
     @Test

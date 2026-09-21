@@ -15,6 +15,12 @@ enum class SoknadStatus {
     IKKE_AKTUELL,
 }
 
+enum class VedtaksUtfall {
+    INNVILGET,
+    DELVIS_INNVILGET,
+    AVSLAG,
+}
+
 data class Soknad(
     val id: UUID = UUID.randomUUID(),
     val eksternId: UUID,
@@ -43,13 +49,35 @@ data class Soknad(
         }
     }
 
+    /**
+     * Fatter vedtak. [innvilgedePerioder] og [begrunnelse] leses bare der utfallet bruker dem:
+     * full innvilgelse utleder periodene fra de søkte, og har ingen begrunnelse.
+     */
     fun fattVedtak(
-        vedtakOppretting: VedtakOppretting,
+        utfall: VedtaksUtfall,
+        innvilgedePerioder: List<Periode>,
+        begrunnelse: String?,
         behandletAv: Navident,
         now: OffsetDateTime,
         document: List<DocumentComponent>,
     ): Soknad {
-        val vedtak = vedtakFor(vedtakOppretting)
+        val vedtak =
+            when (utfall) {
+                VedtaksUtfall.INNVILGET -> Utfall.Innvilget(innvilgedePerioder = soktePerioder)
+                VedtaksUtfall.DELVIS_INNVILGET -> {
+                    require(!innvilgedePerioder.harOverlapp()) {
+                        "Innvilgede perioder ved delvis innvilgelse kan ikke overlappe"
+                    }
+                    require(innvilgedePerioder.alleDagerErInnenfor(soktePerioder)) {
+                        "Innvilgede perioder ved delvis innvilgelse må være innenfor søkte perioder"
+                    }
+                    Utfall.DelvisInnvilget(
+                        innvilgedePerioder = innvilgedePerioder,
+                        begrunnelse = paakrevdBegrunnelse(begrunnelse, "delvis innvilgelse"),
+                    )
+                }
+                VedtaksUtfall.AVSLAG -> Utfall.Avslag(begrunnelse = paakrevdBegrunnelse(begrunnelse, "avslag"))
+            }
         val brevtype =
             requireNotNull(vedtak.brevtype()) {
                 "Finner ikke brevtype for $vedtak"
@@ -62,28 +90,6 @@ data class Soknad(
             brev = Brev(brevtype = brevtype, document = document),
         )
     }
-
-    /**
-     * Oversetter vedtakOppretting til vedtak. Ved full innvilgelse settes innvilgede perioder
-     * til søknadens søkte perioder.
-     */
-    private fun vedtakFor(vedtak: VedtakOppretting): Utfall.Vedtak =
-        when (vedtak) {
-            VedtakOppretting.Innvilgelse -> Utfall.Innvilget(innvilgedePerioder = soktePerioder)
-            is VedtakOppretting.DelvisInnvilgelse -> {
-                require(!vedtak.innvilgedePerioder.harOverlapp()) {
-                    "Innvilgede perioder ved delvis innvilgelse kan ikke overlappe"
-                }
-                require(vedtak.innvilgedePerioder.alleDagerErInnenfor(soktePerioder)) {
-                    "Innvilgede perioder ved delvis innvilgelse må være innenfor søkte perioder"
-                }
-                Utfall.DelvisInnvilget(
-                    innvilgedePerioder = vedtak.innvilgedePerioder,
-                    begrunnelse = vedtak.begrunnelse,
-                )
-            }
-            is VedtakOppretting.Avslag -> Utfall.Avslag(begrunnelse = vedtak.begrunnelse)
-        }
 
     fun henlegg(
         behandletAv: Navident,

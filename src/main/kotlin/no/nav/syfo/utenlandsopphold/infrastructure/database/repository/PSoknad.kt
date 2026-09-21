@@ -179,4 +179,3 @@ fun Brevtype.dbValue(): String = name
 private fun String.toBrevtype(): Brevtype =
     Brevtype.entries.firstOrNull { it.name == this }
         ?: throw IllegalStateException("Ukjent brevtype lagret i database: $this")
-

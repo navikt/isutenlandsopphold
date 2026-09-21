@@ -118,50 +118,6 @@ class BehandlingTest {
     }
 
     @Test
-    fun `VedtakOppretting from godtar de tre vedtaksutfallene, men ikke henleggelse eller ikke aktuell`() {
-        assertEquals(VedtakOppretting.Innvilgelse, VedtakOppretting.from("INNVILGET", emptyList(), begrunnelse = null))
-        assertEquals(
-            VedtakOppretting.DelvisInnvilgelse(listOf(innvilgetPeriode), "Begrunnelse"),
-            VedtakOppretting.from("DELVIS_INNVILGET", listOf(innvilgetPeriode), begrunnelse = "Begrunnelse"),
-        )
-        assertEquals(
-            VedtakOppretting.Avslag("Begrunnelse"),
-            VedtakOppretting.from("AVSLAG", emptyList(), begrunnelse = "Begrunnelse"),
-        )
-
-        assertFailsWith<IllegalArgumentException> {
-            VedtakOppretting.from("HENLAGT", emptyList(), begrunnelse = "Begrunnelse")
-        }
-        assertFailsWith<IllegalArgumentException> {
-            VedtakOppretting.from("IKKE_AKTUELL", emptyList(), begrunnelse = null)
-        }
-    }
-
-    /**
-     * Begrunnelsen kommer inn som nullbar fra API-et. Fabrikken er derfor det eneste
-     * stedet et manglende eller overflødig begrunnelsesfelt kan oppstå i praksis.
-     */
-    @Test
-    fun `VedtakOppretting from krever begrunnelse der utfallet trenger det, og avviser den ellers`() {
-        assertFailsWith<IllegalArgumentException> {
-            VedtakOppretting.from("INNVILGET", emptyList(), begrunnelse = "Skal ikke være satt")
-        }
-        assertFailsWith<IllegalArgumentException> {
-            VedtakOppretting.from("AVSLAG", emptyList(), begrunnelse = null)
-        }
-        assertFailsWith<IllegalArgumentException> {
-            VedtakOppretting.from("DELVIS_INNVILGET", listOf(innvilgetPeriode), begrunnelse = null)
-        }
-    }
-
-    @Test
-    fun `VedtakOppretting from avviser innvilgede perioder ved avslag`() {
-        assertFailsWith<IllegalArgumentException> {
-            VedtakOppretting.from("AVSLAG", listOf(innvilgetPeriode), begrunnelse = "Begrunnelse")
-        }
-    }
-
-    @Test
     fun `paakrevdBegrunnelse avviser manglende og blank begrunnelse`() {
         assertEquals("Begrunnelse", paakrevdBegrunnelse("Begrunnelse", "henleggelse"))
         assertFailsWith<IllegalArgumentException> { paakrevdBegrunnelse(null, "henleggelse") }

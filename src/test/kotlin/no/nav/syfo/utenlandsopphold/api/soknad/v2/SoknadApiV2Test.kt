@@ -30,7 +30,7 @@ import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellGrunn
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.Utfall
-import no.nav.syfo.utenlandsopphold.domain.VedtakOppretting
+import no.nav.syfo.utenlandsopphold.domain.VedtaksUtfall
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
 import no.nav.syfo.utenlandsopphold.infrastructure.mock.mockTilgangskontrollClient
 import no.nav.syfo.utenlandsopphold.testutil.TEST_AZURE_APP_CLIENT_ID
@@ -125,7 +125,9 @@ class SoknadApiV2Test {
         testApplication {
             val behandletSoknad =
                 soknad.fattVedtak(
-                    vedtakOppretting = VedtakOppretting.Avslag("Oppholdet er ikke forenlig med aktivitetsplikten"),
+                    utfall = VedtaksUtfall.AVSLAG,
+                    innvilgedePerioder = emptyList(),
+                    begrunnelse = "Oppholdet er ikke forenlig med aktivitetsplikten",
                     behandletAv = Navident(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG),
                     now = OffsetDateTime.parse("2026-03-02T09:00:00Z"),
                     document = document,
@@ -163,7 +165,9 @@ class SoknadApiV2Test {
         testApplication {
             val behandletSoknad =
                 soknad.fattVedtak(
-                    vedtakOppretting = VedtakOppretting.Avslag("Oppholdet er ikke forenlig med aktivitetsplikten"),
+                    utfall = VedtaksUtfall.AVSLAG,
+                    innvilgedePerioder = emptyList(),
+                    begrunnelse = "Oppholdet er ikke forenlig med aktivitetsplikten",
                     behandletAv = Navident(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG),
                     now = OffsetDateTime.parse("2026-03-02T09:00:00Z"),
                     document = document,
@@ -210,7 +214,7 @@ class SoknadApiV2Test {
                 client.post(VEDTAK_PATH.format(soknad.id)) {
                     somSaksbehandlerMedSkrivetilgang(
                         VedtakPostV2DTO(
-                            utfall = "INNVILGET",
+                            utfall = VedtaksUtfall.INNVILGET,
                             innvilgedePerioder = emptyList(),
                             document = document,
                         ),
@@ -231,24 +235,30 @@ class SoknadApiV2Test {
             )
         }
 
+    /**
+     * Utfallsfeltet er typet som [VedtaksUtfall], så disse verdiene kan ikke uttrykkes i Kotlin.
+     * En klient kan likevel sende dem på wire, og da skal Jackson gi 400 og ikke 500.
+     */
     @Test
-    fun `vedtak godtar ikke henleggelse som utfall, den har eget endepunkt`() =
+    fun `vedtak avviser utfall som ikke er et vedtaksutfall`() =
         testApplication {
             stubHentSoknadOgLagreBehandling()
             val client = setupApiAndClient()
 
-            val response =
-                client.post(VEDTAK_PATH.format(soknad.id)) {
-                    somSaksbehandlerMedSkrivetilgang(
-                        VedtakPostV2DTO(
-                            utfall = "HENLAGT",
-                            innvilgedePerioder = emptyList(),
-                            document = document,
-                        ),
-                    )
-                }
+            for (ugyldigUtfall in listOf("HENLAGT", "IKKE_AKTUELL", "TULL")) {
+                val response =
+                    client.post(VEDTAK_PATH.format(soknad.id)) {
+                        somSaksbehandlerMedSkrivetilgang(
+                            mapOf(
+                                "utfall" to ugyldigUtfall,
+                                "innvilgedePerioder" to emptyList<Any>(),
+                                "document" to document,
+                            ),
+                        )
+                    }
 
-            assertEquals(HttpStatusCode.BadRequest, response.status)
+                assertEquals(HttpStatusCode.BadRequest, response.status, "$ugyldigUtfall skal gi 400")
+            }
         }
 
     @Test
@@ -387,7 +397,7 @@ class SoknadApiV2Test {
         listOf(
             VEDTAK_PATH to
                 VedtakPostV2DTO(
-                    utfall = "INNVILGET",
+                    utfall = VedtaksUtfall.INNVILGET,
                     innvilgedePerioder = emptyList(),
                     document = document,
                 ),
@@ -404,7 +414,9 @@ class SoknadApiV2Test {
         testApplication {
             val behandletSoknad =
                 soknad.fattVedtak(
-                    vedtakOppretting = VedtakOppretting.Innvilgelse,
+                    utfall = VedtaksUtfall.INNVILGET,
+                    innvilgedePerioder = emptyList(),
+                    begrunnelse = null,
                     behandletAv = Navident(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG),
                     now = OffsetDateTime.parse("2026-03-02T09:00:00Z"),
                     document = document,

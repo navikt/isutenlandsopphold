@@ -4,8 +4,9 @@ import no.nav.syfo.common.types.ident.Navident
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellGrunn
+import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
-import no.nav.syfo.utenlandsopphold.domain.VedtakOppretting
+import no.nav.syfo.utenlandsopphold.domain.VedtaksUtfall
 import org.slf4j.LoggerFactory
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -24,13 +25,17 @@ class SoknadService(
     fun fattVedtak(
         soknadId: UUID,
         behandletAv: Navident,
-        vedtak: VedtakOppretting,
+        utfall: VedtaksUtfall,
+        innvilgedePerioder: List<Periode>,
+        begrunnelse: String?,
         document: List<DocumentComponent>,
     ): Soknad {
         val lagretSoknad =
             behandleOgLagreSoknad(soknadId) { soknad ->
                 soknad.fattVedtak(
-                    vedtakOppretting = vedtak,
+                    utfall = utfall,
+                    innvilgedePerioder = innvilgedePerioder,
+                    begrunnelse = begrunnelse,
                     behandletAv = behandletAv,
                     now = OffsetDateTime.now(),
                     document = document,

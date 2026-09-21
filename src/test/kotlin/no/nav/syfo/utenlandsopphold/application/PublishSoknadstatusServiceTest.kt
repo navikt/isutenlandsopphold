@@ -9,7 +9,7 @@ import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponentType
 import no.nav.syfo.utenlandsopphold.domain.Soknad
-import no.nav.syfo.utenlandsopphold.domain.VedtakOppretting
+import no.nav.syfo.utenlandsopphold.domain.VedtaksUtfall
 import no.nav.syfo.utenlandsopphold.domain.lagSoknad
 import no.nav.syfo.utenlandsopphold.infrastructure.database.JdbcTransactionManager
 import no.nav.syfo.utenlandsopphold.infrastructure.database.TestDatabase
@@ -59,7 +59,9 @@ class PublishSoknadstatusServiceTest {
         repository.lagreMottattSoknad(soknad)
         val behandletSoknad =
             soknad.fattVedtak(
-                vedtakOppretting = VedtakOppretting.Innvilgelse,
+                utfall = VedtaksUtfall.INNVILGET,
+                innvilgedePerioder = emptyList(),
+                begrunnelse = null,
                 behandletAv = Navident("Z999999"),
                 now = OffsetDateTime.parse("2026-03-05T10:00:00Z"),
                 document =

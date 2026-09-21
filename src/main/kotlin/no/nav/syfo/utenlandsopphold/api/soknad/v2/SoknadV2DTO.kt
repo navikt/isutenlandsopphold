@@ -9,6 +9,7 @@ import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.SoknadStatus
 import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.VedtaksUtfall
 import no.nav.syfo.utenlandsopphold.util.toLocalDateTimeOslo
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -32,7 +33,7 @@ data class SoknadResponseV2DTO(
 )
 
 data class VedtakPostV2DTO(
-    val utfall: String,
+    val utfall: VedtaksUtfall,
     val innvilgedePerioder: List<PeriodeV2DTO>,
     val document: List<DocumentComponent>,
     val begrunnelse: String? = null,
