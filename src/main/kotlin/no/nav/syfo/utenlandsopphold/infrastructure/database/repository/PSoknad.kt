@@ -131,9 +131,7 @@ fun Utfall.ikkeAktuellGrunnDbValue(): String? =
     }
 
 /**
- * Kolonnen er nullbar fordi innvilgelse og ikke aktuell ikke har begrunnelse. Den
- * nullbarheten hører til databasen, ikke til domenet, der begrunnelsen ligger på
- * utfallene som faktisk krever den.
+ * Kolonnen er nullbar fordi innvilgelse og ikke aktuell ikke har begrunnelse.
  */
 fun Utfall.begrunnelseDbValue(): String? =
     when (this) {
@@ -142,6 +140,11 @@ fun Utfall.begrunnelseDbValue(): String? =
         is Utfall.Henlagt -> begrunnelse
         is Utfall.Innvilget, is Utfall.IkkeAktuell -> null
     }
+
+private fun begrunnelseFraDatabasen(
+    begrunnelse: String?,
+    utfall: String,
+): String = checkNotNull(begrunnelse) { "Behandling med utfall $utfall mangler begrunnelse i databasen" }
 
 private fun String.toUtfall(
     innvilgedePerioder: List<Periode>,
@@ -177,11 +180,3 @@ private fun String.toBrevtype(): Brevtype =
     Brevtype.entries.firstOrNull { it.name == this }
         ?: throw IllegalStateException("Ukjent brevtype lagret i database: $this")
 
-/**
- * Databasen tillater null i begrunnelse fordi innvilgelse og ikke aktuell ikke skal ha
- * noen. Mangler den for et utfall som krever den, er raden inkonsistent.
- */
-private fun begrunnelseFraDatabasen(
-    begrunnelse: String?,
-    utfall: String,
-): String = checkNotNull(begrunnelse) { "Behandling med utfall $utfall mangler begrunnelse i databasen" }

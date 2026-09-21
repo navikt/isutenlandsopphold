@@ -121,7 +121,7 @@ class SoknadApiV2Test {
     }
 
     @Test
-    fun `query returnerer søknad med behandling under nytt feltnavn`() =
+    fun `query returnerer søknad med behandling`() =
         testApplication {
             val behandletSoknad =
                 soknad.fattVedtak(
@@ -159,7 +159,7 @@ class SoknadApiV2Test {
         }
 
     @Test
-    fun `JSON-en for behandling har utfall som skillefelt og bare feltene som gjelder utfallet`() =
+    fun `JSON-en for behandling har utfall som diskriminator for utfallstype og bare feltene som gjelder utfallet`() =
         testApplication {
             val behandletSoknad =
                 soknad.fattVedtak(

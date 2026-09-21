@@ -64,8 +64,8 @@ data class Soknad(
     }
 
     /**
-     * Ved full innvilgelse er de innvilgede periodene søknadens egne. Oversettelsen
-     * hører derfor hjemme her, der de søkte periodene er kjent.
+     * Oversetter vedtakOppretting til vedtak. Ved full innvilgelse settes innvilgede perioder
+     * til søknadens søkte perioder.
      */
     private fun vedtakFor(vedtak: VedtakOppretting): Utfall.Vedtak =
         when (vedtak) {

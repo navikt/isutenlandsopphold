@@ -81,11 +81,9 @@ fun Utfall.brevtype(): Brevtype? =
     }
 
 /**
- * Et ferdig registrert resultat av å behandle en søknad — ikke en kladd eller en
- * arbeidsflyt med mellomtilstander.
+ * Et ferdig registrert resultat av å behandle en søknad.
  *
- * En behandling er ikke det samme som et vedtak: en henleggelse er også en behandling,
- * men ikke et vedtak om retten til sykepenger under utenlandsopphold.
+ * En behandling er ikke det samme som et vedtak: en henleggelse er også en behandling.
  */
 data class Behandling(
     val utfall: Utfall,
