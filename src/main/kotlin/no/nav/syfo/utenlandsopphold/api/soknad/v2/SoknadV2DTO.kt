@@ -8,7 +8,7 @@ import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellGrunn
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.SoknadStatus
-import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.domain.VedtaksUtfall
 import no.nav.syfo.utenlandsopphold.util.toLocalDateTimeOslo
 import java.time.LocalDate
@@ -164,32 +164,32 @@ private fun Periode.toV2DTO(): PeriodeV2DTO = PeriodeV2DTO(fom = fom, tom = tom)
 
 private fun Behandling.toV2DTO(): BehandlingV2DTO =
     when (val utfall = utfall) {
-        is Utfall.Innvilget ->
+        is BehandlingsUtfall.Innvilget ->
             InnvilgetBehandlingV2DTO(
                 behandletAv = behandletAv.value,
                 behandletTidspunkt = behandletTidspunkt.toLocalDateTimeOslo(),
                 innvilgedePerioder = utfall.innvilgedePerioder.map { it.toV2DTO() },
             )
-        is Utfall.DelvisInnvilget ->
+        is BehandlingsUtfall.DelvisInnvilget ->
             DelvisInnvilgetBehandlingV2DTO(
                 behandletAv = behandletAv.value,
                 behandletTidspunkt = behandletTidspunkt.toLocalDateTimeOslo(),
                 innvilgedePerioder = utfall.innvilgedePerioder.map { it.toV2DTO() },
                 begrunnelse = utfall.begrunnelse,
             )
-        is Utfall.Avslag ->
+        is BehandlingsUtfall.Avslag ->
             AvslagBehandlingV2DTO(
                 behandletAv = behandletAv.value,
                 behandletTidspunkt = behandletTidspunkt.toLocalDateTimeOslo(),
                 begrunnelse = utfall.begrunnelse,
             )
-        is Utfall.Henlagt ->
+        is BehandlingsUtfall.Henlagt ->
             HenlagtBehandlingV2DTO(
                 behandletAv = behandletAv.value,
                 behandletTidspunkt = behandletTidspunkt.toLocalDateTimeOslo(),
                 begrunnelse = utfall.begrunnelse,
             )
-        is Utfall.IkkeAktuell ->
+        is BehandlingsUtfall.IkkeAktuell ->
             IkkeAktuellBehandlingV2DTO(
                 behandletAv = behandletAv.value,
                 behandletTidspunkt = behandletTidspunkt.toLocalDateTimeOslo(),

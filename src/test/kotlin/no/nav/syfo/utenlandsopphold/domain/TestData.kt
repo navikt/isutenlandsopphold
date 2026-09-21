@@ -33,7 +33,7 @@ internal val standardSoktePerioder =
  * slik at testene ikke trenger å gjenta koblingen mellom utfall og brev.
  */
 internal fun lagBehandling(
-    utfall: Utfall = Utfall.Innvilget(standardSoktePerioder),
+    utfall: BehandlingsUtfall = BehandlingsUtfall.Innvilget(standardSoktePerioder),
     behandletAv: Navident = veileder,
     behandletTidspunkt: OffsetDateTime = OffsetDateTime.parse("2026-01-10T08:00:00Z"),
     brev: Brev? = utfall.brevtype()?.let { lagBrev(brevtype = it) },

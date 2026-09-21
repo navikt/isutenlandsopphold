@@ -35,11 +35,11 @@ data class Soknad(
                 null -> SoknadStatus.MOTTATT
                 else ->
                     when (behandling.utfall) {
-                        is Utfall.Innvilget -> SoknadStatus.INNVILGET
-                        is Utfall.DelvisInnvilget -> SoknadStatus.DELVIS_INNVILGET
-                        is Utfall.Avslag -> SoknadStatus.AVSLAG
-                        is Utfall.Henlagt -> SoknadStatus.HENLAGT
-                        is Utfall.IkkeAktuell -> SoknadStatus.IKKE_AKTUELL
+                        is BehandlingsUtfall.Innvilget -> SoknadStatus.INNVILGET
+                        is BehandlingsUtfall.DelvisInnvilget -> SoknadStatus.DELVIS_INNVILGET
+                        is BehandlingsUtfall.Avslag -> SoknadStatus.AVSLAG
+                        is BehandlingsUtfall.Henlagt -> SoknadStatus.HENLAGT
+                        is BehandlingsUtfall.IkkeAktuell -> SoknadStatus.IKKE_AKTUELL
                     }
             }
 
@@ -63,7 +63,7 @@ data class Soknad(
     ): Soknad {
         val vedtak =
             when (utfall) {
-                VedtaksUtfall.INNVILGET -> Utfall.Innvilget(innvilgedePerioder = soktePerioder)
+                VedtaksUtfall.INNVILGET -> BehandlingsUtfall.Innvilget(innvilgedePerioder = soktePerioder)
                 VedtaksUtfall.DELVIS_INNVILGET -> {
                     require(!innvilgedePerioder.harOverlapp()) {
                         "Innvilgede perioder ved delvis innvilgelse kan ikke overlappe"
@@ -71,12 +71,12 @@ data class Soknad(
                     require(innvilgedePerioder.alleDagerErInnenfor(soktePerioder)) {
                         "Innvilgede perioder ved delvis innvilgelse må være innenfor søkte perioder"
                     }
-                    Utfall.DelvisInnvilget(
+                    BehandlingsUtfall.DelvisInnvilget(
                         innvilgedePerioder = innvilgedePerioder,
                         begrunnelse = paakrevdBegrunnelse(begrunnelse, "delvis innvilgelse"),
                     )
                 }
-                VedtaksUtfall.AVSLAG -> Utfall.Avslag(begrunnelse = paakrevdBegrunnelse(begrunnelse, "avslag"))
+                VedtaksUtfall.AVSLAG -> BehandlingsUtfall.Avslag(begrunnelse = paakrevdBegrunnelse(begrunnelse, "avslag"))
             }
         val brevtype =
             requireNotNull(vedtak.brevtype()) {
@@ -98,7 +98,7 @@ data class Soknad(
         begrunnelse: String,
     ): Soknad =
         registrerBehandling(
-            utfall = Utfall.Henlagt(begrunnelse = begrunnelse),
+            utfall = BehandlingsUtfall.Henlagt(begrunnelse = begrunnelse),
             behandletAv = behandletAv,
             now = now,
             brev = Brev(brevtype = Brevtype.HENLEGGELSE, document = document),
@@ -114,14 +114,14 @@ data class Soknad(
         now: OffsetDateTime,
     ): Soknad =
         registrerBehandling(
-            utfall = Utfall.IkkeAktuell(grunn),
+            utfall = BehandlingsUtfall.IkkeAktuell(grunn),
             behandletAv = behandletAv,
             now = now,
             brev = null,
         )
 
     private fun registrerBehandling(
-        utfall: Utfall,
+        utfall: BehandlingsUtfall,
         behandletAv: Navident,
         now: OffsetDateTime,
         brev: Brev?,

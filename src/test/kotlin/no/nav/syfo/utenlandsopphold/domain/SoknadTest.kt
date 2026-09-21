@@ -25,7 +25,7 @@ class SoknadTest {
 
         assertEquals(SoknadStatus.INNVILGET, resultat.status)
         val behandling = assertNotNull(resultat.behandling)
-        assertEquals(Utfall.Innvilget(standardSoktePerioder), behandling.utfall)
+        assertEquals(BehandlingsUtfall.Innvilget(standardSoktePerioder), behandling.utfall)
         assertEquals(veileder, behandling.behandletAv)
         assertEquals(now, behandling.behandletTidspunkt)
     }
@@ -46,7 +46,7 @@ class SoknadTest {
 
         assertEquals(SoknadStatus.DELVIS_INNVILGET, resultat.status)
         val behandling = assertNotNull(resultat.behandling)
-        assertEquals(Utfall.DelvisInnvilget(listOf(innvilgetPeriode), "Delvis innvilget begrunnelse"), behandling.utfall)
+        assertEquals(BehandlingsUtfall.DelvisInnvilget(listOf(innvilgetPeriode), "Delvis innvilget begrunnelse"), behandling.utfall)
     }
 
     @Test
@@ -69,7 +69,7 @@ class SoknadTest {
             )
 
         assertEquals(SoknadStatus.DELVIS_INNVILGET, resultat.status)
-        assertEquals(Utfall.DelvisInnvilget(listOf(innvilgetPeriode), "Delvis innvilget begrunnelse"), resultat.behandling?.utfall)
+        assertEquals(BehandlingsUtfall.DelvisInnvilget(listOf(innvilgetPeriode), "Delvis innvilget begrunnelse"), resultat.behandling?.utfall)
     }
 
     @Test
@@ -152,7 +152,7 @@ class SoknadTest {
 
         assertEquals(SoknadStatus.AVSLAG, resultat.status)
         val behandling = assertNotNull(resultat.behandling)
-        assertEquals(Utfall.Avslag("Avslag begrunnelse"), behandling.utfall)
+        assertEquals(BehandlingsUtfall.Avslag("Avslag begrunnelse"), behandling.utfall)
     }
 
     @Test
@@ -181,7 +181,7 @@ class SoknadTest {
 
         assertEquals(SoknadStatus.HENLAGT, resultat.status)
         val behandling = assertNotNull(resultat.behandling)
-        assertEquals(Utfall.Henlagt("Søker har trukket søknaden"), behandling.utfall)
+        assertEquals(BehandlingsUtfall.Henlagt("Søker har trukket søknaden"), behandling.utfall)
     }
 
     @Test
@@ -290,7 +290,7 @@ class SoknadTest {
 
         assertEquals(SoknadStatus.IKKE_AKTUELL, resultat.status)
         val behandling = assertNotNull(resultat.behandling)
-        assertEquals(Utfall.IkkeAktuell(IkkeAktuellGrunn.BEHANDLET_I_INFOTRYGD), behandling.utfall)
+        assertEquals(BehandlingsUtfall.IkkeAktuell(IkkeAktuellGrunn.BEHANDLET_I_INFOTRYGD), behandling.utfall)
         assertEquals(veileder, behandling.behandletAv)
         assertEquals(now, behandling.behandletTidspunkt)
         assertEquals(null, behandling.brev)
@@ -298,7 +298,7 @@ class SoknadTest {
 
     @Test
     fun `merkIkkeAktuell på allerede behandlet søknad kaster feil`() {
-        val behandletSoknad = lagSoknad(behandling = lagBehandling(utfall = Utfall.Innvilget(standardSoktePerioder)))
+        val behandletSoknad = lagSoknad(behandling = lagBehandling(utfall = BehandlingsUtfall.Innvilget(standardSoktePerioder)))
 
         assertFailsWith<IllegalStateException> {
             behandletSoknad.merkIkkeAktuell(

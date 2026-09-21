@@ -29,7 +29,7 @@ import no.nav.syfo.utenlandsopphold.domain.DocumentComponentType
 import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellGrunn
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
-import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.domain.VedtaksUtfall
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
 import no.nav.syfo.utenlandsopphold.infrastructure.mock.mockTilgangskontrollClient
@@ -223,7 +223,7 @@ class SoknadApiV2Test {
 
             assertEquals(HttpStatusCode.OK, response.status)
             val behandling = assertNotNull(assertNotNull(lagret).behandling)
-            assertEquals(Utfall.Innvilget(soknad.soktePerioder), behandling.utfall)
+            assertEquals(BehandlingsUtfall.Innvilget(soknad.soktePerioder), behandling.utfall)
             assertEquals(
                 Navident(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG),
                 behandling.behandletAv,
@@ -280,7 +280,7 @@ class SoknadApiV2Test {
 
             assertEquals(HttpStatusCode.OK, response.status)
             val behandling = assertNotNull(assertNotNull(lagret).behandling)
-            assertEquals(Utfall.Henlagt("Søker har trukket søknaden"), behandling.utfall)
+            assertEquals(BehandlingsUtfall.Henlagt("Søker har trukket søknaden"), behandling.utfall)
             assertEquals(document, assertNotNull(behandling.brev).document)
         }
 
@@ -300,7 +300,7 @@ class SoknadApiV2Test {
 
             assertEquals(HttpStatusCode.OK, response.status)
             val behandling: Behandling = assertNotNull(assertNotNull(lagret).behandling)
-            assertEquals(Utfall.IkkeAktuell(IkkeAktuellGrunn.BEHANDLET_I_INFOTRYGD), behandling.utfall)
+            assertEquals(BehandlingsUtfall.IkkeAktuell(IkkeAktuellGrunn.BEHANDLET_I_INFOTRYGD), behandling.utfall)
             assertNull(behandling.brev)
 
             val behandlingDTO =

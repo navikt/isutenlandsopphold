@@ -12,7 +12,7 @@ import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellGrunn
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
-import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -115,30 +115,30 @@ fun List<DocumentComponent>.serializeToJson(): String = documentMapper.writeValu
 
 private fun String.toDocumentComponents(): List<DocumentComponent> = documentMapper.readValue(this)
 
-fun Utfall.dbValue(): String =
+fun BehandlingsUtfall.dbValue(): String =
     when (this) {
-        is Utfall.Innvilget -> "INNVILGET"
-        is Utfall.DelvisInnvilget -> "DELVIS_INNVILGET"
-        is Utfall.Avslag -> "AVSLAG"
-        is Utfall.Henlagt -> "HENLAGT"
-        is Utfall.IkkeAktuell -> "IKKE_AKTUELL"
+        is BehandlingsUtfall.Innvilget -> "INNVILGET"
+        is BehandlingsUtfall.DelvisInnvilget -> "DELVIS_INNVILGET"
+        is BehandlingsUtfall.Avslag -> "AVSLAG"
+        is BehandlingsUtfall.Henlagt -> "HENLAGT"
+        is BehandlingsUtfall.IkkeAktuell -> "IKKE_AKTUELL"
     }
 
-fun Utfall.ikkeAktuellGrunnDbValue(): String? =
+fun BehandlingsUtfall.ikkeAktuellGrunnDbValue(): String? =
     when (this) {
-        is Utfall.IkkeAktuell -> grunn.name
+        is BehandlingsUtfall.IkkeAktuell -> grunn.name
         else -> null
     }
 
 /**
  * Kolonnen er nullbar fordi innvilgelse og ikke aktuell ikke har begrunnelse.
  */
-fun Utfall.begrunnelseDbValue(): String? =
+fun BehandlingsUtfall.begrunnelseDbValue(): String? =
     when (this) {
-        is Utfall.DelvisInnvilget -> begrunnelse
-        is Utfall.Avslag -> begrunnelse
-        is Utfall.Henlagt -> begrunnelse
-        is Utfall.Innvilget, is Utfall.IkkeAktuell -> null
+        is BehandlingsUtfall.DelvisInnvilget -> begrunnelse
+        is BehandlingsUtfall.Avslag -> begrunnelse
+        is BehandlingsUtfall.Henlagt -> begrunnelse
+        is BehandlingsUtfall.Innvilget, is BehandlingsUtfall.IkkeAktuell -> null
     }
 
 private fun begrunnelseFraDatabasen(
@@ -150,18 +150,18 @@ private fun String.toUtfall(
     innvilgedePerioder: List<Periode>,
     ikkeAktuellGrunn: String?,
     begrunnelse: String?,
-): Utfall =
+): BehandlingsUtfall =
     when (this) {
-        "INNVILGET" -> Utfall.Innvilget(innvilgedePerioder = innvilgedePerioder)
+        "INNVILGET" -> BehandlingsUtfall.Innvilget(innvilgedePerioder = innvilgedePerioder)
         "DELVIS_INNVILGET" ->
-            Utfall.DelvisInnvilget(
+            BehandlingsUtfall.DelvisInnvilget(
                 innvilgedePerioder = innvilgedePerioder,
                 begrunnelse = begrunnelseFraDatabasen(begrunnelse, this),
             )
-        "AVSLAG" -> Utfall.Avslag(begrunnelse = begrunnelseFraDatabasen(begrunnelse, this))
-        "HENLAGT" -> Utfall.Henlagt(begrunnelse = begrunnelseFraDatabasen(begrunnelse, this))
+        "AVSLAG" -> BehandlingsUtfall.Avslag(begrunnelse = begrunnelseFraDatabasen(begrunnelse, this))
+        "HENLAGT" -> BehandlingsUtfall.Henlagt(begrunnelse = begrunnelseFraDatabasen(begrunnelse, this))
         "IKKE_AKTUELL" ->
-            Utfall.IkkeAktuell(
+            BehandlingsUtfall.IkkeAktuell(
                 grunn =
                     checkNotNull(ikkeAktuellGrunn) {
                         "Behandling med utfall IKKE_AKTUELL mangler ikke_aktuell_grunn i databasen"

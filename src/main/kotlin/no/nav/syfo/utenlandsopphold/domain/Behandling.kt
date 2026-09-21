@@ -5,8 +5,8 @@ import no.nav.syfo.common.types.ident.Navident
 import java.time.OffsetDateTime
 import java.util.UUID
 
-sealed interface Utfall {
-    sealed interface Vedtak : Utfall
+sealed interface BehandlingsUtfall {
+    sealed interface Vedtak : BehandlingsUtfall
 
     data class Innvilget(
         val innvilgedePerioder: List<Periode>,
@@ -36,7 +36,7 @@ sealed interface Utfall {
 
     data class Henlagt(
         val begrunnelse: String,
-    ) : Utfall {
+    ) : BehandlingsUtfall {
         init {
             require(begrunnelse.isNotBlank()) { "Henleggelse må ha begrunnelse" }
         }
@@ -47,14 +47,14 @@ sealed interface Utfall {
      */
     data class IkkeAktuell(
         val grunn: IkkeAktuellGrunn,
-    ) : Utfall
+    ) : BehandlingsUtfall
 }
 
-fun Utfall.innvilgedePerioder(): List<Periode> =
+fun BehandlingsUtfall.innvilgedePerioder(): List<Periode> =
     when (this) {
-        is Utfall.Innvilget -> innvilgedePerioder
-        is Utfall.DelvisInnvilget -> innvilgedePerioder
-        is Utfall.Avslag, is Utfall.Henlagt, is Utfall.IkkeAktuell -> emptyList()
+        is BehandlingsUtfall.Innvilget -> innvilgedePerioder
+        is BehandlingsUtfall.DelvisInnvilget -> innvilgedePerioder
+        is BehandlingsUtfall.Avslag, is BehandlingsUtfall.Henlagt, is BehandlingsUtfall.IkkeAktuell -> emptyList()
     }
 
 internal fun paakrevdBegrunnelse(
@@ -71,13 +71,13 @@ enum class IkkeAktuellGrunn {
 /**
  * Brevet et gitt utfall skal gi, eller null for utfall som ikke sender brev.
  */
-fun Utfall.brevtype(): Brevtype? =
+fun BehandlingsUtfall.brevtype(): Brevtype? =
     when (this) {
-        is Utfall.Innvilget -> Brevtype.VEDTAK_INNVILGET
-        is Utfall.DelvisInnvilget -> Brevtype.VEDTAK_DELVIS_INNVILGET
-        is Utfall.Avslag -> Brevtype.VEDTAK_AVSLAG
-        is Utfall.Henlagt -> Brevtype.HENLEGGELSE
-        is Utfall.IkkeAktuell -> null
+        is BehandlingsUtfall.Innvilget -> Brevtype.VEDTAK_INNVILGET
+        is BehandlingsUtfall.DelvisInnvilget -> Brevtype.VEDTAK_DELVIS_INNVILGET
+        is BehandlingsUtfall.Avslag -> Brevtype.VEDTAK_AVSLAG
+        is BehandlingsUtfall.Henlagt -> Brevtype.HENLEGGELSE
+        is BehandlingsUtfall.IkkeAktuell -> null
     }
 
 /**
@@ -86,7 +86,7 @@ fun Utfall.brevtype(): Brevtype? =
  * En behandling er ikke det samme som et vedtak: en henleggelse er også en behandling.
  */
 data class Behandling(
-    val utfall: Utfall,
+    val utfall: BehandlingsUtfall,
     val behandletAv: Navident,
     val behandletTidspunkt: OffsetDateTime,
     val brev: Brev?,

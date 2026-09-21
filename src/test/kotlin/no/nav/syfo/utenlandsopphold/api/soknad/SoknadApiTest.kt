@@ -40,7 +40,7 @@ import no.nav.syfo.utenlandsopphold.domain.DocumentComponentType
 import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellGrunn
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
-import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
 import no.nav.syfo.utenlandsopphold.infrastructure.mock.mockTilgangskontrollClient
 import no.nav.syfo.utenlandsopphold.testutil.TEST_AZURE_APP_CLIENT_ID
@@ -432,7 +432,7 @@ class SoknadApiTest {
 
             assertEquals(HttpStatusCode.OK, response.status)
             assertEquals(soknadId, lagretSoknad?.id)
-            assertEquals(Utfall.Innvilget(innvilgedePerioder), lagretSoknad?.behandling?.utfall)
+            assertEquals(BehandlingsUtfall.Innvilget(innvilgedePerioder), lagretSoknad?.behandling?.utfall)
 
             val body = response.body<SoknadVedtakResponseDTO>()
             assertEquals(soknadId.toString(), body.soknad.soknadId)
@@ -473,7 +473,7 @@ class SoknadApiTest {
 
             assertEquals(HttpStatusCode.OK, response.status)
             assertEquals(
-                Utfall.DelvisInnvilget(listOf(innvilgetPeriode), "Delvis innvilget begrunnelse"),
+                BehandlingsUtfall.DelvisInnvilget(listOf(innvilgetPeriode), "Delvis innvilget begrunnelse"),
                 lagretSoknad?.behandling?.utfall,
             )
 
@@ -509,7 +509,7 @@ class SoknadApiTest {
                 }
 
             assertEquals(HttpStatusCode.OK, response.status)
-            assertEquals(Utfall.Avslag("Avslag begrunnelse"), lagretSoknad?.behandling?.utfall)
+            assertEquals(BehandlingsUtfall.Avslag("Avslag begrunnelse"), lagretSoknad?.behandling?.utfall)
 
             val body = response.body<SoknadVedtakResponseDTO>()
             assertEquals(SoknadStatusDTO.AVSLAG, body.soknad.status)
@@ -543,7 +543,7 @@ class SoknadApiTest {
                 }
 
             assertEquals(HttpStatusCode.OK, response.status)
-            assertEquals(Utfall.Henlagt("Søker har trukket søknaden"), lagretSoknad?.behandling?.utfall)
+            assertEquals(BehandlingsUtfall.Henlagt("Søker har trukket søknaden"), lagretSoknad?.behandling?.utfall)
 
             val body = response.body<SoknadVedtakResponseDTO>()
             assertEquals(SoknadStatusDTO.HENLAGT, body.soknad.status)
@@ -640,7 +640,7 @@ class SoknadApiTest {
                     innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
                     behandling =
                         Behandling(
-                            utfall = Utfall.Innvilget(innvilgedePerioder),
+                            utfall = BehandlingsUtfall.Innvilget(innvilgedePerioder),
                             behandletAv = Navident(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG),
                             behandletTidspunkt = OffsetDateTime.parse("2026-03-02T09:00:00Z"),
                             brev =

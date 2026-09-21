@@ -5,7 +5,7 @@ import no.nav.syfo.common.types.ident.Navident
 import no.nav.syfo.common.util.configuredJacksonMapper
 import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellGrunn
 import no.nav.syfo.utenlandsopphold.domain.Periode
-import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.domain.lagBehandling
 import no.nav.syfo.utenlandsopphold.domain.lagSoknad
 import java.time.LocalDate
@@ -43,7 +43,7 @@ class SoknadstatusRecordTest {
         val innvilgetPeriode = Periode(LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 7))
         val behandling =
             lagBehandling(
-                utfall = Utfall.DelvisInnvilget(listOf(innvilgetPeriode), "Delvis innvilget begrunnelse"),
+                utfall = BehandlingsUtfall.DelvisInnvilget(listOf(innvilgetPeriode), "Delvis innvilget begrunnelse"),
                 behandletAv = Navident("Z999999"),
                 behandletTidspunkt = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
             )
@@ -65,7 +65,7 @@ class SoknadstatusRecordTest {
 
     @Test
     fun `henleggelse publiseres med utfall HENLAGT og uten innvilgede perioder`() {
-        val soknad = lagSoknad(behandling = lagBehandling(utfall = Utfall.Henlagt("Trukket")))
+        val soknad = lagSoknad(behandling = lagBehandling(utfall = BehandlingsUtfall.Henlagt("Trukket")))
 
         val json = serialize(SoknadstatusRecord.fromBehandletSoknad(soknad))
 
@@ -75,7 +75,7 @@ class SoknadstatusRecordTest {
 
     @Test
     fun `begrunnelse og brev publiseres ikke på topicet`() {
-        val soknad = lagSoknad(behandling = lagBehandling(utfall = Utfall.Avslag("Intern begrunnelse")))
+        val soknad = lagSoknad(behandling = lagBehandling(utfall = BehandlingsUtfall.Avslag("Intern begrunnelse")))
 
         val json = serialize(SoknadstatusRecord.fromBehandletSoknad(soknad))
 
@@ -87,7 +87,7 @@ class SoknadstatusRecordTest {
     fun `ikke aktuell publiseres med utfall IKKE_AKTUELL og grunn`() {
         val soknad =
             lagSoknad(
-                behandling = lagBehandling(utfall = Utfall.IkkeAktuell(IkkeAktuellGrunn.BEHANDLET_I_INFOTRYGD)),
+                behandling = lagBehandling(utfall = BehandlingsUtfall.IkkeAktuell(IkkeAktuellGrunn.BEHANDLET_I_INFOTRYGD)),
             )
 
         val json = serialize(SoknadstatusRecord.fromBehandletSoknad(soknad))
@@ -100,7 +100,7 @@ class SoknadstatusRecordTest {
 
     @Test
     fun `andre utfall publiseres uten grunn`() {
-        val soknad = lagSoknad(behandling = lagBehandling(utfall = Utfall.Henlagt("Trukket")))
+        val soknad = lagSoknad(behandling = lagBehandling(utfall = BehandlingsUtfall.Henlagt("Trukket")))
 
         val grunn = serialize(SoknadstatusRecord.fromBehandletSoknad(soknad))["behandling"]["ikkeAktuellGrunn"]
 

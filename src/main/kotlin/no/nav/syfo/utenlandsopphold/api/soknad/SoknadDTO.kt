@@ -5,7 +5,7 @@ import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.SoknadStatus
-import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.domain.innvilgedePerioder
 import no.nav.syfo.utenlandsopphold.util.toLocalDateTimeOslo
 import java.time.LocalDate
@@ -88,11 +88,11 @@ private fun Periode.toDTO(): PeriodeDTO = PeriodeDTO(fom = fom, tom = tom)
 private fun Behandling.toDTO(): VedtakDTO {
     val (utfallVerdi, begrunnelse) =
         when (utfall) {
-            is Utfall.Innvilget -> "INNVILGET" to null
-            is Utfall.DelvisInnvilget -> "DELVIS_INNVILGET" to utfall.begrunnelse
-            is Utfall.Avslag -> "AVSLAG" to utfall.begrunnelse
-            is Utfall.Henlagt -> "HENLAGT" to utfall.begrunnelse
-            is Utfall.IkkeAktuell -> "IKKE_AKTUELL" to null
+            is BehandlingsUtfall.Innvilget -> "INNVILGET" to null
+            is BehandlingsUtfall.DelvisInnvilget -> "DELVIS_INNVILGET" to utfall.begrunnelse
+            is BehandlingsUtfall.Avslag -> "AVSLAG" to utfall.begrunnelse
+            is BehandlingsUtfall.Henlagt -> "HENLAGT" to utfall.begrunnelse
+            is BehandlingsUtfall.IkkeAktuell -> "IKKE_AKTUELL" to null
         }
 
     return VedtakDTO(

@@ -1,7 +1,7 @@
 package no.nav.syfo.utenlandsopphold.infrastructure.kafka.soknadstatus
 
 import no.nav.syfo.utenlandsopphold.domain.Soknad
-import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.domain.innvilgedePerioder
 import java.time.LocalDate
 import java.time.OffsetDateTime
@@ -39,7 +39,7 @@ data class SoknadstatusRecord(
                         createdAt = behandling.behandletTidspunkt,
                         veilederident = behandling.behandletAv.value,
                         utfall = behandling.utfall.toBehandlingRecordUtfall(),
-                        ikkeAktuellGrunn = (behandling.utfall as? Utfall.IkkeAktuell)?.grunn?.name,
+                        ikkeAktuellGrunn = (behandling.utfall as? BehandlingsUtfall.IkkeAktuell)?.grunn?.name,
                         innvilgedePerioder =
                             behandling.utfall.innvilgedePerioder().map { BehandlingRecordPeriode(it.fom, it.tom) },
                     ),
@@ -75,11 +75,11 @@ data class BehandlingRecordPeriode(
     val tom: LocalDate,
 )
 
-private fun Utfall.toBehandlingRecordUtfall(): BehandlingRecordUtfall =
+private fun BehandlingsUtfall.toBehandlingRecordUtfall(): BehandlingRecordUtfall =
     when (this) {
-        is Utfall.Avslag -> BehandlingRecordUtfall.AVSLAG
-        is Utfall.DelvisInnvilget -> BehandlingRecordUtfall.DELVIS_INNVILGET
-        is Utfall.Innvilget -> BehandlingRecordUtfall.INNVILGET
-        is Utfall.Henlagt -> BehandlingRecordUtfall.HENLAGT
-        is Utfall.IkkeAktuell -> BehandlingRecordUtfall.IKKE_AKTUELL
+        is BehandlingsUtfall.Avslag -> BehandlingRecordUtfall.AVSLAG
+        is BehandlingsUtfall.DelvisInnvilget -> BehandlingRecordUtfall.DELVIS_INNVILGET
+        is BehandlingsUtfall.Innvilget -> BehandlingRecordUtfall.INNVILGET
+        is BehandlingsUtfall.Henlagt -> BehandlingRecordUtfall.HENLAGT
+        is BehandlingsUtfall.IkkeAktuell -> BehandlingRecordUtfall.IKKE_AKTUELL
     }
