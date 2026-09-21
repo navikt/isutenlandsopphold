@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import no.nav.syfo.common.types.ident.Navident
 import no.nav.syfo.common.util.configuredJacksonMapper
 import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
-import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellGrunn
+import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellArsak
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.lagBehandling
 import no.nav.syfo.utenlandsopphold.domain.lagSoknad
@@ -84,41 +84,41 @@ class SoknadstatusRecordTest {
     }
 
     @Test
-    fun `ikke aktuell publiseres med utfall IKKE_AKTUELL og grunn`() {
+    fun `ikke aktuell publiseres med utfall IKKE_AKTUELL og årsak`() {
         val soknad =
             lagSoknad(
-                behandling = lagBehandling(utfall = BehandlingsUtfall.IkkeAktuell(IkkeAktuellGrunn.BEHANDLET_I_INFOTRYGD)),
+                behandling = lagBehandling(utfall = BehandlingsUtfall.IkkeAktuell(IkkeAktuellArsak.BEHANDLET_I_INFOTRYGD)),
             )
 
         val json = serialize(SoknadstatusRecord.fromBehandletSoknad(soknad))
 
         assertEquals("BEHANDLET", json["status"].asText())
         assertEquals("IKKE_AKTUELL", json["behandling"]["utfall"].asText())
-        assertEquals("BEHANDLET_I_INFOTRYGD", json["behandling"]["ikkeAktuellGrunn"].asText())
+        assertEquals("BEHANDLET_I_INFOTRYGD", json["behandling"]["ikkeAktuellArsak"].asText())
         assertEquals(0, json["behandling"]["innvilgedePerioder"].size())
     }
 
     @Test
-    fun `andre utfall publiseres uten grunn`() {
+    fun `andre utfall publiseres uten årsak`() {
         val soknad = lagSoknad(behandling = lagBehandling(utfall = BehandlingsUtfall.Henlagt("Trukket")))
 
-        val grunn = serialize(SoknadstatusRecord.fromBehandletSoknad(soknad))["behandling"]["ikkeAktuellGrunn"]
+        val arsak = serialize(SoknadstatusRecord.fromBehandletSoknad(soknad))["behandling"]["ikkeAktuellArsak"]
 
-        assertTrue(grunn == null || grunn.isNull, "ikkeAktuellGrunn skal ikke ha verdi for andre utfall enn ikke aktuell")
+        assertTrue(arsak == null || arsak.isNull, "ikkeAktuellArsak skal ikke ha verdi for andre utfall enn ikke aktuell")
     }
 
     /**
-     * `ikkeAktuellGrunn` serialiseres som `grunn.name`, og samme navn ligger lagret i
-     * kolonnen `behandling.ikke_aktuell_grunn`. Enumnavnene er altså wire-kontrakt mot både
+     * `ikkeAktuellArsak` serialiseres som `arsak.name`, og samme navn ligger lagret i
+     * kolonnen `behandling.ikke_aktuell_arsak`. Enumnavnene er altså wire-kontrakt mot både
      * konsumentene og eksisterende rader. Et rename i IntelliJ ville endret begge deler uten
      * å gi kompileringsfeil. Feiler denne testen: varsle konsumentene og migrer dataene
      * før du endrer settet.
      */
     @Test
-    fun `navnene på ikke-aktuell-grunnene er wire-kontrakt`() {
+    fun `navnene på ikke-aktuell-årsakene er wire-kontrakt`() {
         assertEquals(
             setOf("BEHANDLET_I_INFOTRYGD", "DUPLIKAT", "ANNET"),
-            IkkeAktuellGrunn.entries.map { it.name }.toSet(),
+            IkkeAktuellArsak.entries.map { it.name }.toSet(),
         )
     }
 

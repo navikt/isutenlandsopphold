@@ -38,7 +38,7 @@ import no.nav.syfo.utenlandsopphold.domain.Brev
 import no.nav.syfo.utenlandsopphold.domain.Brevtype
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponentType
-import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellGrunn
+import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellArsak
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
@@ -674,7 +674,7 @@ class SoknadApiTest {
                     soktePerioder = listOf(Periode(fom = LocalDate.of(2026, 4, 1), tom = LocalDate.of(2026, 4, 10))),
                     innsendtTidspunkt = OffsetDateTime.parse("2026-03-01T09:00:00Z"),
                 ).merkIkkeAktuell(
-                    grunn = IkkeAktuellGrunn.DUPLIKAT,
+                    arsak = IkkeAktuellArsak.DUPLIKAT,
                     behandletAv = Navident(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG),
                     now = OffsetDateTime.parse("2026-03-02T09:00:00Z"),
                 )

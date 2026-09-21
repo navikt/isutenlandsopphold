@@ -3,7 +3,7 @@ package no.nav.syfo.utenlandsopphold.application
 import no.nav.syfo.common.types.ident.Navident
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
-import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellGrunn
+import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellArsak
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.VedtaksUtfall
@@ -71,11 +71,11 @@ class SoknadService(
     fun merkIkkeAktuell(
         soknadId: UUID,
         behandletAv: Navident,
-        grunn: IkkeAktuellGrunn,
+        arsak: IkkeAktuellArsak,
     ): Soknad =
         behandleOgLagreSoknad(soknadId) { soknad ->
             soknad.merkIkkeAktuell(
-                grunn = grunn,
+                arsak = arsak,
                 behandletAv = behandletAv,
                 now = OffsetDateTime.now(),
             )

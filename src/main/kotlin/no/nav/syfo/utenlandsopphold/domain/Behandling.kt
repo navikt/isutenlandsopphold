@@ -46,7 +46,7 @@ sealed interface BehandlingsUtfall {
      * Søknaden skal ikke realitetsbehandles her, og gir derfor ikke brev til bruker.
      */
     data class IkkeAktuell(
-        val grunn: IkkeAktuellGrunn,
+        val arsak: IkkeAktuellArsak,
     ) : BehandlingsUtfall
 }
 
@@ -62,7 +62,7 @@ internal fun paakrevdBegrunnelse(
     utfall: String,
 ): String = requireNotNull(begrunnelse?.takeIf { it.isNotBlank() }) { "Begrunnelse er påkrevd ved $utfall" }
 
-enum class IkkeAktuellGrunn {
+enum class IkkeAktuellArsak {
     BEHANDLET_I_INFOTRYGD,
     DUPLIKAT,
     ANNET,

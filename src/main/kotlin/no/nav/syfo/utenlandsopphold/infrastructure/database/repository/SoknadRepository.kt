@@ -303,7 +303,7 @@ class SoknadRepository(
                 it.setString(3, behandling.behandletAv.value)
                 it.setObject(4, behandling.behandletTidspunkt)
                 it.setString(5, behandling.utfall.begrunnelseDbValue())
-                it.setString(6, behandling.utfall.ikkeAktuellGrunnDbValue())
+                it.setString(6, behandling.utfall.ikkeAktuellArsakDbValue())
                 it.setObject(7, soknadId)
                 it.executeQuery().toList { toPBehandling() }.singleOrNull()
                     ?: throw IllegalArgumentException("Fant ikke søknad med id $soknadId")
@@ -471,7 +471,7 @@ class SoknadRepository(
                     behandlet_av,
                     behandlet_tidspunkt,
                     begrunnelse,
-                    ikke_aktuell_grunn
+                    ikke_aktuell_arsak
                 )
                 SELECT ?, s.id, ?, ?, ?, ?, ?
                 FROM soknad s
@@ -539,7 +539,7 @@ internal fun ResultSet.toPBehandling(): PBehandling =
         behandletAv = getString("behandlet_av"),
         behandletTidspunkt = getObject("behandlet_tidspunkt", OffsetDateTime::class.java),
         begrunnelse = getString("begrunnelse"),
-        ikkeAktuellGrunn = getString("ikke_aktuell_grunn"),
+        ikkeAktuellArsak = getString("ikke_aktuell_arsak"),
     )
 
 internal fun ResultSet.toPBrev(): PBrev =

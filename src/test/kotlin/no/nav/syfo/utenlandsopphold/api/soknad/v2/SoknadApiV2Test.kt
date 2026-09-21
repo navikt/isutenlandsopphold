@@ -27,7 +27,7 @@ import no.nav.syfo.utenlandsopphold.domain.Behandling
 import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponentType
-import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellGrunn
+import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellArsak
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.VedtaksUtfall
@@ -307,7 +307,7 @@ class SoknadApiV2Test {
         }
 
     @Test
-    fun `ikke-aktuell lagrer behandling med grunn og uten brev`() =
+    fun `ikke-aktuell lagrer behandling med årsak og uten brev`() =
         testApplication {
             var lagret: Soknad? = null
             stubHentSoknadOgLagreBehandling { lagret = it }
@@ -316,23 +316,23 @@ class SoknadApiV2Test {
             val response =
                 client.post(IKKE_AKTUELL_PATH.format(soknad.id)) {
                     somSaksbehandlerMedSkrivetilgang(
-                        IkkeAktuellPostV2DTO(grunn = IkkeAktuellGrunnV2DTO.BEHANDLET_I_INFOTRYGD),
+                        IkkeAktuellPostV2DTO(arsak = IkkeAktuellArsakV2DTO.BEHANDLET_I_INFOTRYGD),
                     )
                 }
 
             assertEquals(HttpStatusCode.OK, response.status)
             val behandling: Behandling = assertNotNull(assertNotNull(lagret).behandling)
-            assertEquals(BehandlingsUtfall.IkkeAktuell(IkkeAktuellGrunn.BEHANDLET_I_INFOTRYGD), behandling.utfall)
+            assertEquals(BehandlingsUtfall.IkkeAktuell(IkkeAktuellArsak.BEHANDLET_I_INFOTRYGD), behandling.utfall)
             assertNull(behandling.brev)
 
             val behandlingDTO =
                 assertIs<IkkeAktuellBehandlingV2DTO>(response.body<SoknadResponseV2DTO>().soknad.behandling)
-            assertEquals(IkkeAktuellGrunnV2DTO.BEHANDLET_I_INFOTRYGD, behandlingDTO.ikkeAktuellGrunn)
+            assertEquals(IkkeAktuellArsakV2DTO.BEHANDLET_I_INFOTRYGD, behandlingDTO.ikkeAktuellArsak)
             assertEquals(SoknadStatusV2DTO.IKKE_AKTUELL, response.body<SoknadResponseV2DTO>().soknad.status)
         }
 
     @Test
-    fun `ikke-aktuell med ukjent grunn gir 400`() =
+    fun `ikke-aktuell med ukjent årsak gir 400`() =
         testApplication {
             stubHentSoknadOgLagreBehandling()
             val client = setupApiAndClient()
@@ -341,7 +341,7 @@ class SoknadApiV2Test {
                 client.post(IKKE_AKTUELL_PATH.format(soknad.id)) {
                     bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG))
                     contentType(ContentType.Application.Json)
-                    setBody("""{"grunn":"FANTES_IKKE"}""")
+                    setBody("""{"arsak":"FANTES_IKKE"}""")
                 }
 
             assertEquals(HttpStatusCode.BadRequest, response.status)
@@ -428,7 +428,7 @@ class SoknadApiV2Test {
                     document = document,
                     begrunnelse = "Søker har trukket søknaden",
                 ),
-            IKKE_AKTUELL_PATH to IkkeAktuellPostV2DTO(grunn = IkkeAktuellGrunnV2DTO.DUPLIKAT),
+            IKKE_AKTUELL_PATH to IkkeAktuellPostV2DTO(arsak = IkkeAktuellArsakV2DTO.DUPLIKAT),
         )
 
     @Test
@@ -450,7 +450,7 @@ class SoknadApiV2Test {
             val response =
                 client.post(IKKE_AKTUELL_PATH.format(soknad.id)) {
                     somSaksbehandlerMedSkrivetilgang(
-                        IkkeAktuellPostV2DTO(grunn = IkkeAktuellGrunnV2DTO.DUPLIKAT),
+                        IkkeAktuellPostV2DTO(arsak = IkkeAktuellArsakV2DTO.DUPLIKAT),
                     )
                 }
 

@@ -281,19 +281,19 @@ class SoknadTest {
     }
 
     @Test
-    fun `merkIkkeAktuell gir status ikke aktuell med grunn, uten brev`() {
+    fun `merkIkkeAktuell gir status ikke aktuell med årsak, uten brev`() {
         val now = OffsetDateTime.parse("2026-01-10T12:00:00Z")
 
         val resultat =
             lagSoknad().merkIkkeAktuell(
-                grunn = IkkeAktuellGrunn.BEHANDLET_I_INFOTRYGD,
+                arsak = IkkeAktuellArsak.BEHANDLET_I_INFOTRYGD,
                 behandletAv = veileder,
                 now = now,
             )
 
         assertEquals(SoknadStatus.IKKE_AKTUELL, resultat.status)
         val behandling = assertNotNull(resultat.behandling)
-        assertEquals(BehandlingsUtfall.IkkeAktuell(IkkeAktuellGrunn.BEHANDLET_I_INFOTRYGD), behandling.utfall)
+        assertEquals(BehandlingsUtfall.IkkeAktuell(IkkeAktuellArsak.BEHANDLET_I_INFOTRYGD), behandling.utfall)
         assertEquals(veileder, behandling.behandletAv)
         assertEquals(now, behandling.behandletTidspunkt)
         assertEquals(null, behandling.brev)
@@ -305,7 +305,7 @@ class SoknadTest {
 
         assertFailsWith<IllegalStateException> {
             behandletSoknad.merkIkkeAktuell(
-                grunn = IkkeAktuellGrunn.DUPLIKAT,
+                arsak = IkkeAktuellArsak.DUPLIKAT,
                 behandletAv = veileder,
                 now = OffsetDateTime.parse("2026-01-11T08:00:00Z"),
             )
@@ -316,7 +316,7 @@ class SoknadTest {
     fun `søknad merket ikke aktuell kan ikke journalføres eller distribueres`() {
         val ikkeAktuell =
             lagSoknad().merkIkkeAktuell(
-                grunn = IkkeAktuellGrunn.ANNET,
+                arsak = IkkeAktuellArsak.ANNET,
                 behandletAv = veileder,
                 now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
             )

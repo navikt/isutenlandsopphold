@@ -39,7 +39,7 @@ data class SoknadstatusRecord(
                         createdAt = behandling.behandletTidspunkt,
                         veilederident = behandling.behandletAv.value,
                         utfall = behandling.utfall.toBehandlingRecordUtfall(),
-                        ikkeAktuellGrunn = (behandling.utfall as? BehandlingsUtfall.IkkeAktuell)?.grunn?.name,
+                        ikkeAktuellArsak = (behandling.utfall as? BehandlingsUtfall.IkkeAktuell)?.arsak?.name,
                         innvilgedePerioder =
                             behandling.utfall.innvilgedePerioder().map { BehandlingRecordPeriode(it.fom, it.tom) },
                     ),
@@ -59,7 +59,7 @@ data class BehandlingRecord(
     val veilederident: String,
     val utfall: BehandlingRecordUtfall,
     val innvilgedePerioder: List<BehandlingRecordPeriode>,
-    val ikkeAktuellGrunn: String? = null,
+    val ikkeAktuellArsak: String? = null,
 )
 
 enum class BehandlingRecordUtfall {

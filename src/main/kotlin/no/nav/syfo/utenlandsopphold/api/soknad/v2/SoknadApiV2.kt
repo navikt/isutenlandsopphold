@@ -90,7 +90,7 @@ fun Route.registerSoknadApiV2(
                 val behandletSoknad =
                     soknadService.merkIkkeAktuell(
                         soknadId = soknad.id,
-                        grunn = request.grunn.toDomain(),
+                        arsak = request.arsak.toDomain(),
                         behandletAv = authorizedUser.navident,
                     )
 

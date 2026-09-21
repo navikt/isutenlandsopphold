@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
 import no.nav.syfo.utenlandsopphold.domain.Behandling
 import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
-import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellGrunn
+import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellArsak
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.SoknadStatus
@@ -45,7 +45,7 @@ data class HenleggelsePostV2DTO(
 )
 
 data class IkkeAktuellPostV2DTO(
-    val grunn: IkkeAktuellGrunnV2DTO,
+    val arsak: IkkeAktuellArsakV2DTO,
 )
 
 data class SoknadV2DTO(
@@ -115,25 +115,25 @@ data class HenlagtBehandlingV2DTO(
 data class IkkeAktuellBehandlingV2DTO(
     override val behandletAv: String,
     override val behandletTidspunkt: LocalDateTime,
-    val ikkeAktuellGrunn: IkkeAktuellGrunnV2DTO,
+    val ikkeAktuellArsak: IkkeAktuellArsakV2DTO,
 ) : BehandlingV2DTO
 
 enum class SoknadStatusV2DTO { MOTTATT, INNVILGET, DELVIS_INNVILGET, AVSLAG, HENLAGT, IKKE_AKTUELL }
 
-enum class IkkeAktuellGrunnV2DTO { BEHANDLET_I_INFOTRYGD, DUPLIKAT, ANNET }
+enum class IkkeAktuellArsakV2DTO { BEHANDLET_I_INFOTRYGD, DUPLIKAT, ANNET }
 
-fun IkkeAktuellGrunnV2DTO.toDomain(): IkkeAktuellGrunn =
+fun IkkeAktuellArsakV2DTO.toDomain(): IkkeAktuellArsak =
     when (this) {
-        IkkeAktuellGrunnV2DTO.BEHANDLET_I_INFOTRYGD -> IkkeAktuellGrunn.BEHANDLET_I_INFOTRYGD
-        IkkeAktuellGrunnV2DTO.DUPLIKAT -> IkkeAktuellGrunn.DUPLIKAT
-        IkkeAktuellGrunnV2DTO.ANNET -> IkkeAktuellGrunn.ANNET
+        IkkeAktuellArsakV2DTO.BEHANDLET_I_INFOTRYGD -> IkkeAktuellArsak.BEHANDLET_I_INFOTRYGD
+        IkkeAktuellArsakV2DTO.DUPLIKAT -> IkkeAktuellArsak.DUPLIKAT
+        IkkeAktuellArsakV2DTO.ANNET -> IkkeAktuellArsak.ANNET
     }
 
-private fun IkkeAktuellGrunn.toV2DTO(): IkkeAktuellGrunnV2DTO =
+private fun IkkeAktuellArsak.toV2DTO(): IkkeAktuellArsakV2DTO =
     when (this) {
-        IkkeAktuellGrunn.BEHANDLET_I_INFOTRYGD -> IkkeAktuellGrunnV2DTO.BEHANDLET_I_INFOTRYGD
-        IkkeAktuellGrunn.DUPLIKAT -> IkkeAktuellGrunnV2DTO.DUPLIKAT
-        IkkeAktuellGrunn.ANNET -> IkkeAktuellGrunnV2DTO.ANNET
+        IkkeAktuellArsak.BEHANDLET_I_INFOTRYGD -> IkkeAktuellArsakV2DTO.BEHANDLET_I_INFOTRYGD
+        IkkeAktuellArsak.DUPLIKAT -> IkkeAktuellArsakV2DTO.DUPLIKAT
+        IkkeAktuellArsak.ANNET -> IkkeAktuellArsakV2DTO.ANNET
     }
 
 private fun SoknadStatus.toV2DTO(): SoknadStatusV2DTO =
@@ -193,7 +193,7 @@ private fun Behandling.toV2DTO(): BehandlingV2DTO =
             IkkeAktuellBehandlingV2DTO(
                 behandletAv = behandletAv.value,
                 behandletTidspunkt = behandletTidspunkt.toLocalDateTimeOslo(),
-                ikkeAktuellGrunn = utfall.grunn.toV2DTO(),
+                ikkeAktuellArsak = utfall.arsak.toV2DTO(),
             )
     }
 

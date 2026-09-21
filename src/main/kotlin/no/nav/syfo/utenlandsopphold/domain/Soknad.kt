@@ -109,12 +109,12 @@ data class Soknad(
      * bruker, så det finnes heller ingenting å journalføre eller distribuere.
      */
     fun merkIkkeAktuell(
-        grunn: IkkeAktuellGrunn,
+        arsak: IkkeAktuellArsak,
         behandletAv: Navident,
         now: OffsetDateTime,
     ): Soknad =
         registrerBehandling(
-            utfall = BehandlingsUtfall.IkkeAktuell(grunn),
+            utfall = BehandlingsUtfall.IkkeAktuell(arsak),
             behandletAv = behandletAv,
             now = now,
             brev = null,

@@ -10,7 +10,7 @@ import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.domain.Brev
 import no.nav.syfo.utenlandsopphold.domain.Brevtype
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
-import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellGrunn
+import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellArsak
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import java.time.LocalDate
@@ -72,7 +72,7 @@ data class PBehandling(
     val behandletAv: String,
     val behandletTidspunkt: OffsetDateTime,
     val begrunnelse: String?,
-    val ikkeAktuellGrunn: String?,
+    val ikkeAktuellArsak: String?,
 ) {
     fun toBehandling(
         innvilgedePerioder: List<Periode>,
@@ -80,7 +80,7 @@ data class PBehandling(
     ): Behandling =
         Behandling(
             behandlingId = uuid,
-            utfall = utfall.toUtfall(innvilgedePerioder, ikkeAktuellGrunn, begrunnelse),
+            utfall = utfall.toUtfall(innvilgedePerioder, ikkeAktuellArsak, begrunnelse),
             behandletAv = Navident(behandletAv),
             behandletTidspunkt = behandletTidspunkt,
             brev = brev?.toBrev(),
@@ -124,9 +124,9 @@ fun BehandlingsUtfall.dbValue(): String =
         is BehandlingsUtfall.IkkeAktuell -> "IKKE_AKTUELL"
     }
 
-fun BehandlingsUtfall.ikkeAktuellGrunnDbValue(): String? =
+fun BehandlingsUtfall.ikkeAktuellArsakDbValue(): String? =
     when (this) {
-        is BehandlingsUtfall.IkkeAktuell -> grunn.name
+        is BehandlingsUtfall.IkkeAktuell -> arsak.name
         else -> null
     }
 
@@ -148,7 +148,7 @@ private fun begrunnelseFraDatabasen(
 
 private fun String.toUtfall(
     innvilgedePerioder: List<Periode>,
-    ikkeAktuellGrunn: String?,
+    ikkeAktuellArsak: String?,
     begrunnelse: String?,
 ): BehandlingsUtfall =
     when (this) {
@@ -162,17 +162,17 @@ private fun String.toUtfall(
         "HENLAGT" -> BehandlingsUtfall.Henlagt(begrunnelse = begrunnelseFraDatabasen(begrunnelse, this))
         "IKKE_AKTUELL" ->
             BehandlingsUtfall.IkkeAktuell(
-                grunn =
-                    checkNotNull(ikkeAktuellGrunn) {
-                        "Behandling med utfall IKKE_AKTUELL mangler ikke_aktuell_grunn i databasen"
-                    }.toIkkeAktuellGrunn(),
+                arsak =
+                    checkNotNull(ikkeAktuellArsak) {
+                        "Behandling med utfall IKKE_AKTUELL mangler ikke_aktuell_arsak i databasen"
+                    }.toIkkeAktuellArsak(),
             )
         else -> throw IllegalStateException("Ukjent utfall lagret i database: $this")
     }
 
-private fun String.toIkkeAktuellGrunn(): IkkeAktuellGrunn =
-    IkkeAktuellGrunn.entries.firstOrNull { it.name == this }
-        ?: throw IllegalStateException("Ukjent ikke_aktuell_grunn lagret i database: $this")
+private fun String.toIkkeAktuellArsak(): IkkeAktuellArsak =
+    IkkeAktuellArsak.entries.firstOrNull { it.name == this }
+        ?: throw IllegalStateException("Ukjent ikke_aktuell_arsak lagret i database: $this")
 
 fun Brevtype.dbValue(): String = name
 

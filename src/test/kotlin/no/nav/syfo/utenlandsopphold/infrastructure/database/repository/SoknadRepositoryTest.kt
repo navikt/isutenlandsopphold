@@ -10,7 +10,7 @@ import no.nav.syfo.utenlandsopphold.domain.Brev
 import no.nav.syfo.utenlandsopphold.domain.Brevtype
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponentType
-import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellGrunn
+import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellArsak
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.SoknadStatus
@@ -304,7 +304,7 @@ class SoknadRepositoryTest {
             repository.lagreBehandling(
                 transaction,
                 lagretSoknad.merkIkkeAktuell(
-                    grunn = IkkeAktuellGrunn.BEHANDLET_I_INFOTRYGD,
+                    arsak = IkkeAktuellArsak.BEHANDLET_I_INFOTRYGD,
                     behandletAv = Navident("Z999999"),
                     now = OffsetDateTime.parse("2026-03-05T10:00:00Z"),
                 ),
@@ -315,7 +315,7 @@ class SoknadRepositoryTest {
 
         assertEquals(SoknadStatus.IKKE_AKTUELL, hentetPaNytt.status)
         assertEquals(
-            BehandlingsUtfall.IkkeAktuell(IkkeAktuellGrunn.BEHANDLET_I_INFOTRYGD),
+            BehandlingsUtfall.IkkeAktuell(IkkeAktuellArsak.BEHANDLET_I_INFOTRYGD),
             hentetPaNytt.behandling?.utfall,
         )
         assertNull(lagretBegrunnelse())
@@ -324,38 +324,38 @@ class SoknadRepositoryTest {
     }
 
     /**
-     * Databasen skal håndheve koblingen mellom utfall og grunn begge veier, ikke bare
+     * Databasen skal håndheve koblingen mellom utfall og årsak begge veier, ikke bare
      * stole på at domenet gjør det.
      */
     @Test
-    fun `databasen avviser ikke_aktuell_grunn på andre utfall, og ikke aktuell uten grunn`() {
+    fun `databasen avviser ikke_aktuell_arsak på andre utfall, og ikke aktuell uten årsak`() {
         val soknad = soknad()
         repository.lagreMottattSoknad(soknad)
 
         assertFailsWith<PSQLException> {
-            insertBehandlingDirekte(soknadEksternId = soknad.eksternId, utfall = "HENLAGT", ikkeAktuellGrunn = "DUPLIKAT")
+            insertBehandlingDirekte(soknadEksternId = soknad.eksternId, utfall = "HENLAGT", ikkeAktuellArsak = "DUPLIKAT")
         }
         assertFailsWith<PSQLException> {
-            insertBehandlingDirekte(soknadEksternId = soknad.eksternId, utfall = "IKKE_AKTUELL", ikkeAktuellGrunn = null)
+            insertBehandlingDirekte(soknadEksternId = soknad.eksternId, utfall = "IKKE_AKTUELL", ikkeAktuellArsak = null)
         }
     }
 
     private fun insertBehandlingDirekte(
         soknadEksternId: UUID,
         utfall: String,
-        ikkeAktuellGrunn: String?,
+        ikkeAktuellArsak: String?,
     ) = database.connection.use { connection ->
         connection
             .prepareStatement(
                 """
-                INSERT INTO behandling (uuid, soknad_id, utfall, behandlet_av, behandlet_tidspunkt, ikke_aktuell_grunn)
+                INSERT INTO behandling (uuid, soknad_id, utfall, behandlet_av, behandlet_tidspunkt, ikke_aktuell_arsak)
                 SELECT ?, s.id, ?, 'Z999999', now(), ?
                 FROM soknad s WHERE s.ekstern_id = ?
                 """.trimIndent(),
             ).use { statement ->
                 statement.setObject(1, UUID.randomUUID())
                 statement.setString(2, utfall)
-                statement.setString(3, ikkeAktuellGrunn)
+                statement.setString(3, ikkeAktuellArsak)
                 statement.setObject(4, soknadEksternId)
                 statement.executeUpdate()
             }
@@ -371,7 +371,7 @@ class SoknadRepositoryTest {
             repository.lagreBehandling(
                 transaction,
                 lagretSoknad.merkIkkeAktuell(
-                    grunn = IkkeAktuellGrunn.ANNET,
+                    arsak = IkkeAktuellArsak.ANNET,
                     behandletAv = Navident("Z999999"),
                     now = OffsetDateTime.parse("2026-03-05T10:00:00Z"),
                 ),

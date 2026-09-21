@@ -46,7 +46,7 @@ class BehandlingTest {
         )
         assertEquals(emptyList(), BehandlingsUtfall.Avslag("Begrunnelse").innvilgedePerioder())
         assertEquals(emptyList(), BehandlingsUtfall.Henlagt("Begrunnelse").innvilgedePerioder())
-        assertEquals(emptyList(), BehandlingsUtfall.IkkeAktuell(IkkeAktuellGrunn.ANNET).innvilgedePerioder())
+        assertEquals(emptyList(), BehandlingsUtfall.IkkeAktuell(IkkeAktuellArsak.ANNET).innvilgedePerioder())
     }
 
     @Test
@@ -68,17 +68,17 @@ class BehandlingTest {
 
     @Test
     fun `behandling merket ikke aktuell er gyldig uten brev`() {
-        val behandling = lagBehandling(utfall = BehandlingsUtfall.IkkeAktuell(IkkeAktuellGrunn.DUPLIKAT))
+        val behandling = lagBehandling(utfall = BehandlingsUtfall.IkkeAktuell(IkkeAktuellArsak.DUPLIKAT))
 
         assertEquals(null, behandling.brev)
-        assertEquals(IkkeAktuellGrunn.DUPLIKAT, (behandling.utfall as BehandlingsUtfall.IkkeAktuell).grunn)
+        assertEquals(IkkeAktuellArsak.DUPLIKAT, (behandling.utfall as BehandlingsUtfall.IkkeAktuell).arsak)
     }
 
     @Test
     fun `behandling merket ikke aktuell med brev kaster`() {
         assertFailsWith<IllegalArgumentException> {
             lagBehandling(
-                utfall = BehandlingsUtfall.IkkeAktuell(IkkeAktuellGrunn.ANNET),
+                utfall = BehandlingsUtfall.IkkeAktuell(IkkeAktuellArsak.ANNET),
                 brev = lagBrev(brevtype = Brevtype.HENLEGGELSE),
             )
         }
@@ -95,7 +95,7 @@ class BehandlingTest {
         val delvisInnvilget = BehandlingsUtfall.DelvisInnvilget(listOf(innvilgetPeriode), "Delvis innvilget begrunnelse")
         val avslag = BehandlingsUtfall.Avslag("Avslag begrunnelse")
         val henlagt = BehandlingsUtfall.Henlagt("Henleggelse begrunnelse")
-        val ikkeAktuell = BehandlingsUtfall.IkkeAktuell(IkkeAktuellGrunn.DUPLIKAT)
+        val ikkeAktuell = BehandlingsUtfall.IkkeAktuell(IkkeAktuellArsak.DUPLIKAT)
         val alleUtfall: List<BehandlingsUtfall> =
             listOf(innvilget, delvisInnvilget, avslag, henlagt, ikkeAktuell)
 
@@ -114,7 +114,7 @@ class BehandlingTest {
         )
         assertEquals(Brevtype.VEDTAK_AVSLAG, BehandlingsUtfall.Avslag("Begrunnelse").brevtype())
         assertEquals(Brevtype.HENLEGGELSE, BehandlingsUtfall.Henlagt("Begrunnelse").brevtype())
-        assertEquals(null, BehandlingsUtfall.IkkeAktuell(IkkeAktuellGrunn.ANNET).brevtype())
+        assertEquals(null, BehandlingsUtfall.IkkeAktuell(IkkeAktuellArsak.ANNET).brevtype())
     }
 
     @Test
