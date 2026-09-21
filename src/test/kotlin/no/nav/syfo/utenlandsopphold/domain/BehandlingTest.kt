@@ -119,8 +119,8 @@ class BehandlingTest {
 
     @Test
     fun `paakrevdBegrunnelse avviser manglende og blank begrunnelse`() {
-        assertEquals("Begrunnelse", paakrevdBegrunnelse("Begrunnelse", "henleggelse"))
-        assertFailsWith<IllegalArgumentException> { paakrevdBegrunnelse(null, "henleggelse") }
-        assertFailsWith<IllegalArgumentException> { paakrevdBegrunnelse("   ", "henleggelse") }
+        assertEquals("Begrunnelse", pakrevdBegrunnelse("Begrunnelse", "henleggelse"))
+        assertFailsWith<IllegalArgumentException> { pakrevdBegrunnelse(null, "henleggelse") }
+        assertFailsWith<IllegalArgumentException> { pakrevdBegrunnelse("   ", "henleggelse") }
     }
 }

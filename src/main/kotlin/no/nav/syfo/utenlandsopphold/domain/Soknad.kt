@@ -73,10 +73,10 @@ data class Soknad(
                     }
                     BehandlingsUtfall.DelvisInnvilget(
                         innvilgedePerioder = innvilgedePerioder,
-                        begrunnelse = paakrevdBegrunnelse(begrunnelse, "delvis innvilgelse"),
+                        begrunnelse = pakrevdBegrunnelse(begrunnelse, "delvis innvilgelse"),
                     )
                 }
-                VedtaksUtfall.AVSLAG -> BehandlingsUtfall.Avslag(begrunnelse = paakrevdBegrunnelse(begrunnelse, "avslag"))
+                VedtaksUtfall.AVSLAG -> BehandlingsUtfall.Avslag(begrunnelse = pakrevdBegrunnelse(begrunnelse, "avslag"))
             }
         val brevtype =
             requireNotNull(vedtak.brevtype()) {

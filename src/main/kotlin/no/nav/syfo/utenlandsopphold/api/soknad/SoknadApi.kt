@@ -9,7 +9,7 @@ import no.nav.syfo.common.tilgangskontroll.client.TilgangskontrollClient
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.domain.VedtaksUtfall
-import no.nav.syfo.utenlandsopphold.domain.paakrevdBegrunnelse
+import no.nav.syfo.utenlandsopphold.domain.pakrevdBegrunnelse
 import java.util.UUID
 
 fun Route.registerSoknadApi(
@@ -53,7 +53,7 @@ fun Route.registerSoknadApi(
                                 soknadId = soknadId,
                                 behandletAv = authorizedUser.navident,
                                 document = request.document,
-                                begrunnelse = paakrevdBegrunnelse(request.begrunnelse, "henleggelse"),
+                                begrunnelse = pakrevdBegrunnelse(request.begrunnelse, "henleggelse"),
                             )
                         else ->
                             soknadService.fattVedtak(

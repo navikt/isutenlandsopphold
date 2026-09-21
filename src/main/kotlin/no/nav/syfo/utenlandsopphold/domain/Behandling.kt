@@ -57,7 +57,7 @@ fun BehandlingsUtfall.innvilgedePerioder(): List<Periode> =
         is BehandlingsUtfall.Avslag, is BehandlingsUtfall.Henlagt, is BehandlingsUtfall.IkkeAktuell -> emptyList()
     }
 
-internal fun paakrevdBegrunnelse(
+internal fun pakrevdBegrunnelse(
     begrunnelse: String?,
     utfall: String,
 ): String = requireNotNull(begrunnelse?.takeIf { it.isNotBlank() }) { "Begrunnelse er påkrevd ved $utfall" }
