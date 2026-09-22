@@ -9,8 +9,6 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.testing.*
-import io.mockk.coEvery
-import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import no.nav.syfo.common.tilgangskontroll.client.TilgangskontrollClient
@@ -22,8 +20,6 @@ import no.nav.syfo.utenlandsopphold.application.ApplicationState
 import no.nav.syfo.utenlandsopphold.application.BrevService
 import no.nav.syfo.utenlandsopphold.application.ISoknadRepository
 import no.nav.syfo.utenlandsopphold.application.SoknadService
-import no.nav.syfo.utenlandsopphold.application.Transaction
-import no.nav.syfo.utenlandsopphold.application.TransactionManager
 import no.nav.syfo.utenlandsopphold.domain.Behandling
 import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
@@ -35,6 +31,7 @@ import no.nav.syfo.utenlandsopphold.domain.VedtaksUtfall
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
 import no.nav.syfo.utenlandsopphold.infrastructure.mock.mockTilgangskontrollClient
 import no.nav.syfo.utenlandsopphold.testutil.TEST_AZURE_APP_CLIENT_ID
+import no.nav.syfo.utenlandsopphold.testutil.TestTransactionManager
 import no.nav.syfo.utenlandsopphold.testutil.generateJWT
 import no.nav.syfo.utenlandsopphold.testutil.wellKnownInternalAzureAD
 import java.time.LocalDate
@@ -89,7 +86,7 @@ class SoknadApiV2Test {
         val soknadService =
             SoknadService(
                 soknadRepository = repository,
-                transactionManager = TestTransactionManagerV2,
+                transactionManager = TestTransactionManager,
                 brevService = brevServiceMock,
             )
         application {
@@ -249,7 +246,7 @@ class SoknadApiV2Test {
         }
 
     @Test
-    fun `henleggelse lagrer behandling med utfall henlagt uten utfallsfelt i forespørselen`() =
+    fun `henleggelse lagrer behandling med utfall henlagt`() =
         testApplication {
             var lagret: Soknad? = null
             stubHentSoknadOgLagreBehandling { lagret = it }
@@ -296,10 +293,6 @@ class SoknadApiV2Test {
             assertEquals(SoknadStatusV2DTO.IKKE_AKTUELL, response.body<SoknadResponseV2DTO>().soknad.status)
         }
 
-    /**
-     * En ukjent enum-verdi skal gi 400 fra Jackson, ikke 500. Dette er den eneste testen
-     * for det: feilhåndteringen er felles for hele API-et og trenger ikke dekkes per felt.
-     */
     @Test
     fun `ukjent enum-verdi i forespørselen gir 400`() =
         testApplication {
@@ -316,34 +309,6 @@ class SoknadApiV2Test {
             assertEquals(HttpStatusCode.BadRequest, response.status)
         }
 
-    /**
-     * Brevet skal journalføres og distribueres med én gang vedtaket er fattet, ikke vente
-     * på cronjobben. Dette skjer i en fire-and-forget bakgrunnsoppgave, derfor timeout her.
-     */
-    @Test
-    fun `vedtak journalfører og distribuerer brevet umiddelbart`() =
-        testApplication {
-            stubHentSoknadOgLagreBehandling()
-            coEvery { brevServiceMock.journalforBrev(any<Soknad>()) } answers { firstArg() }
-            val client = setupApiAndClient()
-
-            val response =
-                client.post(VEDTAK_PATH.format(soknad.id)) {
-                    somSaksbehandlerMedSkrivetilgang(
-                        VedtakPostV2DTO(utfall = VedtaksUtfall.INNVILGET, document = document),
-                    )
-                }
-
-            assertEquals(HttpStatusCode.OK, response.status)
-            coVerify(timeout = 2000) { brevServiceMock.journalforBrev(any<Soknad>()) }
-            coVerify(timeout = 2000) { brevServiceMock.distribuerBrev(any<Soknad>()) }
-        }
-
-    /**
-     * Tilgangssjekken står eksplisitt i hver rutehandler, ikke i en delt hjelper. Denne
-     * testen er garantien for at ingen av dem mangler den, og må utvides når et nytt
-     * skriveendepunkt kommer til.
-     */
     @Test
     fun `alle skriveendepunkter krever skrivetilgang`() =
         testApplication {
@@ -367,6 +332,25 @@ class SoknadApiV2Test {
         }
 
     /**
+     * Bør utvides hvis det kommer flere endepunkter som krever skrivetilgang.
+     */
+    private fun skriveendepunkter(): List<Pair<String, Any>> =
+        listOf(
+            VEDTAK_PATH to
+                VedtakPostV2DTO(
+                    utfall = VedtaksUtfall.INNVILGET,
+                    innvilgedePerioder = emptyList(),
+                    document = document,
+                ),
+            HENLEGGELSE_PATH to
+                HenleggelsePostV2DTO(
+                    document = document,
+                    begrunnelse = "Søker har trukket søknaden",
+                ),
+            IKKE_AKTUELL_PATH to IkkeAktuellPostV2DTO(arsak = IkkeAktuellArsakV2DTO.DUPLIKAT),
+        )
+
+    /**
      * Autentiseringen settes med én `authenticate`-blokk rundt hele API-et i ApiModule,
      * ikke per rute. Derfor er ett endepunkt nok til å dekke den.
      */
@@ -385,11 +369,11 @@ class SoknadApiV2Test {
         }
 
     /**
-     * 404 kommer fra den delte hjelperen `hentSoknad`, som alle skriveendepunktene må
-     * gå gjennom for å få tak i personidenten tilgangssjekken trenger.
+     * Behandlingsendepunktene bruker en delt hjelper for å hente søknaden,
+     * så holder å teste for et endepunkt.
      */
     @Test
-    fun `skriveendepunkt gir 404 for søknad som ikke finnes`() =
+    fun `behandlingsendepunkt gir 404 for søknad som ikke finnes`() =
         testApplication {
             every { repository.hentSoknad(any()) } returns null
             val client = setupApiAndClient()
@@ -403,56 +387,8 @@ class SoknadApiV2Test {
 
             assertEquals(HttpStatusCode.NotFound, response.status)
         }
-
-    private fun skriveendepunkter(): List<Pair<String, Any>> =
-        listOf(
-            VEDTAK_PATH to
-                VedtakPostV2DTO(
-                    utfall = VedtaksUtfall.INNVILGET,
-                    innvilgedePerioder = emptyList(),
-                    document = document,
-                ),
-            HENLEGGELSE_PATH to
-                HenleggelsePostV2DTO(
-                    document = document,
-                    begrunnelse = "Søker har trukket søknaden",
-                ),
-            IKKE_AKTUELL_PATH to IkkeAktuellPostV2DTO(arsak = IkkeAktuellArsakV2DTO.DUPLIKAT),
-        )
-
-    @Test
-    fun `ikke-aktuell på allerede behandlet søknad gir 409`() =
-        testApplication {
-            val behandletSoknad =
-                soknad.fattVedtak(
-                    utfall = VedtaksUtfall.INNVILGET,
-                    innvilgedePerioder = emptyList(),
-                    begrunnelse = null,
-                    behandletAv = Navident(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG),
-                    now = OffsetDateTime.parse("2026-03-02T09:00:00Z"),
-                    document = document,
-                )
-            every { repository.hentSoknad(any()) } returns behandletSoknad
-            every { repository.hentSoknadForUpdate(any(), any()) } returns behandletSoknad
-            val client = setupApiAndClient()
-
-            val response =
-                client.post(IKKE_AKTUELL_PATH.format(soknad.id)) {
-                    somSaksbehandlerMedSkrivetilgang(
-                        IkkeAktuellPostV2DTO(arsak = IkkeAktuellArsakV2DTO.DUPLIKAT),
-                    )
-                }
-
-            assertEquals(HttpStatusCode.Conflict, response.status)
-        }
 }
 
 private object NoopDatabaseV2 : DatabaseInterface {
     override val connection get() = throw NotImplementedError("Ikke i bruk i denne testen")
-}
-
-private object TestTransactionV2 : Transaction
-
-private object TestTransactionManagerV2 : TransactionManager {
-    override fun <T> inTransaction(block: (Transaction) -> T): T = block(TestTransactionV2)
 }

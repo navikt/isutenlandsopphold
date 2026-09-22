@@ -23,6 +23,7 @@ import no.nav.syfo.utenlandsopphold.api.endpoints.registerMetricApi
 import no.nav.syfo.utenlandsopphold.api.endpoints.registerPodApi
 import no.nav.syfo.utenlandsopphold.api.soknad.v2.registerSoknadApiV2
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
+import no.nav.syfo.utenlandsopphold.application.SoknadFinnesIkkeException
 import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
 import no.nav.syfo.utenlandsopphold.infrastructure.metric.METRICS_REGISTRY
@@ -102,6 +103,7 @@ fun Application.installStatusPages() {
                 when (cause) {
                     is BadRequestException -> HttpStatusCode.BadRequest
                     is NotFoundException -> HttpStatusCode.NotFound
+                    is SoknadFinnesIkkeException -> HttpStatusCode.NotFound
                     is IllegalStateException -> HttpStatusCode.Conflict
                     is IllegalArgumentException -> HttpStatusCode.BadRequest
                     is TilgangDeniedException -> HttpStatusCode.Forbidden
