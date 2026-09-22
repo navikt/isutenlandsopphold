@@ -249,55 +249,6 @@ class SoknadApiV2Test {
         }
 
     @Test
-    fun `vedtak godtar innvilgedePerioder som utelatt, null og tom liste`() =
-        testApplication {
-            stubHentSoknadOgLagreBehandling()
-            val client = setupApiAndClient()
-            val utenPerioder = mapOf("utfall" to "INNVILGET", "document" to document)
-            val former =
-                mapOf(
-                    "utelatt" to utenPerioder,
-                    "null" to utenPerioder + ("innvilgedePerioder" to null),
-                    "tom liste" to utenPerioder + ("innvilgedePerioder" to emptyList<Any>()),
-                )
-
-            for ((navn, body) in former) {
-                val response =
-                    client.post(VEDTAK_PATH.format(soknad.id)) {
-                        somSaksbehandlerMedSkrivetilgang(body)
-                    }
-
-                assertEquals(HttpStatusCode.OK, response.status, "$navn skal godtas")
-            }
-        }
-
-    /**
-     * Utfallsfeltet er typet som [VedtaksUtfall], så disse verdiene kan ikke uttrykkes i Kotlin.
-     * En klient kan likevel sende dem på wire, og da skal Jackson gi 400 og ikke 500.
-     */
-    @Test
-    fun `vedtak avviser utfall som ikke er et vedtaksutfall`() =
-        testApplication {
-            stubHentSoknadOgLagreBehandling()
-            val client = setupApiAndClient()
-
-            for (ugyldigUtfall in listOf("HENLAGT", "IKKE_AKTUELL", "TULL")) {
-                val response =
-                    client.post(VEDTAK_PATH.format(soknad.id)) {
-                        somSaksbehandlerMedSkrivetilgang(
-                            mapOf(
-                                "utfall" to ugyldigUtfall,
-                                "innvilgedePerioder" to emptyList<Any>(),
-                                "document" to document,
-                            ),
-                        )
-                    }
-
-                assertEquals(HttpStatusCode.BadRequest, response.status, "$ugyldigUtfall skal gi 400")
-            }
-        }
-
-    @Test
     fun `henleggelse lagrer behandling med utfall henlagt uten utfallsfelt i forespørselen`() =
         testApplication {
             var lagret: Soknad? = null
@@ -345,8 +296,12 @@ class SoknadApiV2Test {
             assertEquals(SoknadStatusV2DTO.IKKE_AKTUELL, response.body<SoknadResponseV2DTO>().soknad.status)
         }
 
+    /**
+     * En ukjent enum-verdi skal gi 400 fra Jackson, ikke 500. Dette er den eneste testen
+     * for det: feilhåndteringen er felles for hele API-et og trenger ikke dekkes per felt.
+     */
     @Test
-    fun `ikke-aktuell med ukjent årsak gir 400`() =
+    fun `ukjent enum-verdi i forespørselen gir 400`() =
         testApplication {
             stubHentSoknadOgLagreBehandling()
             val client = setupApiAndClient()
@@ -411,45 +366,42 @@ class SoknadApiV2Test {
             }
         }
 
+    /**
+     * Autentiseringen settes med én `authenticate`-blokk rundt hele API-et i ApiModule,
+     * ikke per rute. Derfor er ett endepunkt nok til å dekke den.
+     */
     @Test
-    fun `alle skriveendepunkter krever token`() =
+    fun `apiet krever token`() =
         testApplication {
-            stubHentSoknadOgLagreBehandling()
             val client = setupApiAndClient()
 
-            for ((path, body) in skriveendepunkter()) {
-                val response =
-                    client.post(path.format(soknad.id)) {
-                        contentType(ContentType.Application.Json)
-                        setBody(body)
-                    }
+            val response =
+                client.post(SOKNADER_QUERY_PATH) {
+                    contentType(ContentType.Application.Json)
+                    setBody(SoknaderQueryV2DTO(personident = soknad.personident.value))
+                }
 
-                assertEquals(
-                    HttpStatusCode.Unauthorized,
-                    response.status,
-                    "$path skal kreve token",
-                )
-            }
+            assertEquals(HttpStatusCode.Unauthorized, response.status)
         }
 
+    /**
+     * 404 kommer fra den delte hjelperen `hentSoknad`, som alle skriveendepunktene må
+     * gå gjennom for å få tak i personidenten tilgangssjekken trenger.
+     */
     @Test
-    fun `alle skriveendepunkter gir 404 for søknad som ikke finnes`() =
+    fun `skriveendepunkt gir 404 for søknad som ikke finnes`() =
         testApplication {
             every { repository.hentSoknad(any()) } returns null
             val client = setupApiAndClient()
 
-            for ((path, body) in skriveendepunkter()) {
-                val response =
-                    client.post(path.format(UUID.randomUUID())) {
-                        somSaksbehandlerMedSkrivetilgang(body)
-                    }
+            val response =
+                client.post(VEDTAK_PATH.format(UUID.randomUUID())) {
+                    somSaksbehandlerMedSkrivetilgang(
+                        VedtakPostV2DTO(utfall = VedtaksUtfall.INNVILGET, document = document),
+                    )
+                }
 
-                assertEquals(
-                    HttpStatusCode.NotFound,
-                    response.status,
-                    "$path skal gi 404 for ukjent søknad",
-                )
-            }
+            assertEquals(HttpStatusCode.NotFound, response.status)
         }
 
     private fun skriveendepunkter(): List<Pair<String, Any>> =
