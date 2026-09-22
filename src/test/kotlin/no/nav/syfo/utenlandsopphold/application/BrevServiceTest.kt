@@ -1,7 +1,6 @@
 package no.nav.syfo.utenlandsopphold.application
 
 import io.mockk.Runs
-import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -22,7 +21,6 @@ import no.nav.syfo.utenlandsopphold.domain.innvilgedePerioder
 import no.nav.syfo.utenlandsopphold.domain.lagSoknad
 import no.nav.syfo.utenlandsopphold.domain.standardSoktePerioder
 import no.nav.syfo.utenlandsopphold.domain.veileder
-import org.junit.jupiter.api.BeforeEach
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import kotlin.test.Test
@@ -44,11 +42,6 @@ class BrevServiceTest {
             journalforingService = journalforingServiceMock,
             distribusjonService = distribusjonServiceMock,
         )
-
-    @BeforeEach
-    fun resetMocks() {
-        clearMocks(repositoryMock, pdlClientMock, pdfClientMock, journalforingServiceMock, distribusjonServiceMock)
-    }
 
     private fun behandletSoknad(utfall: BehandlingsUtfall = BehandlingsUtfall.Innvilget(standardSoktePerioder)): Soknad {
         val now = OffsetDateTime.parse("2026-01-10T12:00:00Z")

@@ -9,7 +9,6 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.testing.*
-import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -38,7 +37,6 @@ import no.nav.syfo.utenlandsopphold.infrastructure.mock.mockTilgangskontrollClie
 import no.nav.syfo.utenlandsopphold.testutil.TEST_AZURE_APP_CLIENT_ID
 import no.nav.syfo.utenlandsopphold.testutil.generateJWT
 import no.nav.syfo.utenlandsopphold.testutil.wellKnownInternalAzureAD
-import org.junit.jupiter.api.BeforeEach
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -56,11 +54,6 @@ private const val IKKE_AKTUELL_PATH = "/api/v2/soknader/%s/ikke-aktuell"
 class SoknadApiV2Test {
     private val repository = mockk<ISoknadRepository>()
     private val brevServiceMock = mockk<BrevService>(relaxed = true)
-
-    @BeforeEach
-    fun resetMocks() {
-        clearMocks(repository, brevServiceMock)
-    }
 
     private val soknad =
         Soknad(
