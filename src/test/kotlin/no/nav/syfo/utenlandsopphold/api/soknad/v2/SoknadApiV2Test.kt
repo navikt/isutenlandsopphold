@@ -10,6 +10,8 @@ import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.testing.*
 import io.mockk.clearMocks
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import no.nav.syfo.common.tilgangskontroll.client.TilgangskontrollClient
@@ -57,7 +59,7 @@ class SoknadApiV2Test {
 
     @BeforeEach
     fun resetMocks() {
-        clearMocks(repository)
+        clearMocks(repository, brevServiceMock)
     }
 
     private val soknad =
@@ -158,6 +160,25 @@ class SoknadApiV2Test {
                         .behandling,
                 )
             assertEquals(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG, behandling.behandletAv)
+        }
+
+    @Test
+    fun `query-endepunktet krever tilgang til personen`() =
+        testApplication {
+            val client = setupApiAndClient()
+
+            val response =
+                client.post(SOKNADER_QUERY_PATH) {
+                    bearerAuth(generateJWT(navIdent = UserConstants.VEILEDER_IDENT_MED_LESETILGANG))
+                    contentType(ContentType.Application.Json)
+                    setBody(
+                        SoknaderQueryV2DTO(
+                            personident = UserConstants.PERSON_VEILEDERE_IKKE_HAR_TILGANG_TIL.value,
+                        ),
+                    )
+                }
+
+            assertEquals(HttpStatusCode.Forbidden, response.status, "query skal kreve tilgang til personen")
         }
 
     @Test
@@ -345,6 +366,29 @@ class SoknadApiV2Test {
                 }
 
             assertEquals(HttpStatusCode.BadRequest, response.status)
+        }
+
+    /**
+     * Brevet skal journalføres og distribueres med én gang vedtaket er fattet, ikke vente
+     * på cronjobben. Dette skjer i en fire-and-forget bakgrunnsoppgave, derfor timeout her.
+     */
+    @Test
+    fun `vedtak journalfører og distribuerer brevet umiddelbart`() =
+        testApplication {
+            stubHentSoknadOgLagreBehandling()
+            coEvery { brevServiceMock.journalforBrev(any<Soknad>()) } answers { firstArg() }
+            val client = setupApiAndClient()
+
+            val response =
+                client.post(VEDTAK_PATH.format(soknad.id)) {
+                    somSaksbehandlerMedSkrivetilgang(
+                        VedtakPostV2DTO(utfall = VedtaksUtfall.INNVILGET, document = document),
+                    )
+                }
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            coVerify(timeout = 2000) { brevServiceMock.journalforBrev(any<Soknad>()) }
+            coVerify(timeout = 2000) { brevServiceMock.distribuerBrev(any<Soknad>()) }
         }
 
     /**
