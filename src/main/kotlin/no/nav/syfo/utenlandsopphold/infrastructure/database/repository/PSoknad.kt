@@ -6,12 +6,13 @@ import no.nav.syfo.common.types.ident.Navident
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.common.util.configuredJacksonMapper
 import no.nav.syfo.utenlandsopphold.domain.Behandling
+import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.domain.Brev
 import no.nav.syfo.utenlandsopphold.domain.Brevtype
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
+import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellArsak
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
-import no.nav.syfo.utenlandsopphold.domain.Utfall
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -39,10 +40,7 @@ data class PSoknad(
             behandling =
                 behandling?.toBehandling(
                     innvilgedePerioder = behandlingPerioder.map { it.toPeriode() },
-                    brev =
-                        checkNotNull(brev) {
-                            "Behandling ${behandling.uuid} mangler brev"
-                        },
+                    brev = brev,
                 ),
         )
 }
@@ -74,19 +72,18 @@ data class PBehandling(
     val behandletAv: String,
     val behandletTidspunkt: OffsetDateTime,
     val begrunnelse: String?,
+    val ikkeAktuellArsak: String?,
 ) {
     fun toBehandling(
         innvilgedePerioder: List<Periode>,
-        brev: PBrev,
+        brev: PBrev?,
     ): Behandling =
         Behandling(
             behandlingId = uuid,
-            utfall = utfall.toUtfall(innvilgedePerioder),
+            utfall = utfall.toUtfall(innvilgedePerioder, ikkeAktuellArsak, begrunnelse),
             behandletAv = Navident(behandletAv),
             behandletTidspunkt = behandletTidspunkt,
-            innvilgedePerioder = innvilgedePerioder,
-            begrunnelse = begrunnelse,
-            brev = brev.toBrev(),
+            brev = brev?.toBrev(),
         )
 }
 
@@ -118,22 +115,64 @@ fun List<DocumentComponent>.serializeToJson(): String = documentMapper.writeValu
 
 private fun String.toDocumentComponents(): List<DocumentComponent> = documentMapper.readValue(this)
 
-fun Utfall.dbValue(): String =
+fun BehandlingsUtfall.dbValue(): String =
     when (this) {
-        Utfall.Innvilget -> "INNVILGET"
-        is Utfall.DelvisInnvilget -> "DELVIS_INNVILGET"
-        Utfall.Avslag -> "AVSLAG"
-        Utfall.Henlagt -> "HENLAGT"
+        is BehandlingsUtfall.Innvilget -> "INNVILGET"
+        is BehandlingsUtfall.DelvisInnvilget -> "DELVIS_INNVILGET"
+        is BehandlingsUtfall.Avslag -> "AVSLAG"
+        is BehandlingsUtfall.Henlagt -> "HENLAGT"
+        is BehandlingsUtfall.IkkeAktuell -> "IKKE_AKTUELL"
     }
 
-private fun String.toUtfall(innvilgedePerioder: List<Periode>): Utfall =
+fun BehandlingsUtfall.ikkeAktuellArsakDbValue(): String? =
     when (this) {
-        "INNVILGET" -> Utfall.Innvilget
-        "DELVIS_INNVILGET" -> Utfall.DelvisInnvilget(innvilgedePerioder)
-        "AVSLAG" -> Utfall.Avslag
-        "HENLAGT" -> Utfall.Henlagt
+        is BehandlingsUtfall.IkkeAktuell -> arsak.name
+        else -> null
+    }
+
+/**
+ * Kolonnen er nullbar fordi innvilgelse og ikke aktuell ikke har begrunnelse.
+ */
+fun BehandlingsUtfall.begrunnelseDbValue(): String? =
+    when (this) {
+        is BehandlingsUtfall.DelvisInnvilget -> begrunnelse
+        is BehandlingsUtfall.Avslag -> begrunnelse
+        is BehandlingsUtfall.Henlagt -> begrunnelse
+        is BehandlingsUtfall.Innvilget, is BehandlingsUtfall.IkkeAktuell -> null
+    }
+
+private fun begrunnelseFraDatabasen(
+    begrunnelse: String?,
+    utfall: String,
+): String = checkNotNull(begrunnelse) { "Behandling med utfall $utfall mangler begrunnelse i databasen" }
+
+private fun String.toUtfall(
+    innvilgedePerioder: List<Periode>,
+    ikkeAktuellArsak: String?,
+    begrunnelse: String?,
+): BehandlingsUtfall =
+    when (this) {
+        "INNVILGET" -> BehandlingsUtfall.Innvilget(innvilgedePerioder = innvilgedePerioder)
+        "DELVIS_INNVILGET" ->
+            BehandlingsUtfall.DelvisInnvilget(
+                innvilgedePerioder = innvilgedePerioder,
+                begrunnelse = begrunnelseFraDatabasen(begrunnelse, this),
+            )
+        "AVSLAG" -> BehandlingsUtfall.Avslag(begrunnelse = begrunnelseFraDatabasen(begrunnelse, this))
+        "HENLAGT" -> BehandlingsUtfall.Henlagt(begrunnelse = begrunnelseFraDatabasen(begrunnelse, this))
+        "IKKE_AKTUELL" ->
+            BehandlingsUtfall.IkkeAktuell(
+                arsak =
+                    checkNotNull(ikkeAktuellArsak) {
+                        "Behandling med utfall IKKE_AKTUELL mangler ikke_aktuell_arsak i databasen"
+                    }.toIkkeAktuellArsak(),
+            )
         else -> throw IllegalStateException("Ukjent utfall lagret i database: $this")
     }
+
+private fun String.toIkkeAktuellArsak(): IkkeAktuellArsak =
+    IkkeAktuellArsak.entries.firstOrNull { it.name == this }
+        ?: throw IllegalStateException("Ukjent ikke_aktuell_arsak lagret i database: $this")
 
 fun Brevtype.dbValue(): String = name
 

@@ -12,6 +12,13 @@ enum class SoknadStatus {
     DELVIS_INNVILGET,
     AVSLAG,
     HENLAGT,
+    IKKE_AKTUELL,
+}
+
+enum class VedtaksUtfall {
+    INNVILGET,
+    DELVIS_INNVILGET,
+    AVSLAG,
 }
 
 data class Soknad(
@@ -28,10 +35,11 @@ data class Soknad(
                 null -> SoknadStatus.MOTTATT
                 else ->
                     when (behandling.utfall) {
-                        Utfall.Innvilget -> SoknadStatus.INNVILGET
-                        is Utfall.DelvisInnvilget -> SoknadStatus.DELVIS_INNVILGET
-                        Utfall.Avslag -> SoknadStatus.AVSLAG
-                        Utfall.Henlagt -> SoknadStatus.HENLAGT
+                        is BehandlingsUtfall.Innvilget -> SoknadStatus.INNVILGET
+                        is BehandlingsUtfall.DelvisInnvilget -> SoknadStatus.DELVIS_INNVILGET
+                        is BehandlingsUtfall.Avslag -> SoknadStatus.AVSLAG
+                        is BehandlingsUtfall.Henlagt -> SoknadStatus.HENLAGT
+                        is BehandlingsUtfall.IkkeAktuell -> SoknadStatus.IKKE_AKTUELL
                     }
             }
 
@@ -42,40 +50,85 @@ data class Soknad(
     }
 
     /**
-     * Registrerer resultatet av å behandle søknaden, sammen med brevet som skal sendes.
-     * En søknad kan i dag kun behandles én gang.
+     * Fatter vedtak. [innvilgedePerioder] og [begrunnelse] brukes bare for bestemte
+     * vedtaksutfall. Innvilgede perioder ignoreres for [VedtaksUtfall.INNVILGET].
      */
-    fun behandle(
-        utfall: Utfall,
+    fun fattVedtak(
+        utfall: VedtaksUtfall,
+        innvilgedePerioder: List<Periode>,
+        begrunnelse: String?,
         behandletAv: Navident,
         now: OffsetDateTime,
         document: List<DocumentComponent>,
-        begrunnelse: String?,
+    ): Soknad {
+        val vedtak =
+            when (utfall) {
+                VedtaksUtfall.INNVILGET -> BehandlingsUtfall.Innvilget(innvilgedePerioder = soktePerioder)
+                VedtaksUtfall.DELVIS_INNVILGET -> {
+                    require(!innvilgedePerioder.harOverlapp()) {
+                        "Innvilgede perioder ved delvis innvilgelse kan ikke overlappe"
+                    }
+                    require(innvilgedePerioder.alleDagerErInnenfor(soktePerioder)) {
+                        "Innvilgede perioder ved delvis innvilgelse må være innenfor søkte perioder"
+                    }
+                    BehandlingsUtfall.DelvisInnvilget(
+                        innvilgedePerioder = innvilgedePerioder,
+                        begrunnelse = pakrevdBegrunnelse(begrunnelse, "delvis innvilgelse"),
+                    )
+                }
+                VedtaksUtfall.AVSLAG -> BehandlingsUtfall.Avslag(begrunnelse = pakrevdBegrunnelse(begrunnelse, "avslag"))
+            }
+        val brevtype =
+            requireNotNull(vedtak.brevtype()) {
+                "Finner ikke brevtype for $vedtak"
+            }
+
+        return registrerBehandling(
+            utfall = vedtak,
+            behandletAv = behandletAv,
+            now = now,
+            brev = Brev(brevtype = brevtype, document = document),
+        )
+    }
+
+    fun henlegg(
+        behandletAv: Navident,
+        now: OffsetDateTime,
+        document: List<DocumentComponent>,
+        begrunnelse: String,
+    ): Soknad =
+        registrerBehandling(
+            utfall = BehandlingsUtfall.Henlagt(begrunnelse = begrunnelse),
+            behandletAv = behandletAv,
+            now = now,
+            brev = Brev(brevtype = Brevtype.HENLEGGELSE, document = document),
+        )
+
+    /**
+     * Markerer at søknaden ikke skal realitetsbehandles her. Det sendes ikke brev til
+     * bruker, så det finnes heller ingenting å journalføre eller distribuere.
+     */
+    fun merkIkkeAktuell(
+        arsak: IkkeAktuellArsak,
+        behandletAv: Navident,
+        now: OffsetDateTime,
+    ): Soknad =
+        registrerBehandling(
+            utfall = BehandlingsUtfall.IkkeAktuell(arsak),
+            behandletAv = behandletAv,
+            now = now,
+            brev = null,
+        )
+
+    private fun registrerBehandling(
+        utfall: BehandlingsUtfall,
+        behandletAv: Navident,
+        now: OffsetDateTime,
+        brev: Brev?,
     ): Soknad {
         check(status == SoknadStatus.MOTTATT) {
             "En søknad kan kun behandles når den er MOTTATT, men status er $status"
         }
-
-        val innvilgedePerioder =
-            when (utfall) {
-                Utfall.Innvilget -> soktePerioder
-                is Utfall.DelvisInnvilget -> {
-                    require(utfall.innvilgedePerioder.isNotEmpty()) {
-                        "Delvis innvilgelse må ha minst én innvilget periode"
-                    }
-                    require(!utfall.innvilgedePerioder.harOverlapp()) {
-                        "Innvilgede perioder ved delvis innvilgelse kan ikke overlappe"
-                    }
-                    require(
-                        utfall.innvilgedePerioder.alleDagerErInnenfor(soktePerioder),
-                    ) {
-                        "Innvilgede perioder ved delvis innvilgelse må være innenfor søkte perioder"
-                    }
-                    utfall.innvilgedePerioder
-                }
-                Utfall.Avslag -> emptyList()
-                Utfall.Henlagt -> emptyList()
-            }
 
         return copy(
             behandling =
@@ -83,13 +136,7 @@ data class Soknad(
                     utfall = utfall,
                     behandletAv = behandletAv,
                     behandletTidspunkt = now,
-                    innvilgedePerioder = innvilgedePerioder,
-                    begrunnelse = begrunnelse,
-                    brev =
-                        Brev(
-                            brevtype = utfall.brevtype(),
-                            document = document,
-                        ),
+                    brev = brev,
                 ),
         )
     }

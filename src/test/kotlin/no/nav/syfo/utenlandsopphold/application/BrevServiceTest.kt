@@ -12,12 +12,15 @@ import kotlinx.coroutines.test.runTest
 import no.nav.syfo.common.distribusjon.dto.Distribusjonstype
 import no.nav.syfo.common.journalforing.JournalpostId
 import no.nav.syfo.common.types.ident.Personident
+import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.domain.Brevtype
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
-import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.VedtaksUtfall
 import no.nav.syfo.utenlandsopphold.domain.brevDocument
+import no.nav.syfo.utenlandsopphold.domain.innvilgedePerioder
 import no.nav.syfo.utenlandsopphold.domain.lagSoknad
+import no.nav.syfo.utenlandsopphold.domain.standardSoktePerioder
 import no.nav.syfo.utenlandsopphold.domain.veileder
 import org.junit.jupiter.api.BeforeEach
 import java.time.LocalDate
@@ -47,19 +50,50 @@ class BrevServiceTest {
         clearMocks(repositoryMock, pdlClientMock, pdfClientMock, journalforingServiceMock, distribusjonServiceMock)
     }
 
-    private fun behandletSoknad(utfall: Utfall = Utfall.Innvilget): Soknad =
-        lagSoknad().behandle(
-            utfall = utfall,
-            behandletAv = veileder,
-            now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
-            document = brevDocument,
-            begrunnelse = if (utfall == Utfall.Innvilget) null else "begrunnelse",
-        )
+    private fun behandletSoknad(utfall: BehandlingsUtfall = BehandlingsUtfall.Innvilget(standardSoktePerioder)): Soknad {
+        val now = OffsetDateTime.parse("2026-01-10T12:00:00Z")
+
+        return when (utfall) {
+            is BehandlingsUtfall.Vedtak ->
+                lagSoknad().fattVedtak(
+                    utfall = utfall.vedtakUtfall(),
+                    innvilgedePerioder = utfall.innvilgedePerioder(),
+                    begrunnelse = utfall.begrunnelse(),
+                    behandletAv = veileder,
+                    now = now,
+                    document = brevDocument,
+                )
+            is BehandlingsUtfall.Henlagt ->
+                lagSoknad().henlegg(
+                    behandletAv = veileder,
+                    now = now,
+                    document = brevDocument,
+                    begrunnelse = utfall.begrunnelse,
+                )
+            is BehandlingsUtfall.IkkeAktuell ->
+                error("Ikke aktuell gir ikke brev, og hører derfor ikke hjemme i BrevServiceTest")
+        }
+    }
+
+    /** Testene uttrykker seg i utfall. Vedtaksinputen er den samme informasjonen, snudd andre veien. */
+    private fun BehandlingsUtfall.Vedtak.vedtakUtfall(): VedtaksUtfall =
+        when (this) {
+            is BehandlingsUtfall.Innvilget -> VedtaksUtfall.INNVILGET
+            is BehandlingsUtfall.DelvisInnvilget -> VedtaksUtfall.DELVIS_INNVILGET
+            is BehandlingsUtfall.Avslag -> VedtaksUtfall.AVSLAG
+        }
+
+    private fun BehandlingsUtfall.Vedtak.begrunnelse(): String? =
+        when (this) {
+            is BehandlingsUtfall.Innvilget -> null
+            is BehandlingsUtfall.DelvisInnvilget -> begrunnelse
+            is BehandlingsUtfall.Avslag -> begrunnelse
+        }
 
     @Test
     fun `journalfører og oppdaterer ikke-journalførte brev ved innvilgelse`() =
         runTest {
-            val soknad = behandletSoknad(utfall = Utfall.Innvilget)
+            val soknad = behandletSoknad(utfall = BehandlingsUtfall.Innvilget(standardSoktePerioder))
 
             every { repositoryMock.getIkkeJournalforteSoknader(any()) } returns listOf(soknad)
             every { repositoryMock.setBrevJournalfort(any(), any(), any()) } just Runs
@@ -75,7 +109,7 @@ class BrevServiceTest {
                 journalforingServiceMock.journalfor(testPersonident, any(), any(), JournalforingDokumenttype.VEDTAK)
             }
             verify(exactly = 1) {
-                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev.brevId, JournalpostId("999"), any())
+                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev!!.brevId, JournalpostId("999"), any())
             }
         }
 
@@ -83,8 +117,9 @@ class BrevServiceTest {
     fun `journalfører og oppdaterer ikke-journalførte brev ved delvis innvilgelse`() =
         runTest {
             val delvisInnvilget =
-                Utfall.DelvisInnvilget(
+                BehandlingsUtfall.DelvisInnvilget(
                     innvilgedePerioder = listOf(Periode(fom = LocalDate.of(2026, 1, 5), tom = LocalDate.of(2026, 1, 7))),
+                    begrunnelse = "begrunnelse",
                 )
             val soknad = behandletSoknad(utfall = delvisInnvilget)
 
@@ -103,14 +138,14 @@ class BrevServiceTest {
                 journalforingServiceMock.journalfor(testPersonident, any(), any(), JournalforingDokumenttype.VEDTAK)
             }
             verify(exactly = 1) {
-                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev.brevId, JournalpostId("999"), any())
+                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev!!.brevId, JournalpostId("999"), any())
             }
         }
 
     @Test
     fun `journalfører og oppdaterer ikke-journalførte brev ved avslag`() =
         runTest {
-            val soknad = behandletSoknad(utfall = Utfall.Avslag)
+            val soknad = behandletSoknad(utfall = BehandlingsUtfall.Avslag("begrunnelse"))
 
             every { repositoryMock.getIkkeJournalforteSoknader(any()) } returns listOf(soknad)
             every { repositoryMock.setBrevJournalfort(any(), any(), any()) } just Runs
@@ -126,14 +161,14 @@ class BrevServiceTest {
                 journalforingServiceMock.journalfor(testPersonident, any(), any(), JournalforingDokumenttype.VEDTAK)
             }
             verify(exactly = 1) {
-                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev.brevId, JournalpostId("999"), any())
+                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev!!.brevId, JournalpostId("999"), any())
             }
         }
 
     @Test
     fun `journalfører henleggelse med dokumenttype HENLEGGELSE`() =
         runTest {
-            val soknad = behandletSoknad(utfall = Utfall.Henlagt)
+            val soknad = behandletSoknad(utfall = BehandlingsUtfall.Henlagt("begrunnelse"))
 
             every { repositoryMock.getIkkeJournalforteSoknader(any()) } returns listOf(soknad)
             every { repositoryMock.setBrevJournalfort(any(), any(), any()) } just Runs
@@ -153,7 +188,7 @@ class BrevServiceTest {
                 )
             }
             verify(exactly = 1) {
-                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev.brevId, JournalpostId("999"), any())
+                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev!!.brevId, JournalpostId("999"), any())
             }
         }
 
@@ -175,8 +210,8 @@ class BrevServiceTest {
 
             service.journalforBrev()
 
-            verify(exactly = 1) { repositoryMock.setBrevJournalfort(soknadSomLykkes.behandling!!.brev.brevId, any(), any()) }
-            verify(exactly = 0) { repositoryMock.setBrevJournalfort(soknadSomFeiler.behandling!!.brev.brevId, any(), any()) }
+            verify(exactly = 1) { repositoryMock.setBrevJournalfort(soknadSomLykkes.behandling!!.brev!!.brevId, any(), any()) }
+            verify(exactly = 0) { repositoryMock.setBrevJournalfort(soknadSomFeiler.behandling!!.brev!!.brevId, any(), any()) }
         }
 
     @Test
@@ -194,7 +229,7 @@ class BrevServiceTest {
 
             service.journalforBrev()
 
-            verify(exactly = 1) { repositoryMock.setBrevJournalfort(behandletSoknad.behandling!!.brev.brevId, any(), any()) }
+            verify(exactly = 1) { repositoryMock.setBrevJournalfort(behandletSoknad.behandling!!.brev!!.brevId, any(), any()) }
             verify(exactly = 1) { repositoryMock.setBrevJournalfort(any(), any(), any()) }
         }
 
@@ -215,7 +250,7 @@ class BrevServiceTest {
                 journalforingServiceMock.journalfor(testPersonident, any(), any(), JournalforingDokumenttype.VEDTAK)
             }
             verify(exactly = 1) {
-                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev.brevId, JournalpostId("999"), any())
+                repositoryMock.setBrevJournalfort(soknad.behandling!!.brev!!.brevId, JournalpostId("999"), any())
             }
             verify(exactly = 0) { repositoryMock.getIkkeJournalforteSoknader(any()) }
         }
@@ -233,14 +268,14 @@ class BrevServiceTest {
             service.distribuerBrev()
 
             coVerify(exactly = 1) { distribusjonServiceMock.distribuer(any(), any()) }
-            verify(exactly = 1) { repositoryMock.setBrevDistribuert(soknad.behandling!!.brev.brevId, any()) }
+            verify(exactly = 1) { repositoryMock.setBrevDistribuert(soknad.behandling!!.brev!!.brevId, any()) }
         }
 
     @Test
     fun `distribuerer vedtaksbrev med distribusjonstype VEDTAK`() =
         runTest {
             val soknad =
-                behandletSoknad(utfall = Utfall.Innvilget)
+                behandletSoknad(utfall = BehandlingsUtfall.Innvilget(standardSoktePerioder))
                     .journalforBrev(JournalpostId("999"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
 
             every { repositoryMock.getSoknaderMedIkkeDistribuerteBrev(any()) } returns listOf(soknad)
@@ -258,7 +293,7 @@ class BrevServiceTest {
     fun `distribuerer henleggelsesbrev med distribusjonstype VIKTIG`() =
         runTest {
             val soknad =
-                behandletSoknad(utfall = Utfall.Henlagt)
+                behandletSoknad(utfall = BehandlingsUtfall.Henlagt("begrunnelse"))
                     .journalforBrev(JournalpostId("999"), OffsetDateTime.parse("2026-01-11T08:00:00Z"))
 
             every { repositoryMock.getSoknaderMedIkkeDistribuerteBrev(any()) } returns listOf(soknad)
@@ -290,7 +325,7 @@ class BrevServiceTest {
 
             service.distribuerBrev()
 
-            verify(exactly = 1) { repositoryMock.setBrevDistribuert(soknadSomLykkes.behandling!!.brev.brevId, any()) }
-            verify(exactly = 0) { repositoryMock.setBrevDistribuert(soknadSomFeiler.behandling!!.brev.brevId, any()) }
+            verify(exactly = 1) { repositoryMock.setBrevDistribuert(soknadSomLykkes.behandling!!.brev!!.brevId, any()) }
+            verify(exactly = 0) { repositoryMock.setBrevDistribuert(soknadSomFeiler.behandling!!.brev!!.brevId, any()) }
         }
 }

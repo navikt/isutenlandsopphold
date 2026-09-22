@@ -8,7 +8,8 @@ import no.nav.syfo.common.tilgangskontroll.checkPersonAndSyfoTilgang
 import no.nav.syfo.common.tilgangskontroll.client.TilgangskontrollClient
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.application.SoknadService
-import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.VedtaksUtfall
+import no.nav.syfo.utenlandsopphold.domain.pakrevdBegrunnelse
 import java.util.UUID
 
 fun Route.registerSoknadApi(
@@ -45,20 +46,27 @@ fun Route.registerSoknadApi(
                 tilgangskontrollClient = tilgangskontrollClient,
                 requiresWriteAccess = true,
             ) { authorizedUser, _, _ ->
-                val utfall =
-                    Utfall.from(
-                        utfall = request.utfall,
-                        innvilgedePerioder = request.innvilgedePerioder.map { it.toDomain() },
-                    )
-
                 val behandletSoknad =
-                    soknadService.behandleSoknad(
-                        soknadId = soknadId,
-                        utfall = utfall,
-                        behandletAv = authorizedUser.navident,
-                        document = request.document,
-                        begrunnelse = request.begrunnelse,
-                    )
+                    when (request.utfall) {
+                        "HENLAGT" ->
+                            soknadService.henlegg(
+                                soknadId = soknadId,
+                                behandletAv = authorizedUser.navident,
+                                document = request.document,
+                                begrunnelse = pakrevdBegrunnelse(request.begrunnelse, "henleggelse"),
+                            )
+                        else ->
+                            soknadService.fattVedtak(
+                                soknadId = soknadId,
+                                utfall =
+                                    VedtaksUtfall.entries.find { it.name == request.utfall }
+                                        ?: throw IllegalArgumentException("Invalid utfall: ${request.utfall}"),
+                                innvilgedePerioder = request.innvilgedePerioder.map { it.toDomain() },
+                                begrunnelse = request.begrunnelse,
+                                behandletAv = authorizedUser.navident,
+                                document = request.document,
+                            )
+                    }
 
                 call.respond(behandletSoknad.toResponseDTO())
             }

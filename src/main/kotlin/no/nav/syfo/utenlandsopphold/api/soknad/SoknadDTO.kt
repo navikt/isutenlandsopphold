@@ -1,11 +1,12 @@
 package no.nav.syfo.utenlandsopphold.api.soknad
 
 import no.nav.syfo.utenlandsopphold.domain.Behandling
+import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.SoknadStatus
-import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.innvilgedePerioder
 import no.nav.syfo.utenlandsopphold.util.toLocalDateTimeOslo
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -56,7 +57,7 @@ data class VedtakDTO(
     val begrunnelse: String?,
 )
 
-enum class SoknadStatusDTO { MOTTATT, INNVILGET, DELVIS_INNVILGET, AVSLAG, HENLAGT }
+enum class SoknadStatusDTO { MOTTATT, INNVILGET, DELVIS_INNVILGET, AVSLAG, HENLAGT, IKKE_AKTUELL }
 
 fun SoknadStatus.toDTO(): SoknadStatusDTO =
     when (this) {
@@ -65,6 +66,7 @@ fun SoknadStatus.toDTO(): SoknadStatusDTO =
         SoknadStatus.DELVIS_INNVILGET -> SoknadStatusDTO.DELVIS_INNVILGET
         SoknadStatus.AVSLAG -> SoknadStatusDTO.AVSLAG
         SoknadStatus.HENLAGT -> SoknadStatusDTO.HENLAGT
+        SoknadStatus.IKKE_AKTUELL -> SoknadStatusDTO.IKKE_AKTUELL
     }
 
 fun List<Soknad>.toResponseDTO(): SoknaderResponseDTO = SoknaderResponseDTO(soknader = map { it.toDTO() })
@@ -83,19 +85,23 @@ fun Soknad.toDTO(): SoknadDTO =
 
 private fun Periode.toDTO(): PeriodeDTO = PeriodeDTO(fom = fom, tom = tom)
 
-private fun Behandling.toDTO(): VedtakDTO =
-    VedtakDTO(
-        utfall =
-            when (utfall) {
-                Utfall.Innvilget -> "INNVILGET"
-                is Utfall.DelvisInnvilget -> "DELVIS_INNVILGET"
-                Utfall.Avslag -> "AVSLAG"
-                Utfall.Henlagt -> "HENLAGT"
-            },
-        innvilgedePerioder = innvilgedePerioder.map { it.toDTO() },
+private fun Behandling.toDTO(): VedtakDTO {
+    val (utfallVerdi, begrunnelse) =
+        when (utfall) {
+            is BehandlingsUtfall.Innvilget -> "INNVILGET" to null
+            is BehandlingsUtfall.DelvisInnvilget -> "DELVIS_INNVILGET" to utfall.begrunnelse
+            is BehandlingsUtfall.Avslag -> "AVSLAG" to utfall.begrunnelse
+            is BehandlingsUtfall.Henlagt -> "HENLAGT" to utfall.begrunnelse
+            is BehandlingsUtfall.IkkeAktuell -> "IKKE_AKTUELL" to null
+        }
+
+    return VedtakDTO(
+        utfall = utfallVerdi,
+        innvilgedePerioder = utfall.innvilgedePerioder().map { it.toDTO() },
         fattetAv = behandletAv.value,
         fattetTidspunkt = behandletTidspunkt.toLocalDateTimeOslo(),
         begrunnelse = begrunnelse,
     )
+}
 
 fun PeriodeDTO.toDomain(): Periode = Periode(fom = fom, tom = tom)

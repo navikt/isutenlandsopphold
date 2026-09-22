@@ -1,7 +1,8 @@
 package no.nav.syfo.utenlandsopphold.infrastructure.kafka.soknadstatus
 
+import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.domain.Soknad
-import no.nav.syfo.utenlandsopphold.domain.Utfall
+import no.nav.syfo.utenlandsopphold.domain.innvilgedePerioder
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -38,7 +39,9 @@ data class SoknadstatusRecord(
                         createdAt = behandling.behandletTidspunkt,
                         veilederident = behandling.behandletAv.value,
                         utfall = behandling.utfall.toBehandlingRecordUtfall(),
-                        innvilgedePerioder = behandling.innvilgedePerioder.map { BehandlingRecordPeriode(it.fom, it.tom) },
+                        arsak = (behandling.utfall as? BehandlingsUtfall.IkkeAktuell)?.arsak?.name,
+                        innvilgedePerioder =
+                            behandling.utfall.innvilgedePerioder().map { BehandlingRecordPeriode(it.fom, it.tom) },
                     ),
             )
         }
@@ -56,6 +59,10 @@ data class BehandlingRecord(
     val veilederident: String,
     val utfall: BehandlingRecordUtfall,
     val innvilgedePerioder: List<BehandlingRecordPeriode>,
+    /**
+     * Foreløpig satt bare for utfallet IKKE_AKTUELL, og da med navnet på en [IkkeAktuellArsak].
+     */
+    val arsak: String? = null,
 )
 
 enum class BehandlingRecordUtfall {
@@ -63,6 +70,7 @@ enum class BehandlingRecordUtfall {
     DELVIS_INNVILGET,
     INNVILGET,
     HENLAGT,
+    IKKE_AKTUELL,
 }
 
 data class BehandlingRecordPeriode(
@@ -70,10 +78,11 @@ data class BehandlingRecordPeriode(
     val tom: LocalDate,
 )
 
-private fun Utfall.toBehandlingRecordUtfall(): BehandlingRecordUtfall =
+private fun BehandlingsUtfall.toBehandlingRecordUtfall(): BehandlingRecordUtfall =
     when (this) {
-        is Utfall.Avslag -> BehandlingRecordUtfall.AVSLAG
-        is Utfall.DelvisInnvilget -> BehandlingRecordUtfall.DELVIS_INNVILGET
-        is Utfall.Innvilget -> BehandlingRecordUtfall.INNVILGET
-        is Utfall.Henlagt -> BehandlingRecordUtfall.HENLAGT
+        is BehandlingsUtfall.Avslag -> BehandlingRecordUtfall.AVSLAG
+        is BehandlingsUtfall.DelvisInnvilget -> BehandlingRecordUtfall.DELVIS_INNVILGET
+        is BehandlingsUtfall.Innvilget -> BehandlingRecordUtfall.INNVILGET
+        is BehandlingsUtfall.Henlagt -> BehandlingRecordUtfall.HENLAGT
+        is BehandlingsUtfall.IkkeAktuell -> BehandlingRecordUtfall.IKKE_AKTUELL
     }
