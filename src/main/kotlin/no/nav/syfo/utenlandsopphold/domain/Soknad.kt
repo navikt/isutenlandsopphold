@@ -63,7 +63,11 @@ data class Soknad(
     ): Soknad {
         val vedtak =
             when (utfall) {
-                VedtaksUtfall.INNVILGET -> BehandlingsUtfall.Innvilget(innvilgedePerioder = soktePerioder)
+                VedtaksUtfall.INNVILGET ->
+                    BehandlingsUtfall.Innvilget(
+                        innvilgedePerioder = soktePerioder,
+                        begrunnelse = valgfriBegrunnelse(begrunnelse),
+                    )
                 VedtaksUtfall.DELVIS_INNVILGET -> {
                     require(!innvilgedePerioder.harOverlapp()) {
                         "Innvilgede perioder ved delvis innvilgelse kan ikke overlappe"
