@@ -90,7 +90,7 @@ class SoknadService(
                 soknadRepository.hentSoknadForUpdate(
                     transaction = transaction,
                     soknadId = soknadId,
-                ) ?: throw IllegalArgumentException("Søknad med id $soknadId finnes ikke")
+                ) ?: throw SoknadFinnesIkkeException(soknadId)
 
             val behandletSoknad = behandle(soknad)
 
