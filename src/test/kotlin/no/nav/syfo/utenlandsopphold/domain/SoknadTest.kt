@@ -6,7 +6,9 @@ import java.time.OffsetDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 class SoknadTest {
     @Test
@@ -17,7 +19,7 @@ class SoknadTest {
             lagSoknad().fattVedtak(
                 utfall = VedtaksUtfall.INNVILGET,
                 innvilgedePerioder = emptyList(),
-                begrunnelse = null,
+                begrunnelse = "Oppholdet hindrer ikke planlagt behandling",
                 behandletAv = veileder,
                 now = now,
                 document = brevDocument,
@@ -25,9 +27,32 @@ class SoknadTest {
 
         assertEquals(SoknadStatus.INNVILGET, resultat.status)
         val behandling = assertNotNull(resultat.behandling)
-        assertEquals(BehandlingsUtfall.Innvilget(standardSoktePerioder), behandling.utfall)
+        assertEquals(
+            BehandlingsUtfall.Innvilget(standardSoktePerioder, "Oppholdet hindrer ikke planlagt behandling"),
+            behandling.utfall,
+        )
         assertEquals(veileder, behandling.behandletAv)
         assertEquals(now, behandling.behandletTidspunkt)
+    }
+
+    /**
+     * Begrunnelse er valgfri ved innvilgelse. Et tomt tekstfelt i frontend skal gi null,
+     * ikke en blank streng lagret i databasen.
+     */
+    @Test
+    fun `fattVedtak om innvilgelse gjør blank begrunnelse om til null`() {
+        val resultat =
+            lagSoknad().fattVedtak(
+                utfall = VedtaksUtfall.INNVILGET,
+                innvilgedePerioder = emptyList(),
+                begrunnelse = "   ",
+                behandletAv = veileder,
+                now = OffsetDateTime.parse("2026-01-10T12:00:00Z"),
+                document = brevDocument,
+            )
+
+        val utfall = assertIs<BehandlingsUtfall.Innvilget>(assertNotNull(resultat.behandling).utfall)
+        assertNull(utfall.begrunnelse)
     }
 
     @Test

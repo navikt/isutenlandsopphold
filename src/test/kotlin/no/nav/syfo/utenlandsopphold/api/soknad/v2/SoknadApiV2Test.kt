@@ -227,22 +227,24 @@ class SoknadApiV2Test {
                         VedtakPostV2DTO(
                             utfall = VedtaksUtfall.INNVILGET,
                             document = document,
+                            begrunnelse = "Oppholdet hindrer ikke planlagt behandling",
                         ),
                     )
                 }
 
             assertEquals(HttpStatusCode.OK, response.status)
             val behandling = assertNotNull(assertNotNull(lagret).behandling)
-            assertEquals(BehandlingsUtfall.Innvilget(soknad.soktePerioder), behandling.utfall)
+            assertEquals(
+                BehandlingsUtfall.Innvilget(soknad.soktePerioder, "Oppholdet hindrer ikke planlagt behandling"),
+                behandling.utfall,
+            )
             assertEquals(
                 Navident(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG),
                 behandling.behandletAv,
             )
-            assertIs<InnvilgetBehandlingV2DTO>(
-                response
-                    .body<SoknadResponseV2DTO>()
-                    .soknad.behandling,
-            )
+            val behandlingDTO =
+                assertIs<InnvilgetBehandlingV2DTO>(response.body<SoknadResponseV2DTO>().soknad.behandling)
+            assertEquals("Oppholdet hindrer ikke planlagt behandling", behandlingDTO.begrunnelse)
         }
 
     @Test
