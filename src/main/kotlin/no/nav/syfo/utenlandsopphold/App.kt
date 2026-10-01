@@ -82,7 +82,6 @@ fun main(args: Array<String>) {
     val identhendelseService =
         IdenthendelseService(
             soknadRepository = soknadRepository,
-            pdlClient = clientsModule.personInfoClient,
         )
 
     val soknadstatusProducer =

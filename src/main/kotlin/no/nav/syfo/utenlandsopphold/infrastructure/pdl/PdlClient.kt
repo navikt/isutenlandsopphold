@@ -14,7 +14,6 @@ import no.nav.syfo.common.token.SystemTokenProvider
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.common.util.bearerHeader
 import no.nav.syfo.utenlandsopphold.application.IPdlClient
-import no.nav.syfo.utenlandsopphold.application.PdlIdent
 
 private const val HENT_PERSON_QUERY =
     """
@@ -24,18 +23,6 @@ private const val HENT_PERSON_QUERY =
                 fornavn
                 mellomnavn
                 etternavn
-            }
-        }
-    }
-    """
-
-private const val HENT_IDENTER_QUERY =
-    """
-    query(${'$'}ident: ID!) {
-        hentIdenter(ident: ${'$'}ident, grupper: [FOLKEREGISTERIDENT], historikk: true) {
-            identer {
-                ident
-                historisk
             }
         }
     }
@@ -77,27 +64,6 @@ class PdlClient(
         return listOfNotNull(navn.fornavn, navn.mellomnavn, navn.etternavn).joinToString(" ")
     }
 
-    override suspend fun hentIdenter(personident: Personident): List<PdlIdent>? {
-        val systemToken =
-            systemTokenProvider.getSystemToken(config.clientId)
-                ?: error("Failed to get identer from PDL: Failed to get system token for PDL")
-
-        val response =
-            httpClient.post(config.baseUrl) {
-                header(HttpHeaders.Authorization, bearerHeader(systemToken))
-                header(BEHANDLINGSNUMMER_HEADER, BEHANDLINGSNUMMER_UTENLANDSOPPHOLD)
-                contentType(ContentType.Application.Json)
-                setBody(PdlHentIdenterRequest(variables = PdlHentPersonVariables(ident = personident.value)))
-            }
-
-        return response
-            .body<PdlHentIdenterResponse>()
-            .data
-            ?.hentIdenter
-            ?.identer
-            ?.map { PdlIdent(ident = it.ident, historisk = it.historisk) }
-    }
-
     companion object {
         private const val BEHANDLINGSNUMMER_HEADER = "behandlingsnummer"
 
@@ -134,32 +100,5 @@ class PdlClient(
         val fornavn: String,
         val mellomnavn: String?,
         val etternavn: String,
-    )
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    data class PdlHentIdenterRequest(
-        val query: String = HENT_IDENTER_QUERY,
-        val variables: PdlHentPersonVariables,
-    )
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    data class PdlHentIdenterResponse(
-        val data: PdlIdenterData?,
-    )
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    data class PdlIdenterData(
-        val hentIdenter: PdlIdenter?,
-    )
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    data class PdlIdenter(
-        val identer: List<PdlIdentDTO>,
-    )
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    data class PdlIdentDTO(
-        val ident: String,
-        val historisk: Boolean,
     )
 }

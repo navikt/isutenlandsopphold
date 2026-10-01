@@ -1,6 +1,5 @@
 package no.nav.syfo.utenlandsopphold.infrastructure.kafka.identhendelse
 
-import kotlinx.coroutines.runBlocking
 import no.nav.syfo.utenlandsopphold.application.IdenthendelseService
 import no.nav.syfo.utenlandsopphold.infrastructure.kafka.KafkaConsumerService
 import org.apache.avro.generic.GenericRecord
@@ -21,7 +20,7 @@ class IdenthendelseConsumer(
             records.forEach { record ->
                 val value = record.value()
                 if (value != null) {
-                    runBlocking { identhendelseService.handleIdenthendelse(value.toKafkaIdenthendelseDTO()) }
+                    identhendelseService.handleIdenthendelse(value.toKafkaIdenthendelseDTO())
                 } else {
                     logger.warn("Identhendelse: Value of ConsumerRecord from topic $PDL_AKTOR_TOPIC is null, probably due to a tombstone.")
                     COUNT_KAFKA_CONSUMER_PDL_AKTOR_TOMBSTONE.increment()

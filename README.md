@@ -71,8 +71,8 @@ embedded-postgres.
 ## Identhendelser fra PDL
 
 Applikasjonen konsumerer `pdl.aktor-v2` (Avro) for å holde `personident` på søknader oppdatert.
-Når en person får ny folkeregisterident og vi har søknader på en av de gamle, bekrefter vi mot PDL
-(`hentIdenter`) at den nye identen er aktiv, og oppdaterer deretter `soknad.personident`.
+Når en person får ny folkeregisterident og vi har søknader på en av de gamle, oppdaterer vi
+`soknad.personident` til den nye identen.
 
 ## Kontakt
 
