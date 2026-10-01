@@ -80,6 +80,17 @@ interface ISoknadRepository {
     )
 
     fun lagreMottattSoknad(soknad: Soknad): LagreMottattSoknadResultat
+
+    fun finnesSoknaderMedPersonident(personidenter: List<Personident>): Boolean
+
+    /**
+     * Bytter personident på alle søknader som ligger på en av [inaktive] over til [aktiv].
+     * Returnerer antall oppdaterte søknader.
+     */
+    fun oppdaterPersonident(
+        aktiv: Personident,
+        inaktive: List<Personident>,
+    ): Int
 }
 
 enum class LagreMottattSoknadResultat {

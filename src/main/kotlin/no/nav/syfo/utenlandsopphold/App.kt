@@ -9,6 +9,7 @@ import no.nav.syfo.common.token.texas.EntraIdClient
 import no.nav.syfo.utenlandsopphold.api.apiModule
 import no.nav.syfo.utenlandsopphold.application.ApplicationState
 import no.nav.syfo.utenlandsopphold.application.BrevService
+import no.nav.syfo.utenlandsopphold.application.IdenthendelseService
 import no.nav.syfo.utenlandsopphold.application.PublishSoknadstatusService
 import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.infrastructure.clients.ClientsModule
@@ -78,6 +79,12 @@ fun main(args: Array<String>) {
             brevService = brevService,
         )
 
+    val identhendelseService =
+        IdenthendelseService(
+            soknadRepository = soknadRepository,
+            pdlClient = clientsModule.personInfoClient,
+        )
+
     val soknadstatusProducer =
         SoknadstatusProducer(
             kafkaProducer = kafkaSoknadstatusProducer(kafkaEnvironment = environment.kafka),
@@ -117,6 +124,7 @@ fun main(args: Array<String>) {
                         applicationState = applicationState,
                         environment = environment,
                         soknadService = soknadService,
+                        identhendelseService = identhendelseService,
                     )
 
                     launchCronjobs(

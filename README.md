@@ -68,6 +68,12 @@ Migrasjoner ligger i `src/main/resources/db/migration` og kjøres med Flyway ved
 oppstart. Lokalt brukes Postgres fra `docker-compose.yaml`; tester bruker
 embedded-postgres.
 
+## Identhendelser fra PDL
+
+Applikasjonen konsumerer `pdl.aktor-v2` (Avro) for å holde `personident` på søknader oppdatert.
+Når en person får ny folkeregisterident og vi har søknader på en av de gamle, bekrefter vi mot PDL
+(`hentIdenter`) at den nye identen er aktiv, og oppdaterer deretter `soknad.personident`.
+
 ## Kontakt
 
 ### For NAV-ansatte

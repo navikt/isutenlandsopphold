@@ -38,6 +38,9 @@ dependencies {
     implementation(libs.flyway.database.postgresql)
 
     // Kafka
+    implementation(libs.kafka.avro.serializer) {
+        exclude(group = "org.apache.logging.log4j")
+    }
     implementation(libs.kafka) {
         exclude(group = "org.apache.logging.log4j")
     }
