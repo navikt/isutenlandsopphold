@@ -20,6 +20,7 @@ fun launchKafkaTaskIdenthendelse(
         kafkaAivenConsumerConfig<KafkaAvroDeserializer>(kafkaEnvironment = kafkaEnvironment).apply {
             this[ConsumerConfig.GROUP_ID_CONFIG] = "isutenlandsopphold-identhendelse-v1"
             this[ConsumerConfig.MAX_POLL_RECORDS_CONFIG] = "1"
+            this[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "latest"
             this[KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG] = kafkaEnvironment.aivenSchemaRegistryUrl
             this[KafkaAvroDeserializerConfig.SPECIFIC_AVRO_READER_CONFIG] = false
             this[KafkaAvroDeserializerConfig.USER_INFO_CONFIG] =
