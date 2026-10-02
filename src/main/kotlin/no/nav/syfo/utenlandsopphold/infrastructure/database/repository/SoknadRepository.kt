@@ -53,6 +53,26 @@ class SoknadRepository(
             }
         }
 
+    override fun finnesSoknaderMedPersonident(personidenter: List<Personident>): Boolean =
+        withConnection { connection ->
+            connection.prepareStatement(EXISTS_SOKNAD_BY_PERSONIDENTER).use {
+                it.setArray(1, connection.createArrayOf("varchar", personidenter.map { ident -> ident.value }.toTypedArray()))
+                it.executeQuery().use { rs -> rs.next() && rs.getBoolean(1) }
+            }
+        }
+
+    override fun oppdaterPersonident(
+        aktiv: Personident,
+        inaktive: List<Personident>,
+    ): List<UUID> =
+        withConnection { connection ->
+            connection.prepareStatement(UPDATE_PERSONIDENT).use {
+                it.setString(1, aktiv.value)
+                it.setArray(2, connection.createArrayOf("varchar", inaktive.map { ident -> ident.value }.toTypedArray()))
+                it.executeQuery().toList { getObject("uuid", UUID::class.java) }
+            }
+        }
+
     override fun hentSoknad(soknadId: UUID): Soknad? =
         withConnection(Connection.TRANSACTION_REPEATABLE_READ) { connection ->
             connection.getSoknad(soknadId)
@@ -366,6 +386,16 @@ class SoknadRepository(
         private const val GET_SOKNAD_PERIODER =
             """
                 SELECT * FROM soknad_periode WHERE soknad_id = ANY(?) ORDER BY fom ASC
+            """
+
+        private const val EXISTS_SOKNAD_BY_PERSONIDENTER =
+            """
+                SELECT EXISTS (SELECT 1 FROM soknad WHERE personident = ANY(?))
+            """
+
+        private const val UPDATE_PERSONIDENT =
+            """
+                UPDATE soknad SET personident = ? WHERE personident = ANY(?) RETURNING uuid
             """
 
         private const val GET_BEHANDLINGER =

@@ -729,4 +729,24 @@ class SoknadRepositoryTest {
                     )
                 },
         )
+
+    @Test
+    fun `oppdaterPersonident flytter soknader fra inaktiv til aktiv ident og lar andre vaere`() {
+        val gammel = Personident("33333333333")
+        val ny = Personident("44444444444")
+        val annen = Personident("55555555555")
+        val soknad1 = soknad(personident = gammel).also { repository.lagreMottattSoknad(it) }
+        val soknad2 = soknad(personident = gammel).also { repository.lagreMottattSoknad(it) }
+        repository.lagreMottattSoknad(soknad(personident = annen))
+
+        assertTrue(repository.finnesSoknaderMedPersonident(listOf(gammel)))
+        assertEquals(false, repository.finnesSoknaderMedPersonident(listOf(ny)))
+
+        val oppdaterte = repository.oppdaterPersonident(aktiv = ny, inaktive = listOf(gammel))
+
+        assertEquals(setOf(soknad1.id, soknad2.id), oppdaterte.toSet())
+        assertEquals(2, repository.hentSoknader(ny).size)
+        assertTrue(repository.hentSoknader(gammel).isEmpty())
+        assertEquals(1, repository.hentSoknader(annen).size)
+    }
 }
