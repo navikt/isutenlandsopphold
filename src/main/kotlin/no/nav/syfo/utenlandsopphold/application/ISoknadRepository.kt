@@ -85,12 +85,12 @@ interface ISoknadRepository {
 
     /**
      * Bytter personident på alle søknader som ligger på en av [inaktive] over til [aktiv].
-     * Returnerer antall oppdaterte søknader.
+     * Returnerer uuid-ene til søknadene som ble oppdatert.
      */
     fun oppdaterPersonident(
         aktiv: Personident,
         inaktive: List<Personident>,
-    ): Int
+    ): List<UUID>
 }
 
 enum class LagreMottattSoknadResultat {

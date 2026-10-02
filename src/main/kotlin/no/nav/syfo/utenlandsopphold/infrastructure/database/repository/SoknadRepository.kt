@@ -64,12 +64,12 @@ class SoknadRepository(
     override fun oppdaterPersonident(
         aktiv: Personident,
         inaktive: List<Personident>,
-    ): Int =
+    ): List<UUID> =
         withConnection { connection ->
             connection.prepareStatement(UPDATE_PERSONIDENT).use {
                 it.setString(1, aktiv.value)
                 it.setArray(2, connection.createArrayOf("varchar", inaktive.map { ident -> ident.value }.toTypedArray()))
-                it.executeUpdate()
+                it.executeQuery().toList { getObject("uuid", UUID::class.java) }
             }
         }
 
@@ -395,7 +395,7 @@ class SoknadRepository(
 
         private const val UPDATE_PERSONIDENT =
             """
-                UPDATE soknad SET personident = ? WHERE personident = ANY(?)
+                UPDATE soknad SET personident = ? WHERE personident = ANY(?) RETURNING uuid
             """
 
         private const val GET_BEHANDLINGER =

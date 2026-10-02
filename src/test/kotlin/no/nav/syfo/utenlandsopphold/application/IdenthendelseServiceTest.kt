@@ -7,6 +7,7 @@ import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.infrastructure.kafka.identhendelse.IdentType
 import no.nav.syfo.utenlandsopphold.infrastructure.kafka.identhendelse.Identifikator
 import no.nav.syfo.utenlandsopphold.infrastructure.kafka.identhendelse.KafkaIdenthendelseDTO
+import java.util.UUID
 import kotlin.test.Test
 
 class IdenthendelseServiceTest {
@@ -28,7 +29,7 @@ class IdenthendelseServiceTest {
     @Test
     fun `oppdaterer personident nar vi har soknader pa gammel ident`() {
         every { repository.finnesSoknaderMedPersonident(listOf(gammelIdent)) } returns true
-        every { repository.oppdaterPersonident(nyIdent, listOf(gammelIdent)) } returns 1
+        every { repository.oppdaterPersonident(nyIdent, listOf(gammelIdent)) } returns listOf(UUID.randomUUID())
 
         service.handleIdenthendelse(hendelse(fnr(nyIdent, true), fnr(gammelIdent, false), aktorId))
 

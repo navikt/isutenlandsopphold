@@ -19,10 +19,10 @@ class IdenthendelseService(
         val inaktiveIdenter = identhendelse.getInactivePersonidenter()
         if (inaktiveIdenter.isEmpty() || !soknadRepository.finnesSoknaderMedPersonident(inaktiveIdenter)) return
 
-        val antallOppdatert = soknadRepository.oppdaterPersonident(aktiv = aktivIdent, inaktive = inaktiveIdenter)
-        if (antallOppdatert > 0) {
-            log.info("Identhendelse: Oppdaterte personident på $antallOppdatert søknader basert på identhendelse fra PDL")
-            COUNT_KAFKA_CONSUMER_PDL_AKTOR_UPDATES.increment(antallOppdatert.toDouble())
+        val oppdaterteSoknader = soknadRepository.oppdaterPersonident(aktiv = aktivIdent, inaktive = inaktiveIdenter)
+        if (oppdaterteSoknader.isNotEmpty()) {
+            log.info("Identhendelse: Oppdaterte personident på ${oppdaterteSoknader.size} søknader: $oppdaterteSoknader")
+            COUNT_KAFKA_CONSUMER_PDL_AKTOR_UPDATES.increment(oppdaterteSoknader.size.toDouble())
         }
     }
 
