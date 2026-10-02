@@ -131,14 +131,16 @@ fun BehandlingsUtfall.ikkeAktuellArsakDbValue(): String? =
     }
 
 /**
- * Kolonnen er nullbar fordi innvilgelse og ikke aktuell ikke har begrunnelse.
+ * Kolonnen er nullbar fordi begrunnelse er valgfri ved innvilgelse, og «ikke aktuell»
+ * ikke har begrunnelse i det hele tatt.
  */
 fun BehandlingsUtfall.begrunnelseDbValue(): String? =
     when (this) {
+        is BehandlingsUtfall.Innvilget -> begrunnelse
         is BehandlingsUtfall.DelvisInnvilget -> begrunnelse
         is BehandlingsUtfall.Avslag -> begrunnelse
         is BehandlingsUtfall.Henlagt -> begrunnelse
-        is BehandlingsUtfall.Innvilget, is BehandlingsUtfall.IkkeAktuell -> null
+        is BehandlingsUtfall.IkkeAktuell -> null
     }
 
 private fun begrunnelseFraDatabasen(
@@ -152,7 +154,11 @@ private fun String.toUtfall(
     begrunnelse: String?,
 ): BehandlingsUtfall =
     when (this) {
-        "INNVILGET" -> BehandlingsUtfall.Innvilget(innvilgedePerioder = innvilgedePerioder)
+        "INNVILGET" ->
+            BehandlingsUtfall.Innvilget(
+                innvilgedePerioder = innvilgedePerioder,
+                begrunnelse = begrunnelse,
+            )
         "DELVIS_INNVILGET" ->
             BehandlingsUtfall.DelvisInnvilget(
                 innvilgedePerioder = innvilgedePerioder,
