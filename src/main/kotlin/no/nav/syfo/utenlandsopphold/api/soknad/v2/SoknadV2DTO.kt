@@ -91,6 +91,7 @@ data class InnvilgetBehandlingV2DTO(
     override val behandletAv: String,
     override val behandletTidspunkt: LocalDateTime,
     val innvilgedePerioder: List<PeriodeV2DTO>,
+    val begrunnelse: String? = null,
 ) : BehandlingV2DTO
 
 data class DelvisInnvilgetBehandlingV2DTO(
@@ -169,6 +170,7 @@ private fun Behandling.toV2DTO(): BehandlingV2DTO =
                 behandletAv = behandletAv.value,
                 behandletTidspunkt = behandletTidspunkt.toLocalDateTimeOslo(),
                 innvilgedePerioder = utfall.innvilgedePerioder.map { it.toV2DTO() },
+                begrunnelse = utfall.begrunnelse,
             )
         is BehandlingsUtfall.DelvisInnvilget ->
             DelvisInnvilgetBehandlingV2DTO(

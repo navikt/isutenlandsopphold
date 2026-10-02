@@ -10,9 +10,13 @@ sealed interface BehandlingsUtfall {
 
     data class Innvilget(
         val innvilgedePerioder: List<Periode>,
+        val begrunnelse: String? = null,
     ) : Vedtak {
         init {
             require(innvilgedePerioder.isNotEmpty()) { "Innvilgelse må ha innvilgede perioder" }
+            require(begrunnelse == null || begrunnelse.isNotBlank()) {
+                "Begrunnelse ved innvilgelse må enten utelates eller ha innhold"
+            }
         }
     }
 
@@ -61,6 +65,12 @@ internal fun pakrevdBegrunnelse(
     begrunnelse: String?,
     utfall: String,
 ): String = requireNotNull(begrunnelse?.takeIf { it.isNotBlank() }) { "Begrunnelse er påkrevd ved $utfall" }
+
+/**
+ * Begrunnelse er valgfri ved innvilgelse. Tom eller blank tekst behandles som at
+ * saksbehandler lot feltet stå tomt, slik at vi ikke lagrer blanke strenger.
+ */
+internal fun valgfriBegrunnelse(begrunnelse: String?): String? = begrunnelse?.takeIf { it.isNotBlank() }
 
 enum class IkkeAktuellArsak {
     BEHANDLET_I_INFOTRYGD,
