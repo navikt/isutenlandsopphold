@@ -33,6 +33,7 @@ enum class KafkaSoknadstypeDTO {
     REISETILSKUDD,
     GRADERT_REISETILSKUDD,
     FRISKMELDT_TIL_ARBEIDSFORMIDLING,
+    FISKERE,
 }
 
 enum class KafkaSoknadstatusDTO {
