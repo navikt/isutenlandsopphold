@@ -32,14 +32,13 @@ inline fun <reified ConsumerRecordValue> launchKafkaTask(
             var kafkaConsumer: KafkaConsumer<String, ConsumerRecordValue>? = null
             try {
                 kafkaConsumer = KafkaConsumer(consumerProperties)
-                kafkaConsumer.subscribe(listOf(topic))
                 consecutiveErrors = 0
                 pollWithRetry(applicationState, topic, kafkaConsumer, kafkaConsumerService)
             } catch (ex: CancellationException) {
                 throw ex
             } catch (ex: Exception) {
                 logger.error(
-                    "Failed to create or subscribe kafka consumer for topic $topic. Recreating consumer.",
+                    "Failed to create kafka consumer for topic $topic. Recreating consumer.",
                     ex,
                 )
                 consecutiveErrors++
@@ -64,6 +63,9 @@ internal suspend fun <ConsumerRecordValue> pollWithRetry(
     var consecutiveErrors = 0
     while (applicationState.ready) {
         try {
+            if (kafkaConsumer.subscription().isEmpty()) {
+                kafkaConsumer.subscribe(listOf(topic))
+            }
             kafkaConsumerService.pollAndProcessRecords(kafkaConsumer)
             consecutiveErrors = 0
         } catch (ex: CancellationException) {
@@ -75,6 +77,9 @@ internal suspend fun <ConsumerRecordValue> pollWithRetry(
                 "Exception in kafka consumer for topic $topic (consecutive errors: $consecutiveErrors). Retrying after ${delayMs}ms.",
                 ex,
             )
+            // poll() has already advanced the consumer position past the failed records. Unsubscribing discards
+            // the position, so the consumer resumes from the last committed offsets when it subscribes again.
+            kafkaConsumer.unsubscribe()
             if (applicationState.ready) {
                 delay(delayMs.milliseconds)
             }
