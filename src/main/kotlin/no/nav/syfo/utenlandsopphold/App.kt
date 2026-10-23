@@ -13,6 +13,7 @@ import no.nav.syfo.utenlandsopphold.application.IdenthendelseService
 import no.nav.syfo.utenlandsopphold.application.PublishSoknadstatusService
 import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.infrastructure.clients.ClientsModule
+import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.identhendelse.OutdatedIdentCronjob
 import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.journalforing.JournalforBrevCronjob
 import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.journalforing.JournalforingCronjobConfig
 import no.nav.syfo.utenlandsopphold.infrastructure.cronjob.launchCronjobs
@@ -82,6 +83,7 @@ fun main(args: Array<String>) {
     val identhendelseService =
         IdenthendelseService(
             soknadRepository = soknadRepository,
+            pdlClient = clientsModule.personInfoClient,
         )
 
     val soknadstatusProducer =
@@ -140,6 +142,10 @@ fun main(args: Array<String>) {
                                     publishSoknadstatusService = publishSoknadstatusService,
                                     initialDelayMinutes = publishSoknadstatusCronjobConfig.initialDelayMinutes,
                                     intervalDelayMinutes = publishSoknadstatusCronjobConfig.intervalDelayMinutes,
+                                ),
+                                OutdatedIdentCronjob(
+                                    soknadRepository = soknadRepository,
+                                    identhendelseService = identhendelseService,
                                 ),
                             ),
                     )
