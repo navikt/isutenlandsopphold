@@ -28,9 +28,22 @@ private const val HENT_PERSON_QUERY =
     }
     """
 
+private const val HENT_IDENTER_QUERY =
+    """
+    query(${'$'}ident: ID!, ${'$'}historikk: Boolean, ${'$'}grupper: [IdentGruppe!]) {
+        hentIdenter(ident: ${'$'}ident, historikk: ${'$'}historikk, grupper: ${'$'}grupper) {
+            identer {
+                ident
+                historisk
+                gruppe
+            }
+        }
+    }
+    """
+
 /**
  * Client for PDL (Persondataløsningen) — henter navn på innbygger for bruk i
- * journalførte dokumenter.
+ * journalførte dokumenter, og gjeldende folkeregisterident.
  *
  * Rød sone: fødselsnummer og navn er personopplysninger (PII). Ikke logg
  * request/response-innhold fra denne klienten.
@@ -64,7 +77,33 @@ class PdlClient(
         return listOfNotNull(navn.fornavn, navn.mellomnavn, navn.etternavn).joinToString(" ")
     }
 
+    override suspend fun getAktivIdent(personident: Personident): Personident? {
+        val systemToken =
+            systemTokenProvider.getSystemToken(config.clientId)
+                ?: error("Failed to get identer from PDL: Failed to get system token for PDL")
+
+        val response =
+            httpClient.post(config.baseUrl) {
+                header(HttpHeaders.Authorization, bearerHeader(systemToken))
+                header(BEHANDLINGSNUMMER_HEADER, BEHANDLINGSNUMMER_UTENLANDSOPPHOLD)
+                contentType(ContentType.Application.Json)
+                setBody(PdlHentIdenterRequest(variables = PdlHentIdenterVariables(ident = personident.value)))
+            }
+
+        val pdlResponse = response.body<PdlHentIdenterResponse>()
+        if (!pdlResponse.errors.isNullOrEmpty()) {
+            error("Failed to get identer from PDL: ${pdlResponse.errors.joinToString { it.message }}")
+        }
+        return pdlResponse.data
+            ?.hentIdenter
+            ?.identer
+            ?.firstOrNull { it.gruppe == FOLKEREGISTERIDENT && !it.historisk }
+            ?.let { Personident(it.ident) }
+    }
+
     companion object {
+        private const val FOLKEREGISTERIDENT = "FOLKEREGISTERIDENT"
+
         private const val BEHANDLINGSNUMMER_HEADER = "behandlingsnummer"
 
         private const val BEHANDLINGSNUMMER_UTENLANDSOPPHOLD = "B426"
@@ -100,5 +139,45 @@ class PdlClient(
         val fornavn: String,
         val mellomnavn: String?,
         val etternavn: String,
+    )
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    data class PdlHentIdenterRequest(
+        val query: String = HENT_IDENTER_QUERY,
+        val variables: PdlHentIdenterVariables,
+    )
+
+    data class PdlHentIdenterVariables(
+        val ident: String,
+        val historikk: Boolean = false,
+        val grupper: List<String> = listOf(FOLKEREGISTERIDENT),
+    )
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    data class PdlHentIdenterResponse(
+        val data: PdlHentIdenterData?,
+        val errors: List<PdlError>?,
+    )
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    data class PdlHentIdenterData(
+        val hentIdenter: PdlIdenter?,
+    )
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    data class PdlIdenter(
+        val identer: List<PdlIdent>,
+    )
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    data class PdlIdent(
+        val ident: String,
+        val historisk: Boolean,
+        val gruppe: String,
+    )
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    data class PdlError(
+        val message: String,
     )
 }
