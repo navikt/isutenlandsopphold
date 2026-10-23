@@ -1,6 +1,5 @@
 package no.nav.syfo.utenlandsopphold.infrastructure.pdl
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.header
@@ -109,7 +108,6 @@ class PdlClient(
         private const val BEHANDLINGSNUMMER_UTENLANDSOPPHOLD = "B426"
     }
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
     data class PdlHentPersonRequest(
         val query: String = HENT_PERSON_QUERY,
         val variables: PdlHentPersonVariables,
@@ -119,29 +117,24 @@ class PdlClient(
         val ident: String,
     )
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
     data class PdlHentPersonResponse(
         val data: PdlData?,
     )
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
     data class PdlData(
         val hentPerson: PdlHentPerson?,
     )
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
     data class PdlHentPerson(
         val navn: List<PdlNavn>,
     )
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
     data class PdlNavn(
         val fornavn: String,
         val mellomnavn: String?,
         val etternavn: String,
     )
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
     data class PdlHentIdenterRequest(
         val query: String = HENT_IDENTER_QUERY,
         val variables: PdlHentIdenterVariables,
@@ -153,30 +146,25 @@ class PdlClient(
         val grupper: List<String> = listOf(FOLKEREGISTERIDENT),
     )
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
     data class PdlHentIdenterResponse(
         val data: PdlHentIdenterData?,
         val errors: List<PdlError>?,
     )
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
     data class PdlHentIdenterData(
         val hentIdenter: PdlIdenter?,
     )
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
     data class PdlIdenter(
         val identer: List<PdlIdent>,
     )
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
     data class PdlIdent(
         val ident: String,
         val historisk: Boolean,
         val gruppe: String,
     )
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
     data class PdlError(
         val message: String,
     )
