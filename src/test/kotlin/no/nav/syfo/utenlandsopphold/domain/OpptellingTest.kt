@@ -16,16 +16,30 @@ class OpptellingTest {
     ): Soknad =
         lagSoknad(
             soktePerioder = soktePerioder,
-            vedtak =
-                lagVedtak(
+            behandling =
+                lagBehandling(
                     utfall =
                         if (innvilgedePerioder == soktePerioder) {
-                            Utfall.Innvilget
+                            BehandlingsUtfall.Innvilget(innvilgedePerioder)
                         } else {
-                            Utfall.DelvisInnvilget(innvilgedePerioder)
+                            BehandlingsUtfall.DelvisInnvilget(innvilgedePerioder, begrunnelse = "Begrunnelse")
                         },
-                    innvilgedePerioder = innvilgedePerioder,
                 ),
+        )
+
+    private fun avslattSoknad(soktePerioder: List<Periode>): Soknad =
+        lagSoknad(
+            soktePerioder = soktePerioder,
+            behandling = lagBehandling(utfall = BehandlingsUtfall.Avslag(begrunnelse = "Ikke innvilget")),
+        )
+
+    private fun ikkeAktuellSoknad(
+        soktePerioder: List<Periode>,
+        arsak: IkkeAktuellArsak,
+    ): Soknad =
+        lagSoknad(
+            soktePerioder = soktePerioder,
+            behandling = lagBehandling(utfall = BehandlingsUtfall.IkkeAktuell(arsak)),
         )
 
     @Test
@@ -105,16 +119,7 @@ class OpptellingTest {
 
     @Test
     fun `avslaatt soeknad bidrar ikke med dager`() {
-        val avslatt =
-            lagSoknad(
-                soktePerioder = listOf(periode("2025-12-01", "2025-12-10")),
-                vedtak =
-                    lagVedtak(
-                        utfall = Utfall.Avslag,
-                        innvilgedePerioder = emptyList(),
-                        begrunnelse = "Ikke innvilget",
-                    ),
-            )
+        val avslatt = avslattSoknad(soktePerioder = listOf(periode("2025-12-01", "2025-12-10")))
         val soknad = lagSoknad(soktePerioder = listOf(periode("2026-03-01", "2026-03-05")))
 
         val opptelling = listOf(avslatt, soknad).opptellingerFor(soknad).single()
@@ -133,6 +138,46 @@ class OpptellingTest {
 
         assertEquals(5, opptelling.antallDagerBruktHvisInnvilget)
         assertEquals(9, opptelling.antallDagerPotensieltBruktHvisInnvilget)
+    }
+
+    @Test
+    fun `soeknad behandlet i Infotrygd telles som ubehandlet`() {
+        val infotrygd =
+            ikkeAktuellSoknad(
+                soktePerioder = listOf(periode("2026-02-01", "2026-02-04")),
+                arsak = IkkeAktuellArsak.BEHANDLET_I_INFOTRYGD,
+            )
+        val soknad = lagSoknad(soktePerioder = listOf(periode("2026-03-01", "2026-03-05")))
+
+        val opptelling = listOf(infotrygd, soknad).opptellingerFor(soknad).single()
+
+        assertEquals(5, opptelling.antallDagerBruktHvisInnvilget)
+        assertEquals(9, opptelling.antallDagerPotensieltBruktHvisInnvilget)
+        assertEquals(listOf(periode("2026-02-01", "2026-02-04")), opptelling.tidligereUbehandledePerioder)
+    }
+
+    @Test
+    fun `ikke aktuell av andre aarsaker og henlagt bidrar ikke med dager`() {
+        val duplikat =
+            ikkeAktuellSoknad(
+                soktePerioder = listOf(periode("2026-02-01", "2026-02-04")),
+                arsak = IkkeAktuellArsak.DUPLIKAT,
+            )
+        val annet =
+            ikkeAktuellSoknad(
+                soktePerioder = listOf(periode("2026-02-10", "2026-02-12")),
+                arsak = IkkeAktuellArsak.ANNET,
+            )
+        val henlagt =
+            lagSoknad(
+                soktePerioder = listOf(periode("2026-02-20", "2026-02-22")),
+                behandling = lagBehandling(utfall = BehandlingsUtfall.Henlagt(begrunnelse = "Henlagt")),
+            )
+        val soknad = lagSoknad(soktePerioder = listOf(periode("2026-03-01", "2026-03-05")))
+
+        val opptelling = listOf(duplikat, annet, henlagt, soknad).opptellingerFor(soknad).single()
+
+        assertEquals(5, opptelling.antallDagerPotensieltBruktHvisInnvilget)
     }
 
     @Test
@@ -207,16 +252,7 @@ class OpptellingTest {
 
     @Test
     fun `avslaatte dager regnes som ubehandlede kun hvis de ogsaa er soekt om i en ubehandlet soeknad`() {
-        val avslatt =
-            lagSoknad(
-                soktePerioder = listOf(periode("2026-02-01", "2026-02-04")),
-                vedtak =
-                    lagVedtak(
-                        utfall = Utfall.Avslag,
-                        innvilgedePerioder = emptyList(),
-                        begrunnelse = "Ikke innvilget",
-                    ),
-            )
+        val avslatt = avslattSoknad(soktePerioder = listOf(periode("2026-02-01", "2026-02-04")))
         val soknad = lagSoknad(soktePerioder = listOf(periode("2026-03-01", "2026-03-05")))
 
         val opptelling = listOf(avslatt, soknad).opptellingerFor(soknad).single()

@@ -17,8 +17,8 @@ const val MAKS_ANTALL_DAGER_UTENFOR_EOS = 28
  *
  * - [antallDagerBruktHvisInnvilget] tar med tidligere innvilgede dager.
  * - [antallDagerPotensieltBruktHvisInnvilget] tar i tillegg med søkte dager fra andre ubehandlede
- *   søknader, altså worst case dersom også disse er innvilget eller innvilges. Dette tallet er relevant fordi søknader
- *   behandlet i Infotrygd ikke har vedtak i vår database.
+ *   søknader, altså worst case dersom også disse er innvilget eller innvilges. Søknader behandlet i
+ *   Infotrygd regnes som ubehandlede her, fordi vi ikke har vedtaket i vår database.
  *
  * [soktePerioderIVinduet], [tidligereInnvilgedePerioder] og [tidligereUbehandledePerioder] fordeler dagene i vinduet
  * på tre innbyrdes disjunkte lister, alle klippet til vinduet. Ingen dag telles to ganger:
@@ -60,12 +60,12 @@ data class Opptelling(
  */
 fun List<Soknad>.opptellingerFor(soknad: Soknad): List<Opptelling> {
     val alleInnvilgedeDager =
-        filter { it.status == SoknadStatus.INNVILGET || it.status == SoknadStatus.DELVIS_INNVILGET }
-            .flatMap { it.vedtak?.innvilgedePerioder.orEmpty() }
+        mapNotNull { it.behandling }
+            .flatMap { it.utfall.innvilgedePerioder() }
             .dager()
 
     val alleSokteDagerIAndreUbehandlede =
-        filter { it.status == SoknadStatus.MOTTATT && it.id != soknad.id }
+        filter { it.id != soknad.id && (it.status == SoknadStatus.MOTTATT || it.erBehandletIInfotrygd()) }
             .flatMap { it.soktePerioder }
             .dager()
 
@@ -101,3 +101,6 @@ fun List<Soknad>.opptellingerFor(soknad: Soknad): List<Opptelling> {
             )
         }
 }
+
+private fun Soknad.erBehandletIInfotrygd(): Boolean =
+    (behandling?.utfall as? BehandlingsUtfall.IkkeAktuell)?.arsak == IkkeAktuellArsak.BEHANDLET_I_INFOTRYGD

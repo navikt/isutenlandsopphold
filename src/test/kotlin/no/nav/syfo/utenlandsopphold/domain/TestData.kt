@@ -54,21 +54,6 @@ internal fun lagBrev(
         document = document,
     )
 
-internal fun lagVedtak(
-    utfall: Utfall,
-    innvilgedePerioder: List<Periode>,
-    begrunnelse: String? = if (utfall == Utfall.Innvilget) null else "Begrunnelse",
-    fattetTidspunkt: OffsetDateTime = OffsetDateTime.parse("2026-01-03T08:00:00Z"),
-): Vedtak =
-    Vedtak(
-        utfall = utfall,
-        fattetAv = veileder,
-        fattetTidspunkt = fattetTidspunkt,
-        innvilgedePerioder = innvilgedePerioder,
-        document = vedtakDocument,
-        begrunnelse = begrunnelse,
-    )
-
 internal val veileder = Navident("Z990000")
 
 internal val brevDocument =
