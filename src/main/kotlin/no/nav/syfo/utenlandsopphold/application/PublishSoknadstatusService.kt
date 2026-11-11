@@ -31,8 +31,9 @@ class PublishSoknadstatusService(
 
     fun publishMottattSoknad(soknadId: UUID) {
         transactionManager.inTransaction { transaction ->
-            val soknad = soknadRepository.hentSoknadForUpdate(transaction, soknadId)
-                ?: throw SoknadFinnesIkkeException(soknadId)
+            val soknad =
+                soknadRepository.hentSoknadForUpdate(transaction, soknadId)
+                    ?: throw SoknadFinnesIkkeException(soknadId)
             if (!soknad.shouldPublishMottatt()) {
                 return@inTransaction
             }
@@ -58,8 +59,9 @@ class PublishSoknadstatusService(
      */
     fun publishBehandletSoknad(soknadId: UUID) {
         transactionManager.inTransaction { transaction ->
-            val soknad = soknadRepository.hentSoknadForUpdate(transaction, soknadId)
-                ?: throw SoknadFinnesIkkeException(soknadId)
+            val soknad =
+                soknadRepository.hentSoknadForUpdate(transaction, soknadId)
+                    ?: throw SoknadFinnesIkkeException(soknadId)
             if (!soknad.shouldPublishBehandlet()) {
                 return@inTransaction
             }
