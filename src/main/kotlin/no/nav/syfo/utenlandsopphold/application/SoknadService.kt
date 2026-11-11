@@ -15,6 +15,7 @@ class SoknadService(
     private val transactionManager: TransactionManager,
     private val soknadRepository: ISoknadRepository,
     private val brevService: BrevService,
+    private val publishSoknadstatusService: PublishSoknadstatusService,
 ) {
     fun hentSoknad(soknadId: UUID): Soknad? = soknadRepository.hentSoknad(soknadId)
 
@@ -41,6 +42,7 @@ class SoknadService(
                     document = document,
                 )
             }
+        publishBehandletAsync(lagretSoknad)
         journalforOgDistribuerAsync(lagretSoknad)
         return lagretSoknad
     }
@@ -60,6 +62,7 @@ class SoknadService(
                     begrunnelse = begrunnelse,
                 )
             }
+        publishBehandletAsync(lagretSoknad)
         journalforOgDistribuerAsync(lagretSoknad)
         return lagretSoknad
     }
@@ -72,14 +75,18 @@ class SoknadService(
         soknadId: UUID,
         behandletAv: Navident,
         arsak: IkkeAktuellArsak,
-    ): Soknad =
-        behandleOgLagreSoknad(soknadId) { soknad ->
-            soknad.merkIkkeAktuell(
-                arsak = arsak,
-                behandletAv = behandletAv,
-                now = OffsetDateTime.now(),
-            )
-        }
+    ): Soknad {
+        val lagretSoknad =
+            behandleOgLagreSoknad(soknadId) { soknad ->
+                soknad.merkIkkeAktuell(
+                    arsak = arsak,
+                    behandletAv = behandletAv,
+                    now = OffsetDateTime.now(),
+                )
+            }
+        publishBehandletAsync(lagretSoknad)
+        return lagretSoknad
+    }
 
     private fun behandleOgLagreSoknad(
         soknadId: UUID,
@@ -99,6 +106,16 @@ class SoknadService(
                 behandletSoknad = behandletSoknad,
             )
         }
+
+    private fun publishBehandletAsync(behandletSoknad: Soknad) {
+        launchAsyncTask {
+            try {
+                publishSoknadstatusService.publishBehandletSoknad(behandletSoknad.id)
+            } catch (exception: Exception) {
+                log.error("Feil ved umiddelbar publisering av BEHANDLET-status for søknad ${behandletSoknad.id}", exception)
+            }
+        }
+    }
 
     private fun journalforOgDistribuerAsync(behandletSoknad: Soknad) {
         launchAsyncTask {

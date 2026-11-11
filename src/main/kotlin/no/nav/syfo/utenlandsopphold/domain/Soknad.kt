@@ -28,6 +28,7 @@ data class Soknad(
     val soktePerioder: List<Periode>,
     val innsendtTidspunkt: OffsetDateTime,
     val behandling: Behandling? = null,
+    val publishedAt: OffsetDateTime? = null,
 ) {
     val status: SoknadStatus
         get() =
@@ -144,6 +145,10 @@ data class Soknad(
                 ),
         )
     }
+
+    fun shouldPublishMottatt(): Boolean = publishedAt == null
+
+    fun shouldPublishBehandlet(): Boolean = behandling != null && behandling.publishedAt == null && publishedAt != null
 
     fun journalforBrev(
         journalpostId: JournalpostId,

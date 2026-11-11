@@ -149,35 +149,33 @@ class SoknadRepository(
             connection.toSoknader(pSoknader)
         }
 
-    override fun setSoknadPublished(
-        soknadId: UUID,
-        publishedAt: OffsetDateTime,
-    ) {
-        withConnection { connection ->
-            connection.prepareStatement(SET_SOKNAD_PUBLISHED_AT).use {
-                it.setObject(1, publishedAt)
-                it.setObject(2, soknadId)
-                it.executeUpdate()
-            }
-        }
-    }
-
     override fun getSoknaderMedUnpublishedBehandling(): List<Soknad> =
         withConnection(Connection.TRANSACTION_REPEATABLE_READ) { connection ->
             val pSoknader = connection.getSoknaderMedUnpublishedBehandling()
             connection.toSoknader(pSoknader)
         }
 
+    override fun setSoknadPublished(
+        transaction: Transaction,
+        soknadId: UUID,
+        publishedAt: OffsetDateTime,
+    ) {
+        transaction.jdbcConnection().prepareStatement(SET_SOKNAD_PUBLISHED_AT).use {
+            it.setObject(1, publishedAt)
+            it.setObject(2, soknadId)
+            it.executeUpdate()
+        }
+    }
+
     override fun setBehandlingPublished(
+        transaction: Transaction,
         behandlingId: UUID,
         publishedAt: OffsetDateTime,
     ) {
-        withConnection { connection ->
-            connection.prepareStatement(SET_BEHANDLING_PUBLISHED_AT).use {
-                it.setObject(1, publishedAt)
-                it.setObject(2, behandlingId)
-                it.executeUpdate()
-            }
+        transaction.jdbcConnection().prepareStatement(SET_BEHANDLING_PUBLISHED_AT).use {
+            it.setObject(1, publishedAt)
+            it.setObject(2, behandlingId)
+            it.executeUpdate()
         }
     }
 
@@ -541,6 +539,7 @@ internal fun ResultSet.toPSoknad(): PSoknad =
         createdAt = getObject("created_at", OffsetDateTime::class.java),
         personident = Personident(getString("personident")),
         innsendtTidspunkt = getObject("innsendt_tidspunkt", OffsetDateTime::class.java),
+        publishedAt = getObject("soknad_published_at", OffsetDateTime::class.java),
     )
 
 internal fun ResultSet.toPSoknadPeriode(): PSoknadPeriode =
@@ -570,6 +569,7 @@ internal fun ResultSet.toPBehandling(): PBehandling =
         behandletTidspunkt = getObject("behandlet_tidspunkt", OffsetDateTime::class.java),
         begrunnelse = getString("begrunnelse"),
         ikkeAktuellArsak = getString("ikke_aktuell_arsak"),
+        publishedAt = getObject("behandling_published_at", OffsetDateTime::class.java),
     )
 
 internal fun ResultSet.toPBrev(): PBrev =

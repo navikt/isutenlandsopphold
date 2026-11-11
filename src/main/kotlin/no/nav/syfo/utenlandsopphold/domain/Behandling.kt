@@ -101,6 +101,7 @@ data class Behandling(
     val behandletTidspunkt: OffsetDateTime,
     val brev: Brev?,
     val behandlingId: UUID = UUID.randomUUID(),
+    val publishedAt: OffsetDateTime? = null,
 ) {
     init {
         // Dekker fire tilfeller på én gang: riktig brevtype, feil brevtype, utfall som

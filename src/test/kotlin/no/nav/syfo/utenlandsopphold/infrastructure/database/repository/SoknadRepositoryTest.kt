@@ -539,7 +539,9 @@ class SoknadRepositoryTest {
         repository.lagreMottattSoknad(soknad)
         assertEquals(1, repository.getUnpublishedSoknader().size)
 
-        repository.setSoknadPublished(soknad.id, OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS))
+        transactionManager.inTransaction {
+            repository.setSoknadPublished(it, soknad.id, OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS))
+        }
 
         assertTrue(repository.getUnpublishedSoknader().isEmpty())
     }
@@ -569,7 +571,9 @@ class SoknadRepositoryTest {
             )
         assertEquals(1, repository.getSoknaderMedUnpublishedBehandling().size)
 
-        repository.setBehandlingPublished(opprettet.behandlingUuid, OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS))
+        transactionManager.inTransaction {
+            repository.setBehandlingPublished(it, opprettet.behandlingUuid, OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS))
+        }
 
         assertTrue(repository.getSoknaderMedUnpublishedBehandling().isEmpty())
     }

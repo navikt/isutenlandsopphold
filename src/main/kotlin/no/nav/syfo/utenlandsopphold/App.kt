@@ -73,11 +73,24 @@ fun main(args: Array<String>) {
             freshBehandlingGracePeriod = journalforingCronjobConfig.freshBehandlingGracePeriod,
         )
 
+    val soknadstatusProducer =
+        SoknadstatusProducer(
+            kafkaProducer = kafkaSoknadstatusProducer(kafkaEnvironment = environment.kafka),
+        )
+    val publishSoknadstatusService =
+        PublishSoknadstatusService(
+            transactionManager = transactionManager,
+            soknadRepository = soknadRepository,
+            soknadstatusProducer = soknadstatusProducer,
+        )
+    val publishSoknadstatusCronjobConfig = PublishSoknadstatusCronjobConfig.fromEnv()
+
     val soknadService =
         SoknadService(
             transactionManager = transactionManager,
             soknadRepository = soknadRepository,
             brevService = brevService,
+            publishSoknadstatusService = publishSoknadstatusService,
         )
 
     val identhendelseService =
@@ -85,17 +98,6 @@ fun main(args: Array<String>) {
             soknadRepository = soknadRepository,
             pdlClient = clientsModule.personInfoClient,
         )
-
-    val soknadstatusProducer =
-        SoknadstatusProducer(
-            kafkaProducer = kafkaSoknadstatusProducer(kafkaEnvironment = environment.kafka),
-        )
-    val publishSoknadstatusService =
-        PublishSoknadstatusService(
-            soknadRepository = soknadRepository,
-            soknadstatusProducer = soknadstatusProducer,
-        )
-    val publishSoknadstatusCronjobConfig = PublishSoknadstatusCronjobConfig.fromEnv()
 
     val server =
         embeddedServer(
