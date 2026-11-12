@@ -24,6 +24,7 @@ data class PSoknad(
     val personident: Personident,
     val innsendtTidspunkt: OffsetDateTime,
     val createdAt: OffsetDateTime,
+    val publishedAt: OffsetDateTime?,
 ) {
     fun toSoknad(
         soktePerioder: List<PSoknadPeriode>,
@@ -42,6 +43,7 @@ data class PSoknad(
                     innvilgedePerioder = behandlingPerioder.map { it.toPeriode() },
                     brev = brev,
                 ),
+            publishedAt = publishedAt,
         )
 }
 
@@ -73,6 +75,7 @@ data class PBehandling(
     val behandletTidspunkt: OffsetDateTime,
     val begrunnelse: String?,
     val ikkeAktuellArsak: String?,
+    val publishedAt: OffsetDateTime?,
 ) {
     fun toBehandling(
         innvilgedePerioder: List<Periode>,
@@ -84,6 +87,7 @@ data class PBehandling(
             behandletAv = Navident(behandletAv),
             behandletTidspunkt = behandletTidspunkt,
             brev = brev?.toBrev(),
+            publishedAt = publishedAt,
         )
 }
 

@@ -4,6 +4,7 @@ import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import io.mockk.verifyOrder
 import no.nav.syfo.common.types.ident.Navident
 import no.nav.syfo.common.types.ident.Personident
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
@@ -23,6 +24,7 @@ import org.junit.jupiter.api.TestInstance
 import java.time.OffsetDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -34,6 +36,7 @@ class PublishSoknadstatusServiceTest {
 
     private val service =
         PublishSoknadstatusService(
+            transactionManager = transactionManager,
             soknadRepository = repository,
             soknadstatusProducer = soknadstatusProducerMock,
         )
@@ -124,7 +127,7 @@ class PublishSoknadstatusServiceTest {
     @Test
     fun `publishBehandledeSoknader publiserer og markerer behandling som publisert i databasen`() {
         val behandletSoknad = lagreBehandletSoknad(soknad())
-        repository.setSoknadPublished(behandletSoknad.id, OffsetDateTime.now())
+        transactionManager.inTransaction { repository.setSoknadPublished(it, behandletSoknad.id, OffsetDateTime.now()) }
         every { soknadstatusProducerMock.publish(any()) } returns Result.success(Unit)
 
         val resultater = service.publishBehandledeSoknader()
@@ -173,8 +176,8 @@ class PublishSoknadstatusServiceTest {
     fun `feil for en soknad stopper ikke publisering av BEHANDLET for de andre`() {
         val soknadSomFeiler = lagreBehandletSoknad(soknad())
         val soknadSomLykkes = lagreBehandletSoknad(soknad(Personident("22222222222")))
-        repository.setSoknadPublished(soknadSomFeiler.id, OffsetDateTime.now())
-        repository.setSoknadPublished(soknadSomLykkes.id, OffsetDateTime.now())
+        transactionManager.inTransaction { repository.setSoknadPublished(it, soknadSomFeiler.id, OffsetDateTime.now()) }
+        transactionManager.inTransaction { repository.setSoknadPublished(it, soknadSomLykkes.id, OffsetDateTime.now()) }
 
         every { soknadstatusProducerMock.publish(match { it.uuid == soknadSomFeiler.eksternId }) } returns
             Result.failure(RuntimeException("kafka er nede"))
@@ -188,5 +191,62 @@ class PublishSoknadstatusServiceTest {
         val upubliserte = repository.getSoknaderMedUnpublishedBehandling()
         assertEquals(1, upubliserte.size)
         assertEquals(soknadSomFeiler.id, upubliserte.single().id)
+    }
+
+    @Test
+    fun `publishMottattSoknad publiserer ikke på nytt når soknaden allerede er publisert`() {
+        val soknad = soknad()
+        repository.lagreMottattSoknad(soknad)
+        every { soknadstatusProducerMock.publish(any()) } returns Result.success(Unit)
+
+        service.publishMottattSoknad(soknad.id)
+        service.publishMottattSoknad(soknad.id)
+
+        verify(exactly = 1) { soknadstatusProducerMock.publish(any()) }
+        assertTrue(repository.getUnpublishedSoknader().isEmpty())
+    }
+
+    @Test
+    fun `publishBehandletSoknad venter med BEHANDLET til MOTTATT er publisert`() {
+        val behandletSoknad = lagreBehandletSoknad(soknad())
+        every { soknadstatusProducerMock.publish(any()) } returns Result.success(Unit)
+
+        service.publishBehandletSoknad(behandletSoknad.id)
+
+        verify(exactly = 0) { soknadstatusProducerMock.publish(any()) }
+
+        service.publishMottattSoknad(behandletSoknad.id)
+        service.publishBehandletSoknad(behandletSoknad.id)
+        service.publishBehandletSoknad(behandletSoknad.id)
+
+        verifyOrder {
+            soknadstatusProducerMock.publish(match { it.status == Soknadstatus.MOTTATT })
+            soknadstatusProducerMock.publish(match { it.status == Soknadstatus.BEHANDLET })
+        }
+        verify(exactly = 2) { soknadstatusProducerMock.publish(any()) }
+        assertTrue(repository.getSoknaderMedUnpublishedBehandling().isEmpty())
+    }
+
+    @Test
+    fun `publishMottattSoknad publiserer ikke MOTTATT etter at BEHANDLET er publisert`() {
+        val behandletSoknad = lagreBehandletSoknad(soknad())
+        every { soknadstatusProducerMock.publish(any()) } returns Result.success(Unit)
+        service.publishMottattSoknad(behandletSoknad.id)
+        service.publishBehandletSoknad(behandletSoknad.id)
+
+        service.publishMottattSoknad(behandletSoknad.id)
+
+        verify(exactly = 1) { soknadstatusProducerMock.publish(match { it.status == Soknadstatus.MOTTATT }) }
+    }
+
+    @Test
+    fun `publishBehandletSoknad markerer ikke behandling som publisert når produsenten feiler`() {
+        val behandletSoknad = lagreBehandletSoknad(soknad())
+        transactionManager.inTransaction { repository.setSoknadPublished(it, behandletSoknad.id, OffsetDateTime.now()) }
+        every { soknadstatusProducerMock.publish(any()) } returns Result.failure(RuntimeException("kafka er nede"))
+
+        assertFailsWith<RuntimeException> { service.publishBehandletSoknad(behandletSoknad.id) }
+
+        assertEquals(1, repository.getSoknaderMedUnpublishedBehandling().size)
     }
 }

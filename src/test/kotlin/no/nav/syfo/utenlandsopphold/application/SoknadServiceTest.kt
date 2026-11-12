@@ -4,6 +4,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellArsak
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.VedtaksUtfall
@@ -23,12 +24,14 @@ import kotlin.test.assertFailsWith
 class SoknadServiceTest {
     private val repository = mockk<ISoknadRepository>()
     private val brevService = mockk<BrevService>(relaxed = true)
+    private val publishSoknadstatusService = mockk<PublishSoknadstatusService>(relaxed = true)
 
     private val service =
         SoknadService(
             transactionManager = TestTransactionManager,
             soknadRepository = repository,
             brevService = brevService,
+            publishSoknadstatusService = publishSoknadstatusService,
         )
 
     private val soknad = lagSoknad()
@@ -58,6 +61,7 @@ class SoknadServiceTest {
 
         coVerify(timeout = 2000) { brevService.journalforBrev(any<Soknad>()) }
         coVerify(timeout = 2000) { brevService.distribuerBrev(any<Soknad>()) }
+        verify(timeout = 2000) { publishSoknadstatusService.publishBehandletSoknad(soknad.id) }
     }
 
     @Test
@@ -73,6 +77,7 @@ class SoknadServiceTest {
 
         coVerify(timeout = 2000) { brevService.journalforBrev(any<Soknad>()) }
         coVerify(timeout = 2000) { brevService.distribuerBrev(any<Soknad>()) }
+        verify(timeout = 2000) { publishSoknadstatusService.publishBehandletSoknad(soknad.id) }
     }
 
     @Test
@@ -87,6 +92,7 @@ class SoknadServiceTest {
 
         coVerify(exactly = 0) { brevService.journalforBrev(any<Soknad>()) }
         coVerify(exactly = 0) { brevService.distribuerBrev(any<Soknad>()) }
+        verify(timeout = 2000) { publishSoknadstatusService.publishBehandletSoknad(soknad.id) }
     }
 
     @Test

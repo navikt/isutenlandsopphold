@@ -67,14 +67,16 @@ interface ISoknadRepository {
 
     fun getUnpublishedSoknader(): List<Soknad>
 
+    fun getSoknaderMedUnpublishedBehandling(): List<Soknad>
+
     fun setSoknadPublished(
+        transaction: Transaction,
         soknadId: UUID,
         publishedAt: OffsetDateTime,
     )
 
-    fun getSoknaderMedUnpublishedBehandling(): List<Soknad>
-
     fun setBehandlingPublished(
+        transaction: Transaction,
         behandlingId: UUID,
         publishedAt: OffsetDateTime,
     )

@@ -88,6 +88,7 @@ class SoknadApiV2Test {
                 soknadRepository = repository,
                 transactionManager = TestTransactionManager,
                 brevService = brevServiceMock,
+                publishSoknadstatusService = mockk(relaxed = true),
             )
         application {
             apiModule(

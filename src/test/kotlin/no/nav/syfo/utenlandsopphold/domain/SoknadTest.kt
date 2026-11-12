@@ -6,9 +6,11 @@ import java.time.OffsetDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class SoknadTest {
     @Test
@@ -353,4 +355,26 @@ class SoknadTest {
             ikkeAktuell.distribuerBrev(OffsetDateTime.parse("2026-01-11T08:00:00Z"))
         }
     }
+
+    @Test
+    fun `shouldPublishMottatt er true kun når MOTTATT ikke er publisert`() {
+        assertTrue(lagSoknad().shouldPublishMottatt())
+        assertFalse(lagSoknad().copy(publishedAt = publisert).shouldPublishMottatt())
+    }
+
+    @Test
+    fun `shouldPublishBehandlet krever behandling som ikke er publisert og publisert MOTTATT`() {
+        val behandlet = lagSoknad(behandling = lagBehandling())
+
+        assertFalse(lagSoknad().copy(publishedAt = publisert).shouldPublishBehandlet())
+        assertFalse(behandlet.shouldPublishBehandlet())
+        assertTrue(behandlet.copy(publishedAt = publisert).shouldPublishBehandlet())
+        assertFalse(
+            behandlet
+                .copy(publishedAt = publisert, behandling = behandlet.behandling!!.copy(publishedAt = publisert))
+                .shouldPublishBehandlet(),
+        )
+    }
+
+    private val publisert = OffsetDateTime.parse("2026-01-03T08:00:00Z")
 }
