@@ -253,12 +253,13 @@ class OpptellingTest {
     @Test
     fun `avslaatte dager regnes som ubehandlede kun hvis de ogsaa er soekt om i en ubehandlet soeknad`() {
         val avslatt = avslattSoknad(soktePerioder = listOf(periode("2026-02-01", "2026-02-04")))
+        val annenUbehandlet = lagSoknad(soktePerioder = listOf(periode("2026-02-03", "2026-02-10")))
         val soknad = lagSoknad(soktePerioder = listOf(periode("2026-03-01", "2026-03-05")))
 
-        val opptelling = listOf(avslatt, soknad).opptellingerFor(soknad).single()
+        val opptelling = listOf(avslatt, annenUbehandlet, soknad).opptellingerFor(soknad).single()
 
         assertEquals(emptyList(), opptelling.tidligereInnvilgedePerioder)
-        assertEquals(emptyList(), opptelling.tidligereUbehandledePerioder)
+        assertEquals(listOf(periode("2026-02-03", "2026-02-10")), opptelling.tidligereUbehandledePerioder)
     }
 
     @Test

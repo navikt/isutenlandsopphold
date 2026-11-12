@@ -14,4 +14,4 @@ data class InfoTilBehandlingAvSoknad(
 )
 
 fun List<Soknad>.infoTilBehandlingAv(soknad: Soknad): InfoTilBehandlingAvSoknad =
-    InfoTilBehandlingAvSoknad(opptellinger = opptellingerFor(soknad))
+    InfoTilBehandlingAvSoknad(opptellinger = this.opptellingerFor(soknad))
