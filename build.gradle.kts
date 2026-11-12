@@ -41,8 +41,23 @@ dependencies {
     implementation(libs.kafka.avro.serializer) {
         exclude(group = "org.apache.logging.log4j")
     }
+    constraints {
+        implementation("com.google.guava:guava") {
+            version {
+                require("33.8.0-jre")
+            }
+        }
+    }
+
     implementation(libs.kafka) {
         exclude(group = "org.apache.logging.log4j")
+    }
+    constraints {
+        implementation("at.yawk.lz4:lz4-java") {
+            version {
+                require("1.11.4")
+            }
+        }
     }
 
     // Metrics
