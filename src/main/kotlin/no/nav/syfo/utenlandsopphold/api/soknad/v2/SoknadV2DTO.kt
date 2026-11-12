@@ -6,10 +6,14 @@ import no.nav.syfo.utenlandsopphold.domain.Behandling
 import no.nav.syfo.utenlandsopphold.domain.BehandlingsUtfall
 import no.nav.syfo.utenlandsopphold.domain.DocumentComponent
 import no.nav.syfo.utenlandsopphold.domain.IkkeAktuellArsak
+import no.nav.syfo.utenlandsopphold.domain.InfoTilBehandlingAvSoknad
+import no.nav.syfo.utenlandsopphold.domain.MAKS_ANTALL_DAGER_UTENFOR_EOS
+import no.nav.syfo.utenlandsopphold.domain.Opptelling
 import no.nav.syfo.utenlandsopphold.domain.Periode
 import no.nav.syfo.utenlandsopphold.domain.Soknad
 import no.nav.syfo.utenlandsopphold.domain.SoknadStatus
 import no.nav.syfo.utenlandsopphold.domain.VedtaksUtfall
+import no.nav.syfo.utenlandsopphold.domain.infoTilBehandlingAv
 import no.nav.syfo.utenlandsopphold.util.toLocalDateTimeOslo
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -55,11 +59,36 @@ data class SoknadV2DTO(
     val innsendtTidspunkt: LocalDateTime,
     val soktePerioder: List<PeriodeV2DTO>,
     val behandling: BehandlingV2DTO?,
+    val infoTilBehandling: InfoTilBehandlingV2DTO?,
 )
 
 data class PeriodeV2DTO(
     val fom: LocalDate,
     val tom: LocalDate,
+)
+
+/**
+ * Informasjon veileder trenger for å behandle en søknad. Settes kun for søknader som ikke er behandlet.
+ */
+data class InfoTilBehandlingV2DTO(
+    val opptellinger: List<OpptellingV2DTO>,
+)
+
+/**
+ * Opptelling av dager utenfor EØS i et vindu på ett år som slutter på [tom], én per søkte periode.
+ * Tallene svarer på hva resultatet blir dersom søknaden innvilges. "Potensielt" tar i tillegg med dager fra
+ * andre ubehandlede søknader og søknader behandlet i Infotrygd. Dager igjen er [maksAntallDager] minus brukt, og kan
+ * være negativt hvis grensen overskrides.
+ */
+data class OpptellingV2DTO(
+    val fom: LocalDate,
+    val tom: LocalDate,
+    val maksAntallDager: Int,
+    val antallDagerBruktHvisInnvilget: Int,
+    val antallDagerPotensieltBruktHvisInnvilget: Int,
+    val soktePerioderIVinduet: List<PeriodeV2DTO>,
+    val tidligereInnvilgedePerioder: List<PeriodeV2DTO>,
+    val tidligereUbehandledePerioder: List<PeriodeV2DTO>,
 )
 
 /**
@@ -147,11 +176,34 @@ private fun SoknadStatus.toV2DTO(): SoknadStatusV2DTO =
         SoknadStatus.IKKE_AKTUELL -> SoknadStatusV2DTO.IKKE_AKTUELL
     }
 
-fun List<Soknad>.toResponseV2DTO(): SoknaderResponseV2DTO = SoknaderResponseV2DTO(soknader = map { it.toV2DTO() })
+fun List<Soknad>.toResponseV2DTO(): SoknaderResponseV2DTO =
+    SoknaderResponseV2DTO(
+        soknader =
+            map { soknad ->
+                val infoTilBehandling =
+                    if (soknad.status == SoknadStatus.MOTTATT) infoTilBehandlingAv(soknad) else null
+                soknad.toV2DTO(infoTilBehandling)
+            },
+    )
 
 fun Soknad.toResponseV2DTO(): SoknadResponseV2DTO = SoknadResponseV2DTO(soknad = toV2DTO())
 
-fun Soknad.toV2DTO(): SoknadV2DTO =
+private fun InfoTilBehandlingAvSoknad.toV2DTO(): InfoTilBehandlingV2DTO =
+    InfoTilBehandlingV2DTO(opptellinger = opptellinger.map { it.toV2DTO() })
+
+private fun Opptelling.toV2DTO(): OpptellingV2DTO =
+    OpptellingV2DTO(
+        fom = fom,
+        tom = tom,
+        maksAntallDager = MAKS_ANTALL_DAGER_UTENFOR_EOS,
+        antallDagerBruktHvisInnvilget = antallDagerBruktHvisInnvilget,
+        antallDagerPotensieltBruktHvisInnvilget = antallDagerPotensieltBruktHvisInnvilget,
+        soktePerioderIVinduet = soktePerioderIVinduet.map { it.toV2DTO() },
+        tidligereInnvilgedePerioder = tidligereInnvilgedePerioder.map { it.toV2DTO() },
+        tidligereUbehandledePerioder = tidligereUbehandledePerioder.map { it.toV2DTO() },
+    )
+
+fun Soknad.toV2DTO(infoTilBehandling: InfoTilBehandlingAvSoknad? = null): SoknadV2DTO =
     SoknadV2DTO(
         soknadId = id.toString(),
         eksternId = eksternId,
@@ -159,6 +211,7 @@ fun Soknad.toV2DTO(): SoknadV2DTO =
         innsendtTidspunkt = innsendtTidspunkt.toLocalDateTimeOslo(),
         soktePerioder = soktePerioder.map { it.toV2DTO() },
         behandling = behandling?.toV2DTO(),
+        infoTilBehandling = infoTilBehandling?.toV2DTO(),
     )
 
 private fun Periode.toV2DTO(): PeriodeV2DTO = PeriodeV2DTO(fom = fom, tom = tom)
