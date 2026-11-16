@@ -85,6 +85,9 @@ tasks {
         filesMatching("META-INF/services/**") {
             duplicatesStrategy = DuplicatesStrategy.WARN
         }
+        filesMatching("META-INF/*.kotlin_module") {
+            duplicatesStrategy = DuplicatesStrategy.INCLUDE
+        }
         mergeServiceFiles()
         archiveFileName.set("app.jar")
         archiveClassifier.set("")

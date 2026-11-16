@@ -154,6 +154,55 @@ class SoknadApiV2Test {
         }
 
     @Test
+    fun `query gir info til behandling kun for ubehandlede søknader`() =
+        testApplication {
+            val innvilget =
+                Soknad(
+                    eksternId = UUID.randomUUID(),
+                    personident = UserConstants.PERSON_VEILEDERE_HAR_TILGANG_TIL,
+                    soktePerioder = listOf(Periode(fom = LocalDate.of(2026, 3, 1), tom = LocalDate.of(2026, 3, 3))),
+                    innsendtTidspunkt = OffsetDateTime.parse("2026-02-01T09:00:00Z"),
+                ).fattVedtak(
+                    utfall = VedtaksUtfall.INNVILGET,
+                    innvilgedePerioder = emptyList(),
+                    begrunnelse = null,
+                    behandletAv = Navident(UserConstants.VEILEDER_IDENT_MED_SKRIVETILGANG),
+                    now = OffsetDateTime.parse("2026-02-02T09:00:00Z"),
+                    document = document,
+                )
+            every {
+                repository.hentSoknader(UserConstants.PERSON_VEILEDERE_HAR_TILGANG_TIL)
+            } returns listOf(innvilget, soknad)
+            val client = setupApiAndClient()
+
+            val response =
+                client.post(SOKNADER_QUERY_PATH) {
+                    bearerAuth(generateJWT())
+                    contentType(ContentType.Application.Json)
+                    setBody(
+                        SoknaderQueryV2DTO(
+                            personident = UserConstants.PERSON_VEILEDERE_HAR_TILGANG_TIL.value,
+                        ),
+                    )
+                }
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            val soknader = response.body<SoknaderResponseV2DTO>().soknader
+            assertNull(soknader.single { it.soknadId == innvilget.id.toString() }.infoTilBehandling)
+
+            val opptelling =
+                assertNotNull(soknader.single { it.soknadId == soknad.id.toString() }.infoTilBehandling)
+                    .opptellinger
+                    .single()
+            assertEquals(LocalDate.of(2025, 4, 11), opptelling.fom)
+            assertEquals(LocalDate.of(2026, 4, 10), opptelling.tom)
+            assertEquals(28, opptelling.maksAntallDager)
+            assertEquals(13, opptelling.antallDagerBruktHvisInnvilget)
+            assertEquals(13, opptelling.antallDagerPotensieltBruktHvisInnvilget)
+            assertEquals(listOf(PeriodeV2DTO(LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 3))), opptelling.tidligereInnvilgedePerioder)
+        }
+
+    @Test
     fun `query-endepunktet krever tilgang til personen`() =
         testApplication {
             val client = setupApiAndClient()
