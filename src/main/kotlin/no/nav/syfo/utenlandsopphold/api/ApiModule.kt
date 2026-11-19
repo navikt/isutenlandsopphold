@@ -28,6 +28,7 @@ import no.nav.syfo.utenlandsopphold.application.SoknadService
 import no.nav.syfo.utenlandsopphold.infrastructure.database.DatabaseInterface
 import no.nav.syfo.utenlandsopphold.infrastructure.metric.METRICS_REGISTRY
 import java.time.Duration
+import java.util.concurrent.CancellationException
 
 fun Application.apiModule(
     applicationState: ApplicationState,
@@ -89,6 +90,11 @@ fun Application.installMetrics() {
 
 fun Application.installStatusPages() {
     install(StatusPages) {
+        // Client disconnected before the response was sent; rethrow so cancellation propagates
+        exception<CancellationException> { call, cause ->
+            call.application.log.debug("Request cancelled: ${cause.message}")
+            throw cause
+        }
         exception<Throwable> { call, cause ->
             val log = call.application.log
             log
